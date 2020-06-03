@@ -1,6 +1,6 @@
 # Vanilla
 
-Vanilla is a single-core operating system for the ARMv7 architecture
+This is my 2020 summer project. Vanilla is a single-core operating system for the ARMv7 architecture.
 
 ## Coming soon
 
