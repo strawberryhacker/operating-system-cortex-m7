@@ -202,8 +202,8 @@ typedef struct {
 #define GPIOD ((gpio_reg *)0x400E1400)
 #define GPIOE ((gpio_reg *)0x400E1600)
 
-#define SERIAL0 ((usart_reg *)0x40024000)
-#define SERIAL1 ((usart_reg *)0x40028000)
-#define SERIAL2 ((usart_reg *)0x4002C000)
+#define USART0 ((usart_reg *)0x40024000)
+#define USART1 ((usart_reg *)0x40028000)
+#define USART2 ((usart_reg *)0x4002C000)
 
 #endif

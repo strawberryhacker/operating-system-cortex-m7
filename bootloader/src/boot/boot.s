@@ -81,21 +81,100 @@ default_handler:
 Vector_table:
     .word	_stack_e
 	.word	Startup
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
-	.word	0
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
 	.word	systick_handler
+
+	// Paripheral interrupts
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	usart1_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
+	.word	default_handler
 
 	// Make a default handler for unused interrupts
 	.weak systick_handler
 	.thumb_set systick_handler, default_handler
+
+	.weak usart1_handler
+	.thumb_set usart1_handler, default_handler
