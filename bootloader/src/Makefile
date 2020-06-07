@@ -6,10 +6,12 @@ driver-y += /src/drivers/watchdog.c
 driver-y += /src/drivers/flash.c
 driver-y += /src/drivers/usart.c
 driver-y += /src/drivers/gpio.c
+driver-y += /src/drivers/icm.c
 
 cpu-y += /src/cpu/interrupt.c
 
 board-y += /src/board/serial.c
+board-y += /src/board/debug.c
 
 generic-y += /src/generic/print.c
 generic-y += /src/generic/crc.c

@@ -110,7 +110,7 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	default_handler
+	.word	usart0_handler
 	.word	usart1_handler
 	.word	default_handler
 	.word	default_handler
@@ -178,3 +178,6 @@ Vector_table:
 
 	.weak usart1_handler
 	.thumb_set usart1_handler, default_handler
+
+	.weak usart0_handler
+	.thumb_set usart0_handler, default_handler

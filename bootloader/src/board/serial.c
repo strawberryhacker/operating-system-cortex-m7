@@ -31,7 +31,7 @@ void serial_init(void) {
     interrupt_enable(14);
 }
 
-void serial_write(const char* data, ...) {
+void print(const char* data, ...) {
     va_list obj;
     va_start(obj, data);
 

@@ -6,7 +6,7 @@ void interrupt_enable(u8 irq_number) {
 }
 
 void interrupt_disable(u8 irq_number) {
-
+	NVIC->ICER[irq_number >> 5] = (1 << (irq_number & 0b11111));
 }
 
 void interrupt_set_prioriy(u8 irq_number) {

@@ -6,7 +6,7 @@
 
 void serial_init(void);
 
-void serial_write(const char* data, ...);
+void print(const char* data, ...);
 
 u8 serial_read(void);
 

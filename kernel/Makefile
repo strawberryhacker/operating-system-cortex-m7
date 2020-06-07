@@ -3,7 +3,7 @@
 TOP = $(shell pwd)
 
 BUILDDIR = $(TOP)/build
-TARGET_NAME = bootloader
+TARGET_NAME = kernel
 
 # Compilers
 CC      = arm-none-eabi-gcc
@@ -36,13 +36,15 @@ include src/Makefile
 #-------------------------------------------------------------------------------
 .SECONDARY: $(OBJ)
 .PHONY: all start end elf bin lss hex
-all: elf lss bin hex size
+all: elf lss bin hex size upload
 
 elf: $(BUILDDIR)/$(TARGET_NAME).elf
 bin: $(BUILDDIR)/$(TARGET_NAME).bin
 lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
+upload:
+	python3 ../tools/programmer.py -com /dev/ttyS3 -f build/kernel.bin 
 
 size: $(BUILDDIR)/$(TARGET_NAME).elf
 	@echo

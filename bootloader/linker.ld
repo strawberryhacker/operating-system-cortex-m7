@@ -5,8 +5,10 @@ OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
 MEMORY {
-    flash (rx)  : ORIGIN = 0x00400000, LENGTH = 0x02000  /* 8 KiB */
-    sram  (rwx) : ORIGIN = 0x20400000, LENGTH = 0x5DC00 /* 384 kB */
+    flash          (rx) : ORIGIN = 0x00400000, LENGTH = 0x3F80  /* 32 KiB */
+    header          (r) : ORIGIN = 0x00403F80, LENGTH = 0x80    /* 32 words */
+    boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x20    /* 32 bytes */
+    sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x5DBE0 /* 384 kB */
 }
 
 STACK_SIZE = 0x500;

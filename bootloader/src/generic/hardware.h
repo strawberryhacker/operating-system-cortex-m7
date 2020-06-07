@@ -190,11 +190,28 @@ typedef struct {
 	_r  u32 STIR;
 } nvic_reg;
 
+typedef struct {
+	_rw u32 CFG;
+	_w  u32 CTRL;
+	_r  u32 SR;
+	_r  u32 RESERVED1;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_r  u32 IMR;
+	_r  u32 ISR;
+	_r  u32 UASR;
+	_r  u32 RESERVED2[3];
+	_rw u32 DSCR;
+	_rw u32 HASH;
+	_w  u32 UIHVAL[8];
+} icm_reg;
+
 #define CLOCK ((clock_reg *)0x400E0600)
 #define FLASH ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
 #define SYSTICK ((systick_reg *)0xE000E010)
 #define NVIC ((nvic_reg *)0xE000E100)
+#define ICM ((icm_reg *)0x40048000)
 
 #define GPIOA ((gpio_reg *)0x400E0E00)
 #define GPIOB ((gpio_reg *)0x400E1000)

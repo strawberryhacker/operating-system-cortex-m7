@@ -3,6 +3,6 @@
 
 #include "types.h"
 
-#define RAMFUNC __attribute__((long_call, section(".ramfunc")))
+#define __ramfunc__ __attribute__((long_call, section(".ramfunc")))
 
 #endif
