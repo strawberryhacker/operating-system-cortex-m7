@@ -17,7 +17,7 @@ ARM_ASM = arm-none-eabi-as
 CPFLAGS += -I$(TOP)/src
 
 CFLAGS += -x c -mthumb -O1 -ffunction-sections -mlong-calls -g3 -Wall
-CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c
+CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections
 
 LDFLAGS += -mthumb -Wl,-Map="$(BUILDDIR)/$(TARGET_NAME).map" -Wl,--start-group
 LDFLAGS += -Wl,--end-group -Wl,--gc-sections -mcpu=cortex-m7 -Tlinker.ld
@@ -36,37 +36,31 @@ include src/Makefile
 #-------------------------------------------------------------------------------
 .SECONDARY: $(OBJ)
 .PHONY: all start end elf bin lss hex
-all: elf lss bin hex size
+all: start elf lss bin hex
 
 elf: $(BUILDDIR)/$(TARGET_NAME).elf
 bin: $(BUILDDIR)/$(TARGET_NAME).bin
 lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
-
-size: $(BUILDDIR)/$(TARGET_NAME).elf
+start:
 	@echo
-	@$(CC) $(LDFLAGS) -Wl,--print-memory-usage $(OBJ) -o $(TOP)/dummy.elf
-	@rm $(TOP)/dummy.elf
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
-	@echo Building: "\033[32m" $(notdir $@) "\033[0m"
 	@$(OBJCOPY) -O binary $< $@
 
 $(BUILDDIR)/%.lss: $(BUILDDIR)/%.elf
-	@echo Building: "\033[32m" $(notdir $@) "\033[0m"
 	@$(OBJDUMP) -h -S $< > $@
 
 $(BUILDDIR)/%.hex: $(BUILDDIR)/%.elf
-	@echo Building: "\033[32m" $(notdir $@) "\033[0m"
 	@$(OBJCOPY) -O ihex $< $@
 
 
 # Linking stage
 $(BUILDDIR)/%.elf: $(OBJ)
 	@echo
-	@echo Building: "\033[32m" $(notdir $@) "\033[0m"
-	@$(CC) $(LDFLAGS) $^ -o $@
+	@$(CC) $(LDFLAGS) -Wl,--print-memory-usage $^ -o $@
+	@echo
 
 # Generate object files from .c files
 $(BUILDDIR)/%.o: %.c

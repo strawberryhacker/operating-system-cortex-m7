@@ -64,8 +64,9 @@ int main(void) {
 	
 
 	while (1) {
-		if (tick >= 50) {
+		if (tick >= 500) {
 			tick = 0;
+			debug_print("YO\n");
 			// Toggle led
 			if (GPIOC->ODSR & (1 << 8)) {
 				GPIOC->CODR = (1 << 8);
@@ -100,8 +101,9 @@ int main(void) {
 					NVIC->ICER[i] = 0xFF;
 				}
 
-				USART1->CR = 0b10101100;
-				USART0->CR = 0b10101100;
+				peripheral_clock_disable(14);
+				peripheral_clock_disable(13);
+				SYSTICK->CSR = 0;
 
 				// Vector table is at 0x00404000
 				asm volatile ("dsb sy");

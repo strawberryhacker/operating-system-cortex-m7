@@ -28,7 +28,7 @@ void serial_init(void) {
 
     usart_init(USART1, &serial);
 
-    interrupt_enable(14);
+    nvic_enable(14);
 }
 
 void print(const char* data, ...) {

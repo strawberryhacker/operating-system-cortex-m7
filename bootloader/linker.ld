@@ -5,15 +5,17 @@ OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
 MEMORY {
-    flash          (rx) : ORIGIN = 0x00400000, LENGTH = 0x3F80  /* 32 KiB */
-    header          (r) : ORIGIN = 0x00403F80, LENGTH = 0x80    /* 32 words */
-    boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x20    /* 32 bytes */
-    sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x5DBE0 /* 384 kB */
+    flash          (rx) : ORIGIN = 0x00400000, LENGTH = 0x03F80 /* 32 KiB    */
+    header          (r) : ORIGIN = 0x00403F80, LENGTH = 0x00080 /* 32 words  */
+    boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x00020 /* 32 bytes  */
+    sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x5DBE0 /* 384 kB    */
 }
 
 STACK_SIZE = 0x500;
 
 SECTIONS {
+
+    /* Cortex-M7 vector table */
     .vector_table : {
         . = ALIGN(4);
         _vector_table_s = .;
@@ -22,6 +24,8 @@ SECTIONS {
         _vector_table_e = .;
     } > flash
 
+
+    /* Code */
     .text : {
         . = ALIGN(4);
         _text_s = .;
@@ -38,6 +42,7 @@ SECTIONS {
         . = ALIGN(4);
         _text_e = .;
     } > flash
+
 
     /* Black C magic */
     .ARM.extab : {
@@ -62,6 +67,8 @@ SECTIONS {
 		KEEP(*(SORT(.fini_array.*)))
     } > flash
 
+
+    /* Constant data */
     .rodata : {
         . = ALIGN(4);
         _rodata_s = .;
@@ -71,9 +78,10 @@ SECTIONS {
         _rodata_e = .;
     } > flash
 
+
+    /* Initialized data and ramfunctions */
     . = ALIGN(4);
     _relocate_s = LOADADDR(.data);
-
     .data : {
         . = ALIGN(4);
         _data_s = .;
@@ -85,6 +93,8 @@ SECTIONS {
         _data_e = .;
     } > sram AT > flash
 
+
+    /* Uninitialized data */
     .bss (NOLOAD) : {
         . = ALIGN(4);
         _bss_s = .;
@@ -94,6 +104,7 @@ SECTIONS {
         _bss_e = .;
     } > sram
 
+    /* Stack */
     .stack (NOLOAD) : {
         . = ALIGN(8);
         _stack_s = .;

@@ -23,7 +23,7 @@ void debug_init(void) {
     usart_init(USART0, &debug_usart);
 
     usart_interrupt_enable(USART0, USART_IRQ_RXRDY);
-    interrupt_enable(13);
+    nvic_enable(13);
 }
 
 static char debug_buffer[64];

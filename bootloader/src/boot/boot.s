@@ -18,15 +18,15 @@
 /// Base address of the vector table
 vector_table_reg: .word 0xE000ED08
 
-/// Startup routine defined in the second entry in the vector table. This 
+/// Startup routine is defined in the second entry in the vector table. This 
 /// performs relocation of the .data segment, initialization of the .bss 
 /// segment and vector table relocation. Finally it calls `__libc_init_array`
 /// and branch to the main loop.
 .section .text
-.global Startup
-.type Startup, %function
+.global startup
+.type startup, %function
 
-Startup:
+startup:
     // Relocate .data segment
 	ldr r0, =_data_s
 	ldr r1, =_data_e
@@ -75,12 +75,14 @@ inf_loop:
 default_handler:
 	b default_handler
 
-/// Vector table
+/// Cortex-M7 vector table
 .section .vector_table, "a", %progbits
 .type Vector_table, %object
 Vector_table:
     .word	_stack_e
-	.word	Startup
+	.word	startup
+
+	// Cortex-M7 core interrupts
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -94,7 +96,7 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	systick_handler
+	.word	systick_handler    // Systick
 
 	// Paripheral interrupts
 	.word	default_handler
@@ -110,8 +112,8 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	usart0_handler
-	.word	usart1_handler
+	.word	usart0_handler     // USART0
+	.word	usart1_handler     // USART1
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -172,7 +174,8 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 
-	// Make a default handler for unused interrupts
+	// If any interrupt are enabled but the handler not present, it will run
+	// the default handler in an infinite loop
 	.weak systick_handler
 	.thumb_set systick_handler, default_handler
 
