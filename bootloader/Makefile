@@ -29,22 +29,58 @@ ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 #-------------------------------------------------------------------------------
 SRC +=
 
-include src/Makefile
+bootloader-y += /src/main.c
+
+driver-y += /src/drivers/systick.c
+driver-y += /src/drivers/clock.c
+driver-y += /src/drivers/watchdog.c
+driver-y += /src/drivers/flash.c
+driver-y += /src/drivers/usart.c
+driver-y += /src/drivers/gpio.c
+driver-y += /src/drivers/icm.c
+
+cpu-y += /src/cpu/interrupt.c
+
+board-y += /src/board/serial.c
+board-y += /src/board/debug.c
+
+generic-y += /src/generic/print.c
+generic-y += /src/generic/crc.c
+
+asm-y += /src/boot/boot.s
+
+BOOT_OBJ := $(patsubst %.c, %.o, $(bootloader-y))
+CPU_OBJ := $(patsubst %.c, %.o, $(cpu-y))
+GENERIC_OBJ := $(patsubst %.c, %.o, $(generic-y))
+BOARD_OBJ := $(patsubst %.c, %.o, $(board-y))
+DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
+ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))
+
+OBJ += $(addprefix $(BUILDDIR), $(BOOT_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(ASM_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(BOARD_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(GENERIC_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(CPU_OBJ))
+
+# Add include paths
+CPFLAGS += -I$(TOP)/src/drivers
+CPFLAGS += -I$(TOP)/src/board
+CPFLAGS += -I$(TOP)/src/generic
+CPFLAGS += -I$(TOP)/src/cpu
 
 #-------------------------------------------------------------------------------
 # Rules
 #-------------------------------------------------------------------------------
 .SECONDARY: $(OBJ)
-.PHONY: all start end elf bin lss hex
-all: start elf lss bin hex
+.PHONY: all elf bin lss hex
+all: elf lss bin hex
 
 elf: $(BUILDDIR)/$(TARGET_NAME).elf
 bin: $(BUILDDIR)/$(TARGET_NAME).bin
 lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
-start:
-	@echo
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O binary $< $@
@@ -55,12 +91,11 @@ $(BUILDDIR)/%.lss: $(BUILDDIR)/%.elf
 $(BUILDDIR)/%.hex: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O ihex $< $@
 
-
-# Linking stage
 $(BUILDDIR)/%.elf: $(OBJ)
 	@echo
 	@$(CC) $(LDFLAGS) -Wl,--print-memory-usage $^ -o $@
 	@echo
+
 
 # Generate object files from .c files
 $(BUILDDIR)/%.o: %.c
@@ -74,6 +109,5 @@ $(BUILDDIR)/%.o: %.s
 	@echo " >" $<
 	@$(ARM_ASM) $(ASMFLAGS) -c $< -o $@
 
-
 clean:
-	@rm -r $(BUILDDIR)
+	@rm -r -f $(BUILDDIR)
