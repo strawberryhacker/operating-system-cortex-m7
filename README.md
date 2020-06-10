@@ -5,7 +5,7 @@ This is my 2020 summer project. Vanilla is a single-core operating system for th
 ## Coming soon
 
 - Bootloader w/ICM check and encryption
-- Python kernel programmer
+- Python kernel programmer &check;
 - Basic driver support
 - Multiclass scheduler w/FPU support and lazy stacking
 - System calls
