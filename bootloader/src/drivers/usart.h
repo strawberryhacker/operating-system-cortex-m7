@@ -51,4 +51,9 @@ static inline u8 usart_read(usart_reg* reg) {
     return reg->RHR;
 }
 
+static inline void usart_flush(usart_reg* reg) {
+	// There should be no data in the TR nor THR
+	while (!(reg->CSR & (1 << 9)));
+}
+
 #endif

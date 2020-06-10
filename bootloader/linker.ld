@@ -6,8 +6,9 @@ SEARCH_DIR(.)
 
 MEMORY {
     flash          (rx) : ORIGIN = 0x00400000, LENGTH = 0x03F80 /* 32 KiB    */
-    header          (r) : ORIGIN = 0x00403F80, LENGTH = 0x00080 /* 32 words  */
-    boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x00020 /* 32 bytes  */
+    image_hash      (r) : ORIGIN = 0x00401C00, LENGTH = 0x00200 /* 512 B     */
+    boot_header     (r) : ORIGIN = 0x00401E00, LENGTH = 0x00200 /* 512 B     */
+    boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x00020 /* 32 B      */
     sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x5DBE0 /* 384 kB    */
 }
 
@@ -103,6 +104,7 @@ SECTIONS {
         . = ALIGN(4);
         _bss_e = .;
     } > sram
+
 
     /* Stack */
     .stack (NOLOAD) : {

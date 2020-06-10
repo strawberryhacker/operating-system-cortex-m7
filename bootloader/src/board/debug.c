@@ -3,7 +3,7 @@
 #include "clock.h"
 #include "usart.h"
 #include "print.h"
-#include "interrupt.h"
+#include "nvic.h"
 
 #include <stdarg.h>
 
@@ -26,6 +26,13 @@ void debug_init(void) {
     nvic_enable(13);
 }
 
+void debug_deinit(void) {
+	peripheral_clock_disable(13);
+	usart_deinit(USART0);
+	nvic_disable(13);
+	nvic_clear_pending(13);
+}
+
 static char debug_buffer[64];
 
 void debug_print(const char* data, ...) {
@@ -37,4 +44,8 @@ void debug_print(const char* data, ...) {
     while (size--) {
         usart_write(USART0, *src++);
     }
+}
+
+void debug_flush(void) {
+	usart_flush(USART0);
 }

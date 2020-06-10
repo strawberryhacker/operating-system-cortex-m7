@@ -223,4 +223,9 @@ typedef struct {
 #define USART1 ((usart_reg *)0x40028000)
 #define USART2 ((usart_reg *)0x4002C000)
 
+#define VECTOR_TABLE_BASE 0xE000ED08
+
+#define KERNEL_IMAGE_ADDR 0x00404000
+
+
 #endif

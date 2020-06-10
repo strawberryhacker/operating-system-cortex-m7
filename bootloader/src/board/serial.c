@@ -3,7 +3,7 @@
 #include "clock.h"
 #include "gpio.h"
 #include "print.h"
-#include "interrupt.h"
+#include "nvic.h"
 #include <stdarg.h>
 
 static char serial_buffer[256];
@@ -29,6 +29,13 @@ void serial_init(void) {
     usart_init(USART1, &serial);
 
     nvic_enable(14);
+}
+
+void serial_deinit(void) {
+	peripheral_clock_disable(14);
+	usart_deinit(USART1);
+	nvic_disable(14);
+	nvic_clear_pending(14);
 }
 
 void print(const char* data, ...) {

@@ -19,7 +19,8 @@ void usart_init(usart_reg* reg, const struct usart_desc* desc) {
 
 void usart_deinit(usart_reg* reg) {
     // Disable and reset the USART
-    reg->CR = (1 << 4) | (1 << 6) | (1 << 2) | (1 << 3);
+    reg->CR = (1 << 5) | (1 << 7) | (1 << 2) | (1 << 3);
+	reg->IDR = 0xFFFFFFFF;
 }
 
 void usart_interrupt_enable(usart_reg* reg, u32 mask) {

@@ -39,7 +39,7 @@ driver-y += /src/drivers/usart.c
 driver-y += /src/drivers/gpio.c
 driver-y += /src/drivers/icm.c
 
-cpu-y += /src/cpu/interrupt.c
+cpu-y += /src/cpu/nvic.c
 
 board-y += /src/board/serial.c
 board-y += /src/board/debug.c

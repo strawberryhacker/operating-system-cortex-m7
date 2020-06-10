@@ -9,15 +9,6 @@ void clock_source_enable(enum clock_source source) {
 
         // Wait for the RC oscillator to stabilize
         while (!(CLOCK->SR & (1 << 17)));
-
-        // Set RC frequency to 12 MHz
-        u32 reg = CLOCK->MOR;
-        reg &= ~(0b111 << 4);
-        reg |= (2 << 4);
-        CLOCK->MOR = reg | 0x00370000;
-
-        // Wait for the RC oscillator to stabilize
-        while (!(CLOCK->SR & (1 << 17)));
     } else {
         // Enable the crystal
         CLOCK->MOR |= (1 << 0) | 0x00370000;
@@ -46,6 +37,24 @@ u8 clock_source_disable(enum clock_source source) {
     }
     CLOCK->MOR = reg;
     return 1;
+}
+
+/// Sets the frequency of the internal RC oscillator
+void rc_frequency_select(enum rc_frecuency frec) {
+	// The RC oscillator must be enabled 
+	if (!(CLOCK->SR & (1 << 17))) {
+		// Panic
+		while (1);
+	}
+	
+	// Update the frequency
+	u32 reg = CLOCK->MOR;
+	reg &= ~(0b111 << 4);
+	reg |= (frec << 4);
+	CLOCK->MOR = reg;
+	
+	// Wait for the RC oscillator to stabilize
+	while (!(CLOCK->SR & (1 << 17)));
 }
 
 /// Routes one of the clock sources to the main clock net
@@ -110,6 +119,14 @@ void master_clock_select(enum clock_net net, enum master_presc presc,
         reg |= (presc << 4);
         CLOCK->MCKR = reg;
         while (!(CLOCK->SR & (1 << 3)));
+		
+		// Write divider
+		reg = CLOCK->MCKR;
+		reg &= ~(0b11 << 8);
+		reg |= (div << 8);
+		CLOCK->MCKR = reg;
+        while (!(CLOCK->SR & (1 << 3)));
+		
     } else {
         // Write PRESC
         reg = CLOCK->MCKR;
@@ -163,4 +180,14 @@ void peripheral_clock_disable(u8 per_id) {
         // Can not use fast access.
         CLOCK->PCR = (per_id & 0b1111111) | (1 << 12);
     }
+}
+
+/// Resets the clock tree. Only the internal RC oscillator is allowed to run.
+/// Both CPU and bus clocks are running at 12 MHz 
+void clock_tree_reset(void) {
+	master_clock_select(MAIN_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_OFF);
+	plla_disable();
+	main_clock_select(RC_OSCILLCATOR);
+	rc_frequency_select(RC_12_MHz);
+	clock_source_disable(CRYSTAL_OSCILLATOR);
 }

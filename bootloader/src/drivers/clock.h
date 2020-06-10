@@ -33,35 +33,36 @@ enum master_divider {
     MASTER_DIV_3
 };
 
+enum rc_frecuency {
+	RC_4_MHz,
+	RC_8_MHz,
+	RC_12_MHz
+};
+
 /// The full clock network of the chip can be found in the SAMe70 datasheet
 /// at page 251
 
-/// Clock sources
 void clock_source_enable(enum clock_source source);
 
 u8 clock_source_disable(enum clock_source source);
 
+void rc_frequency_select(enum rc_frecuency frec);
 
-/// Main clock net
 void main_clock_select(enum clock_source source);
 
-
-/// PLL 
 void plla_init(u8 div, u16 mul, u8 startup_time);
 
 u8 plla_disable(void);
 
-
-/// Master clock - CPU - SysTick - FreeRunning - Bus - Peripheral
 void master_clock_select(enum clock_net net, enum master_presc presc, 
     enum master_divider div);
 
 u8 master_clock_verify(void);
 
-
-/// Peripheral clocks
 void peripheral_clock_enable(u8 per_id);
 
 void peripheral_clock_disable(u8 per_id);
+
+void clock_tree_reset(void);
 
 #endif

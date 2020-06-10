@@ -1,4 +1,4 @@
-#include "interrupt.h"
+#include "nvic.h"
 #include "hardware.h"
 
 void nvic_enable(u8 irq_number) {
@@ -15,4 +15,8 @@ void nvic_set_prioriy(u8 irq_number) {
 
 void nvic_pend(u8 irq_number) {
 
+}
+
+void nvic_clear_pending(u8 irq_number) {
+	
 }

@@ -6,12 +6,17 @@
 #include "watchdog.h"
 #include "flash.h"
 #include "serial.h"
-#include "interrupt.h"
+#include "nvic.h"
 #include "debug.h"
 #include "usart.h"
+#include "gpio.h"
+#include "systick.h"
+
+#define PACKET_START 0b10101010
 
 struct packet_s {
 	u8 cmd;
+	u8 crc;
 	u16 size;
 	u8 payload[512];
 };
@@ -20,70 +25,73 @@ enum state_e {
 	STATE_IDLE,
 	STATE_CMD,
 	STATE_SIZE,
-	STATE_PAYLOAD
+	STATE_PAYLOAD,
+	STATE_CRC
 };
 
-#define PACKET_START 0b10101010
+enum error_s {
+	NO_ERROR,
+	CRC_ERROR,
+	FLASH_ERROR,
+	COMMAND_ERROR
+};
+
+void jump_to_image(u32 base_addr);
 
 volatile struct packet_s packet = {0};
 volatile enum state_e state = STATE_IDLE;
-volatile u8 size_index = 0;
-volatile u32 payload_index = 0;
+volatile u32 packet_index = 0;
+volatile u8 packet_flag = 0;
 static volatile u32 tick = 0;
-volatile u8 new_packet = 0;
 
 int main(void) {
 	// Disable the watchdog timer
 	watchdog_disable();
+
+	// The CPU will run at 300 Mhz so the flash access cycles has to be updated
 	flash_set_access_cycles(7);
 
 	// Set CPU frequency to 300 MHz and bus frequency to 150 MHz
 	clock_source_enable(RC_OSCILLCATOR);
+	rc_frequency_select(RC_12_MHz);
 	main_clock_select(RC_OSCILLCATOR);
 	plla_init(1, 25, 0xFF);
 	master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
 	
-	// Set up serial communication
+	// Initialize serial communication
 	serial_init();
 	debug_init();
 
-	interrupt_i_enable();
+	cpsie_i();
+	
+	// Configure the on-board LED
+	gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
+	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
 
-	GPIOC->PER = (1 << 8);
-	GPIOC->OER = (1 << 8);
-	GPIOC->SODR = (1 << 8);
-
-	// The processor runs at 12 MHz
-	SYSTICK->CSR = 0b111;
-	SYSTICK->RVR = 300000;
+	// Configure the systick
+	systick_set_rvr(300000);
+	systick_enable(1);
 
 	flash_erase_image(7000);
 
+	debug_print("Bootloader started...\n");
 	u32 page_counter = 0;
-
 	
-
 	while (1) {
 		if (tick >= 500) {
 			tick = 0;
-			debug_print("YO\n");
-			// Toggle led
-			if (GPIOC->ODSR & (1 << 8)) {
-				GPIOC->CODR = (1 << 8);
-			} else {
-				GPIOC->SODR = (1 << 8);
-			}
+			gpio_toggle(GPIOC, 8);
 		}
-		if (new_packet) {
-			new_packet = 0;
-			//debug_print("New packet: \n\tsize %d\n\tcmd: %1h\n\tPayload index: %d\n\tsize index: %d\n\tnew msg: %d\n", 
-			//	packet.size, packet.cmd, payload_index, size_index, new_packet);
+		if (packet_flag) {
+			packet_flag = 0;
 			
+			// Padding non-complete pages
 			if (packet.size != 512) {
 				for (u32 i = packet.size; i < 512; i++) {
-					packet.payload[i] = 0;
+					packet.payload[i] = 0xFF;
 				}
 			}
+			
 			// Program the flash
 			if (!(flash_write_image_page(page_counter++, (u8 *)packet.payload))) {
 				debug_print("Warning\n");
@@ -91,34 +99,12 @@ int main(void) {
 				while (1);
 			}
 			
-			print("%c", 'A');
+			// Sent the status code back to the programming tool, so the next
+			// package can be sent
+			print("%c", (char)NO_ERROR);
 
 			if (packet.cmd == 1) {
-
-				debug_print("\n - - - - - - - - New firmware updated - - - - - - - - \n\n");
-
-				for (u8 i = 0; i < 8; i++) {
-					NVIC->ICER[i] = 0xFF;
-				}
-
-				peripheral_clock_disable(14);
-				peripheral_clock_disable(13);
-				SYSTICK->CSR = 0;
-
-				// Vector table is at 0x00404000
-				asm volatile ("dsb sy");
-				asm volatile ("isb sy");
-				*((volatile u32 *)0xE000ED08) = 0x00404000;
-				asm volatile ("dsb sy");
-				asm volatile ("isb sy");
-				
-				u32 stack_pointer = *((u32 * )0x00404000);
-				u32 program_counter = (*((u32 * )(0x00404004))) | 1;
-				
-				asm volatile ("cpsid i" : : : "memory");
-				
-				asm volatile ("mov sp, %0\t\n" : : "l" (stack_pointer));
-				asm volatile ("mov pc, %0\t\n" : : "l" (program_counter));
+				jump_to_image(KERNEL_IMAGE_ADDR);
 			}
 		}
 	}
@@ -128,6 +114,14 @@ void systick_handler() {
 	tick++;
 }
 
+/// The interrupt routine will receive the kernel image in packages of 512 bytes
+/// Packet:      [ start byte ] [ command ] [ size ] [ payload ] [ CRC ]
+///
+/// start byte - indicates start of packet. Should be set to a non-ascii char
+/// command    - one byte where 0x01 is reserved and mark the final package
+/// size       - two bytes indicating the size of the package. First is LSByte
+/// payload    - holds the data
+/// CRC        - cyclic redundancy check
 void usart1_handler() {
 	u8 rec_byte = serial_read();
 
@@ -142,27 +136,30 @@ void usart1_handler() {
 			packet.cmd = rec_byte;
 			state = STATE_SIZE;
 			packet.size = 0;
-			size_index = 0;
+			packet_index = 0;
 			break;
 		}
 		case STATE_SIZE : {
-			// Get the size
-			packet.size |= (rec_byte << (8 * size_index));
-			size_index++;
-			if (size_index >= 2) {
+			packet.size |= (rec_byte << (8 * packet_index));
+			packet_index++;
+			if (packet_index >= 2) {
 				state = STATE_PAYLOAD;
-				payload_index = 0;
+				packet_index = 0;
 			}
 			break;
 		}
 		case STATE_PAYLOAD : {
-			//debug_print("Ooh\n");
-			packet.payload[payload_index] = rec_byte;
-			payload_index++;
-			if (payload_index >= packet.size) {
-				state = STATE_IDLE;
-				new_packet = 1;
+			packet.payload[packet_index] = rec_byte;
+			packet_index++;
+			if (packet_index >= packet.size) {
+				state = STATE_CRC;
 			}
+			break;
+		}
+		case STATE_CRC : {
+			packet.crc = rec_byte;
+			state = STATE_IDLE;
+			packet_flag = 1;
 			break;
 		}
 	}
@@ -170,4 +167,57 @@ void usart1_handler() {
 
 void usart0_handler(void) {
 	(void)usart_read(USART0);
+}
+
+void jump_to_image(u32 base_addr) {
+	
+	// The vector table base and thus the image base should be
+	// aligned with 32 words
+	if (base_addr & 0b1111111) {
+		// Panic
+	}
+	debug_print("Firmware upgrade complete!\n");
+	debug_flush();
+	
+	// Deinitialize all usarts
+	serial_deinit();
+	debug_deinit();
+	
+	// Disable systick
+	systick_reset();
+	
+	// Disable all interrupts except NMI
+	cpsid_f();
+	
+	// Reset the clock tree and flash
+	clock_tree_reset();
+	flash_set_access_cycles(1);
+	
+	// Clear any pending systick interrupts
+	nvic_clear_pending(-1);
+	
+	// Set vector table offset
+	*((volatile u32 *)VECTOR_TABLE_BASE) = base_addr;
+	
+	// Insert a data memory barrier and a data synchronization barrier to ensure that
+	// all instructions and data accesses are complete before proceeding
+	dmb();
+	dsb();
+	
+	// Flushing the instruction pipeline is mandatory before any self modifying code
+	isb();
+	
+	// Update stack pointer and program counter
+	volatile u32* image_base = (volatile u32 *)base_addr;
+	
+	asm volatile (
+	"mov r0, %0		\n\t"
+	"ldr r1, [r0]	\n\t"
+	"add r0, r0, #4	\n\t"
+	"ldr r0, [r0]	\n\t"
+	"orr r0, r0, #1	\n\t"
+	"mov sp, r1		\n\t"
+	"mov pc, r0		\n\t"
+	: : "l" (image_base) : "r0", "r1", "memory"
+	);
 }
