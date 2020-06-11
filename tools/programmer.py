@@ -1,6 +1,5 @@
 import serial
 import argparse
-import hashlib
 import math
 import sys
 import time
@@ -12,26 +11,27 @@ class flasher:
     
     def parser(self):
         parser = argparse.ArgumentParser(description="Chip flasher");
-        parser.add_argument("-com", "--com_port", help="Specify the com port \
-            COMx or /dev/ttySx")
-        parser.add_argument("-f", "--file", required=True, help="Specifies the binary")
+
+        parser.add_argument("-com", "--com_port",
+                            help="Specify the com port COMx or /dev/ttySx")
+
+        parser.add_argument("-f", "--file",
+                            required=True,
+                            help="Specifies the binary")
+
         args = parser.parse_args()
 
         self.file = args.file;
         self.com_port = args.com_port;
 
-    def generate_hash(self, data):
-        h = hashlib.sha256(bytes(data))
-        b = h.hexdigest()
-        print(b)
-        return b
-
-
     def serial_open(self):
         try:
-            self.com = serial.Serial(port=self.com_port, baudrate=115200, dsrdtr=True);
+            self.com = serial.Serial(port=self.com_port, 
+                                     baudrate=115200,
+                                     dsrdtr=True);
+
         except serial.SerialException as e:
-            print("You are doomed... ", e)
+            print(e)
             exit()
 
     def serial_close(self):
@@ -44,51 +44,61 @@ class flasher:
         f = open(self.file, "rb")
         return f.read()
 
-    def update_progress(self, info, progress):
-        bar_size = 50
-        block_size = int(round(bar_size*progress))
-        sys.stdout.write("%s [%s%s] %i %%\r" % (info, "#"*block_size, "."*(bar_size-block_size), progress*100))
-        #sys.stdout.flush()
-
-    def file_transfer(self):
-
+    def load_image(self):
+        # Read the binary image into data and calculate sizes
         data = self.file_read()
-
-
         length = len(data)
         number_of_block = math.ceil(length / 512)
-        print("Number of blocks: ", number_of_block)
+
         self.serial_open()
 
+        # Go to the bootloader
+        print("Vanilla bootloader starting...")
         self.serial_print(bytearray([98]))
 
-        time.sleep(0.3)
-        curr_size = 0
+        time.sleep(0.5)
+
+        # Chips is in the bootloader and is ready to receive image
+        print("Downloading kernel...")
+
         for i in range(number_of_block):
+            # Current fragment of the binary file
             frag = data[i*512:(i+1)*512]
-            b = bytearray(frag)
-            #if i >= (number_of_block - 1):
-            #    b = bytearray([0b10101010, 1, len(frag) & 0xFF, (len(frag) >> 8) & 0xFF]) + b
-            #else:
-            b = bytearray([0b10101010, 1 if i == (number_of_block - 1) else 0, len(frag) & 0xFF, (len(frag) >> 8) & 0xFF]) + b
 
+            # Packet start byte
+            packet_start = bytearray([0b10101010])
 
-            self.serial_print(b)
+            # Packet command
+            if i == (number_of_block - 1):
+                packet_cmd = bytearray([1])
+            else:
+                packet_cmd = bytearray([0])
+
+            # Packet payload size
+            packet_size = bytearray([len(frag) & 0xFF, (len(frag) >> 8) & 0xFF])
+
+            # Packet payload
+            packet_payload = bytearray(frag)
+
+            # Packet CRC
+            packet_crc = bytearray([0])
+            
+            # Construct the packet
+            packet = packet_start + packet_cmd + packet_size + packet_payload \
+                + packet_crc
+
+            self.serial_print(packet)
 
             # Wait for some ACK
-            status = self.com.read()
-            if status != b'A':
+            status = self.com.read(1)
+            if status != b'\x00':
                 print("Error")
-                exit()  
+                print(status)
+                exit()
 
-            curr_size += len(frag)
-            self.update_progress("Programming: ", curr_size / length) 
+        print("Kernel download complete!")
 
+# Run the functions
 test = flasher()
 test.parser()
-test.file_transfer()
-
-#test.serial_open()
-#test.serial_print("Hello my name is StrawberryHacker\n")
-#test.serial_close()
-#test.generate_hash("This is a test")
+test.load_image()

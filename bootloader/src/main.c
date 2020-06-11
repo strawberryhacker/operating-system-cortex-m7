@@ -187,7 +187,7 @@ void jump_to_image(u32 base_addr) {
 	systick_reset();
 	
 	// Disable all interrupts except NMI
-	cpsid_f();
+	cpsid_i();
 	
 	// Reset the clock tree and flash
 	clock_tree_reset();
