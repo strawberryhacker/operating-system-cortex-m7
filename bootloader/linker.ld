@@ -95,6 +95,12 @@ SECTIONS {
     } > sram AT > flash
 
 
+    /* Boot signature */
+    .boot_signature (NOLOAD) : {
+        KEEP(*(.boot_signature))
+    } > boot_signature
+
+
     /* Uninitialized data */
     .bss (NOLOAD) : {
         . = ALIGN(4);

@@ -44,6 +44,14 @@ class flasher:
         f = open(self.file, "rb")
         return f.read()
 
+    def wait_ack(self):
+        # Wait for some ACK
+        status = self.com.read(1)
+        if status != b'\x00':
+            print("Error")
+            print(status)
+            exit()
+
     def load_image(self):
         # Read the binary image into data and calculate sizes
         data = self.file_read()
@@ -54,9 +62,20 @@ class flasher:
 
         # Go to the bootloader
         print("Vanilla bootloader starting...")
-        self.serial_print(bytearray([98]))
+        self.serial_print(bytearray([0]))
 
-        time.sleep(0.5)
+        self.wait_ack()
+
+        # Erase the flash
+        flash_erase = bytearray([0b10101010, 2, 4, 0])
+        flash_erase += bytearray([len(data) & 0xFF])
+        flash_erase += bytearray([(len(data) >> 8) & 0xFF])
+        flash_erase += bytearray([(len(data) >> 16) & 0xFF])
+        flash_erase += bytearray([(len(data) >> 24) & 0xFF])
+        flash_erase += bytearray([0])
+        self.serial_print(flash_erase)
+
+        self.wait_ack()
 
         # Chips is in the bootloader and is ready to receive image
         print("Downloading kernel...")
@@ -89,12 +108,7 @@ class flasher:
 
             self.serial_print(packet)
 
-            # Wait for some ACK
-            status = self.com.read(1)
-            if status != b'\x00':
-                print("Error")
-                print(status)
-                exit()
+            self.wait_ack()
 
         print("Kernel download complete!")
 

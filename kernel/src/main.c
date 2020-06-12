@@ -13,8 +13,33 @@
 #include "systick.h"
 
 static volatile u32 tick = 0;
+extern u32 _end;
 
-__attribute__((section(".kernel_header"))) const u8 header[256] = {0};
+struct kernel_header {
+	u32 boot_start;
+	u32 boot_size;
+	u32 kernel_start;
+	u32 kernel_size;
+};
+
+__attribute__((section(".kernel_header"))) struct kernel_header header = {
+	.boot_start = 0x00400000,
+	.boot_size = 0x4000,
+	.kernel_start = 0x00404000,
+	.kernel_size = 0x456456
+};
+
+
+__bootsig__ u8 boot_signature[32];
+
+void memcpy(const void* src, void* dest, u32 size) {
+	const u8* src_ptr = (const u8 *)src;
+	u8* dest_ptr = (u8 *)dest;
+
+	while (size--) {
+		*dest_ptr++ = *src_ptr++;
+	}
+}
 
 int main(void) {
 	// Disable the watchdog timer
@@ -44,7 +69,7 @@ int main(void) {
 	systick_set_rvr(300000);
 	systick_enable(1);
 
-	debug_print("Kernel started...\n");
+	debug_print("Kernel started yo...\n");
 	
 	while (1) {
 		if (tick >= 500) {
@@ -61,7 +86,8 @@ void systick_handler() {
 
 void usart1_handler(void) {
 	u8 rec_byte = usart_read(USART1);
-	if (rec_byte == 'b') {
+	if (rec_byte == 0) {
+		memcpy("StayInHouse", boot_signature, 11);
 		// Perform a soft reset
 		asm volatile ("cpsid i" : : : "memory");
 		*((u32 *)0x400E1800) = 0xA5000000 | 0b1;

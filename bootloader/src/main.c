@@ -11,38 +11,38 @@
 #include "usart.h"
 #include "gpio.h"
 #include "systick.h"
+#include "cpu.h"
+#include "host_interface.h"
 
-#define PACKET_START 0b10101010
 
-struct packet_s {
-	u8 cmd;
-	u8 crc;
-	u16 size;
-	u8 payload[512];
+struct header_s {
+	u32 major_version;
+	u32 minor_version;
+	u32 boot_start;
+	u32 boot_size;
+	u32 kernel_start;
+	u32 kernel_max_size;
 };
 
-enum state_e {
-	STATE_IDLE,
-	STATE_CMD,
-	STATE_SIZE,
-	STATE_PAYLOAD,
-	STATE_CRC
-};
-
-enum error_s {
-	NO_ERROR,
-	CRC_ERROR,
-	FLASH_ERROR,
-	COMMAND_ERROR
+struct hash_s {
+	u8 hash[32];
+	u32 start_addr;
+	u32 size;
 };
 
 void jump_to_image(u32 base_addr);
 
-volatile struct packet_s packet = {0};
-volatile enum state_e state = STATE_IDLE;
-volatile u32 packet_index = 0;
-volatile u8 packet_flag = 0;
+
 static volatile u32 tick = 0;
+
+extern volatile struct packet_s packet;
+extern volatile u8 packet_flag;
+
+// Special sections in memory
+__bootsig__ u8 boot_signature[32];
+__header__ struct header_s boot_header;
+__hash__ struct hash_s image_hash;
+
 
 int main(void) {
 	// Disable the watchdog timer
@@ -57,7 +57,7 @@ int main(void) {
 	main_clock_select(RC_OSCILLCATOR);
 	plla_init(1, 25, 0xFF);
 	master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
-	
+
 	// Initialize serial communication
 	serial_init();
 	debug_init();
@@ -71,10 +71,10 @@ int main(void) {
 	// Configure the systick
 	systick_set_rvr(300000);
 	systick_enable(1);
-
-	flash_erase_image(7000);
+	
 
 	debug_print("Bootloader started...\n");
+	host_ack();
 	u32 page_counter = 0;
 	
 	while (1) {
@@ -82,87 +82,53 @@ int main(void) {
 			tick = 0;
 			gpio_toggle(GPIOC, 8);
 		}
-		if (packet_flag) {
-			packet_flag = 0;
-			
-			// Padding non-complete pages
-			if (packet.size != 512) {
-				for (u32 i = packet.size; i < 512; i++) {
-					packet.payload[i] = 0xFF;
+		if (packet_flag) {			
+			if (packet.cmd == CMD_ERASE_FLASH) {
+				if (packet.size != 4) {
+					while(1);
+				}
+				u32 erase_size = ((packet.payload[0] & 0xFF) |
+								  (packet.payload[1] << 8) |
+								  (packet.payload[2] << 16) |
+								  (packet.payload[3] << 24));
+				// Erase the flash
+				flash_erase_image(erase_size);
+
+				// Sent the status code back to the programming tool, so the next
+				// package can be sent
+				debug_print("Flash erase: %d bytes\n", erase_size);
+				print("%c", (char)NO_ERROR);
+
+			} else {
+				// Padding non-complete pages
+				if (packet.size != 512) {
+					for (u32 i = packet.size; i < 512; i++) {
+						packet.payload[i] = 0xFF;
+					}
+				}
+				
+				// Program the flash
+				if (!(flash_write_image_page(page_counter++, (u8 *)packet.payload))) {
+					debug_print("Warning\n");
+					asm volatile("cpsid f" : : : "memory");
+					while (1);
+				}
+				
+				// Sent the status code back to the programming tool, so the next
+				// package can be sent
+				print("%c", (char)NO_ERROR);
+
+				if (packet.cmd == 1) {
+					jump_to_image(KERNEL_IMAGE_ADDR);
 				}
 			}
-			
-			// Program the flash
-			if (!(flash_write_image_page(page_counter++, (u8 *)packet.payload))) {
-				debug_print("Warning\n");
-				asm volatile("cpsid f" : : : "memory");
-				while (1);
-			}
-			
-			// Sent the status code back to the programming tool, so the next
-			// package can be sent
-			print("%c", (char)NO_ERROR);
-
-			if (packet.cmd == 1) {
-				jump_to_image(KERNEL_IMAGE_ADDR);
-			}
+			packet_flag = 0;
 		}
 	}
 }
 
 void systick_handler() {
 	tick++;
-}
-
-/// The interrupt routine will receive the kernel image in packages of 512 bytes
-/// Packet:      [ start byte ] [ command ] [ size ] [ payload ] [ CRC ]
-///
-/// start byte - indicates start of packet. Should be set to a non-ascii char
-/// command    - one byte where 0x01 is reserved and mark the final package
-/// size       - two bytes indicating the size of the package. First is LSByte
-/// payload    - holds the data
-/// CRC        - cyclic redundancy check
-void usart1_handler() {
-	u8 rec_byte = serial_read();
-
-	switch (state) {
-		case STATE_IDLE : {
-			if (rec_byte == PACKET_START) {
-				state = STATE_CMD;
-			}
-			break;
-		}
-		case STATE_CMD : {
-			packet.cmd = rec_byte;
-			state = STATE_SIZE;
-			packet.size = 0;
-			packet_index = 0;
-			break;
-		}
-		case STATE_SIZE : {
-			packet.size |= (rec_byte << (8 * packet_index));
-			packet_index++;
-			if (packet_index >= 2) {
-				state = STATE_PAYLOAD;
-				packet_index = 0;
-			}
-			break;
-		}
-		case STATE_PAYLOAD : {
-			packet.payload[packet_index] = rec_byte;
-			packet_index++;
-			if (packet_index >= packet.size) {
-				state = STATE_CRC;
-			}
-			break;
-		}
-		case STATE_CRC : {
-			packet.crc = rec_byte;
-			state = STATE_IDLE;
-			packet_flag = 1;
-			break;
-		}
-	}
 }
 
 void usart0_handler(void) {

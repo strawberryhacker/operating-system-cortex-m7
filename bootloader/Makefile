@@ -43,6 +43,7 @@ cpu-y += /src/cpu/nvic.c
 
 board-y += /src/board/serial.c
 board-y += /src/board/debug.c
+board-y += /src/board/host_interface.c
 
 generic-y += /src/generic/print.c
 generic-y += /src/generic/crc.c
