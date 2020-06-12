@@ -15,4 +15,10 @@ This is my 2020 summer project. Vanilla is a single-core operating system for th
 - TCP/IP stack
 - Server support
 
-Maybe add some other snacks later...oooh
+# Bootloader
+
+The software embeds a flash bootloader residing inside flash at address 0x00404000. It can open a serial connection with a host computer in order to download the new kernel. The bootloader will load the kernel image to address 0x00404000. The first page of the image must consist of the kernel header. Therefore the actual application and vector table starts at address 0x00404200. The bootloader is accessed in the following ways
+
+- kernel header not valid
+- kernel image not valid (ICM failure)
+- boot signature at address 0x20400000 says "Stay in bootloader"
