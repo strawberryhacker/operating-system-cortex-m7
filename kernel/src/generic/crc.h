@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef CRC_H
 #define CRC_H
 

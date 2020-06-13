@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "memory.h"
 
 void memory_copy(const void* src, void* dest, u32 size) {

@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "debug.h"
 #include "gpio.h"
 #include "clock.h"

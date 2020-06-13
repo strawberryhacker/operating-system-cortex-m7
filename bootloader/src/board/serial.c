@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "serial.h"
 #include "usart.h"
 #include "clock.h"

@@ -1,15 +1,13 @@
 /// Copyright (C) StrawberryHacker
 
 #include "types.h"
-#include "hardware.h"
 #include "clock.h"
 #include "watchdog.h"
 #include "flash.h"
 #include "serial.h"
-#include "nvic.h"
 #include "debug.h"
 #include "usart.h"
-#include "gpio.h"
+#include "nvic.h"
 #include "systick.h"
 #include "cpu.h"
 #include "sections.h"
@@ -20,8 +18,6 @@
 /// Defines the start byte in the transmission protocol
 #define PACKET_START 0b10101010
 
-/// The image info structure will be located in the last page of the bootloader
-/// and in the fist page of the kernel
 struct image_info {
 	u32 major_version;
 	u32 minor_version;
@@ -68,17 +64,14 @@ enum error_s {
 void host_ack(enum error_s code);
 void jump_to_image(u32 base_addr);
 
-/// Incremented in the SysTick handler
-static volatile u32 tick = 0;
-
-/// Variables related to the host interface
+/// Variables related to the host communication interface
 volatile struct packet_s packet = {0};
 volatile enum state_e state = STATE_IDLE;
 volatile u32 packet_index = 0;
 volatile u8 packet_flag = 0;
 
 /// This descibes the mermory layout from the bootloaders perspective. It must
-/// match with the kernel image info
+/// match with the kernel image info. This structure is placed in page 30
 __image_info__ const struct image_info boot_info = {
 	.major_version    = 0,
 	.minor_version    = 1,
@@ -88,18 +81,21 @@ __image_info__ const struct image_info boot_info = {
 	.kernel_max_size  = 0x001FBE00
 };
 
-/// Temporarily location for the hash table
+/// Temporarily location for the hash table. The computed hash will first be
+/// stored here, then written to the flash buffer, then written to the flash
 __attribute__((__aligned__(128))) struct hash kernel_hash;
 
-/// Boot signature to determite if an attempted jump to the knrnel should be 
-/// perfomed
+/// The `boot signature` is shared between the kernel and the bootloader. This
+/// way the kenel can force the bootloader to skip image loading after a soft
+/// reset
 __bootsig__ u8 boot_signature[32];
 
-/// Used for performing an erase-write on a flash page < 32 
+/// Used for performing an erase-write on a flash page in the lower 32 KiB 
 u8 flash_buffer[512];
 
 int main(void) {
-	// Disable the watchdog timer
+	// The first stage of the bootloader disables watchdog and configures a 
+	// basic clock tree. This speeds up the ICM hashing, allowing for fast boot
 	watchdog_disable();
 
 	// The CPU will run at 300 Mhz so the flash access cycles has to be updated
@@ -112,15 +108,17 @@ int main(void) {
 	plla_init(1, 25, 0xFF);
 	master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
 
-	// Enable the hash peripheral clock
+	// Enable the hash engine peripheral clock
 	peripheral_clock_enable(32);
+	
+	// This serial port is optional
 	debug_init();
 	
-	// This part determines if we have to stay in the bootloader
+	// Chech for the boot signature which is forcing the bootloader to skip
+	// image loading
 	if (memory_compare(boot_signature, "StayInBootloader", 16) == 0) {
-		// We do not have to stay in the bootloader
 		
-		// This will make a image_info pointer to the first kernel page
+		// This will make a `image_info` pointing to the first kernel page (p32)
 		const struct image_info* kernel_info = 
 			(const struct image_info *)0x00404000;
 		
@@ -130,33 +128,32 @@ int main(void) {
 			(boot_info.kernel_start == kernel_info->kernel_start) &&
 			(boot_info.kernel_max_size == kernel_info->kernel_max_size)) {
 
-			// Check the knernel hash
-			// Check the hash in the flash page
+			// Compute the hash digest on the kernel image and compare it to the
+			// original digest in the flash (p30)
 			memory_fill(kernel_hash.digest, 0, 32);
 			hash256_generate((void *)0x00404000, kernel_hash.size,
 						kernel_hash.digest);
 		
 			if (memory_compare((void *)0x00403C00, kernel_hash.digest, 32)) {
 				
-				// The image and header information is valid, and the CPU is 
-				// not required to stay in the bootloader
+				// The image info structure is valid and the original image is
+				// not modified
 				jump_to_image(KERNEL_IMAGE_ADDR);
 			} else {
-				debug_print("Kernel hash not right\n");
+				debug_print("Hash mismatch\n");
 			}
 
 		} else {
-			debug_print("Kernel info does not match\n");
+			debug_print("Image info mismatch\n");
 		}
 	} else {
+		// The boot signature must be cleared so that its not used twice
 		memory_fill(boot_signature, 0, 32);
 	}
 
 	// Either a go-to-bootloader request or a non valid image condition has
 	// occured. Start up the serial interfaces, enables interrupts and begin
 	// processing packages from the host PC
-
-	// Initialize serial communication
 	serial_init();
 
 	// Enable all interrupt with a configurable priority
@@ -164,11 +161,11 @@ int main(void) {
 
 	// ACK the host so that it knows the bootloader is ready to receive data
 	host_ack(NO_ERROR);
-
 	u32 page_counter = 0;
 	
 	while (1) {
 		if (packet_flag) {
+			// Currently only fixed 8k erase and page write is supported
 
 			if (packet.cmd == CMD_ERASE_FLASH) {
 				// The erase flash payload should be 4 bytes
@@ -188,7 +185,7 @@ int main(void) {
 				// Update the kernel size for the hashing algorithm
 				kernel_hash.size = erase_size;
 
-				// Sent the status code back to the programming tool, so the next
+				// Send the status code back to the programming tool, so the next
 				// package can be sent
 				host_ack(NO_ERROR);
 
@@ -205,7 +202,7 @@ int main(void) {
 					panic("Flash write error");
 				}
 				
-				// Sent the status code back to the programming tool, so the next
+				// Send the status code back to the programming tool, so the next
 				// package can be sent
 				host_ack(NO_ERROR);
 
@@ -215,6 +212,8 @@ int main(void) {
 					hash256_generate((void *)0x00404000, kernel_hash.size,
 						kernel_hash.digest);
 					
+					// Fill the flash buffer with the hash digest and memory
+					// region size
 					u8* src = (u8 *)&kernel_hash;
 					u8* dest = flash_buffer;
 					for (u32 i = 0; i < 512; i++) {
@@ -224,9 +223,6 @@ int main(void) {
 							*dest++ = 0xFF;
 						}
 					}
-
-					
-
 					// Write the hash and image size to the reserved hash 
 					// memory section
 					if (!(flash_erase_write(30, flash_buffer))) {
@@ -240,28 +236,22 @@ int main(void) {
 	}
 }
 
-void usart0_handler(void) {
-	(void)usart_read(USART0);
-}
-
 void jump_to_image(u32 base_addr) {
 	
-	// The vector table base and thus the image base should be
-	// aligned with 32 words
+	// The vector table offset register should be aligned with 32 words
 	if (base_addr & 0b1111111) {
-		// Panic
+		panic("Image address error");
 	}
-
-	debug_flush();
 	
-	// Deinitialize all usarts
+	// Deinitialize all serial interfaces
 	serial_deinit();
 	debug_deinit();
 	
-	// Disable all interrupts withconfigurable priority
+	// Disable all interrupts with configurable priority
 	cpsid_i();
 	
-	// Reset the clock tree and flash
+	// Reset the clock tree and flash. After this function the CPU runs on the
+	// internal RC oscillator at 12 MHz
 	clock_tree_reset();
 	flash_set_access_cycles(1);
 	

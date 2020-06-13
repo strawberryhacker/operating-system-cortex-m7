@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "panic.h"
 #include "debug.h"
 

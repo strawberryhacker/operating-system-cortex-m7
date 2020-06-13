@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "usart.h"
 
 void usart_init(usart_reg* reg, const struct usart_desc* desc) {
@@ -6,7 +8,7 @@ void usart_init(usart_reg* reg, const struct usart_desc* desc) {
 
     // Write the mode register
     reg->RTOR = 0;
-	reg->TTGR = 0;
+    reg->TTGR = 0;
     reg->MR = (1 << 20) | (desc->data_bits << 6) | (desc->stop_bits << 12) |
         (desc->parity << 9);
     

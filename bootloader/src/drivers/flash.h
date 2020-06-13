@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef FLASH_H
 #define FLASH_H
 

@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "clock.h"
 #include "hardware.h"
 

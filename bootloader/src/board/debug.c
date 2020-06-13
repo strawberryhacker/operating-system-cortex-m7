@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "debug.h"
 #include "gpio.h"
 #include "clock.h"
@@ -29,10 +31,6 @@ void debug_init(void) {
 
     // This will enable the serial interface
     usart_init(USART0, &debug_usart);
-
-    // Enable interrupt in both peripheral registers and in the NVIC
-    usart_interrupt_enable(USART0, USART_IRQ_RXRDY);
-    nvic_enable(13);
 }
 
 /// Releases the serial resources used

@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "flash.h"
 #include "hardware.h"
 #include "serial.h"
@@ -29,7 +31,7 @@ __ramfunc__ u8 flash_erase_write(u32 page, const u8* buffer) {
 	}
 
     // Memory barriers
-	asm volatile ("dsb sy" : : : "memory");
+    asm volatile ("dsb sy" : : : "memory");
     asm volatile ("dmb sy" : : : "memory");
 	
 	// Issue a erase then write command
@@ -103,7 +105,7 @@ __ramfunc__ u8 flash_write_image_page(u32 page, const u8* buffer) {
 
     asm volatile ("dmb sy" : : : "memory");
     asm volatile ("dsb sy" : : : "memory");
-	asm volatile ("isb sy" : : : "memory");
+    asm volatile ("isb sy" : : : "memory");
 
     FLASH->FCR = 0x5A000000 | (((page + 32) & 0xFF) << 8) | 0x01;
 

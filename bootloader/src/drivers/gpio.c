@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "gpio.h"
 
 void gpio_set_function(gpio_reg* port, u8 pin, enum gpio_func func) {

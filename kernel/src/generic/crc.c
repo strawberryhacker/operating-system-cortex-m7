@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "crc.h"
 
 const u8 crc_table[256] = {0};

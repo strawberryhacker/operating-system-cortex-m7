@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef CLOCK_H
 #define CLOCK_H
 

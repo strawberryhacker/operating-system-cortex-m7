@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef USART_H
 #define USART_H
 
