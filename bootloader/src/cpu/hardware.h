@@ -225,7 +225,7 @@ typedef struct {
 
 #define VECTOR_TABLE_BASE 0xE000ED08
 
-#define KERNEL_IMAGE_ADDR 0x00404000
+#define KERNEL_IMAGE_ADDR 0x00404200
 
 
 #endif

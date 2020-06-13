@@ -13,7 +13,7 @@
 #include "systick.h"
 #include "cpu.h"
 #include "sections.h"
-#include "std.h"
+#include "memory.h"
 #include "hash.h"
 #include "panic.h"
 
@@ -293,7 +293,7 @@ void jump_to_image(u32 base_addr) {
 }
 
 void host_ack(enum error_s code) {
-    print("%c", (char)code);
+    serial_print("%c", (char)code);
 }
 
 /// The interrupt routine will receive the kernel image in packages of 512 bytes
@@ -311,7 +311,7 @@ void usart1_handler() {
 		case STATE_IDLE : {
 			// If the bootloader
 			if (rec_byte == 0) {
-				print("%c", (char)NO_ERROR);
+				serial_print("%c", (char)NO_ERROR);
 			}
 			if (rec_byte == PACKET_START) {
 				if (packet_flag == 0) {

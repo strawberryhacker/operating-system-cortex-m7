@@ -4,7 +4,8 @@
 .cpu cortex-m7
 .thumb
 
-/// Declared in the linker script
+/// These variables are declared in the linker script. They are pointing to 
+/// where they are located. 
 .extern _relocate_s
 .extern _vector_table_s
 .extern _vector
@@ -15,13 +16,14 @@
 .extern _stack_e
 .extern _rodata_s
 
-/// Base address of the vector table
+/// Base address of the vector table offset register
 vector_table_reg: .word 0xE000ED08
 
 /// Startup routine is defined in the second entry in the vector table. This 
+/// is loaded into PC after the chip boots at address 0x00400000. This function 
 /// performs relocation of the .data segment, initialization of the .bss 
 /// segment and vector table relocation. Finally it calls `__libc_init_array`
-/// and branch to the main loop.
+/// and branches to the main loop
 .section .text
 .global startup
 .type startup, %function
@@ -57,7 +59,7 @@ zero_loop:
 	bne zero_loop
 
 vector_table_set:
-	// Set vector table base address
+	// Set vector table offset register
 	ldr r0, =_vector_table_s
 	ldr r1, vector_table_reg
 	bic.w r0, r0, #128
@@ -70,12 +72,13 @@ inf_loop:
 	b inf_loop
 
 
-/// Default handler for unused interrupts
+/// Default handler alias for unused interrupts. If interrupts are enabled and
+/// triggered without the handler being declared, this functions is executed
 .section .text, "ax", %progbits
 default_handler:
 	b default_handler
 
-/// Cortex-M7 vector table
+/// Definition of the Cortex-M7 vector table
 .section .vector_table, "a", %progbits
 .type Vector_table, %object
 Vector_table:

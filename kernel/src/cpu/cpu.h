@@ -3,10 +3,6 @@
 
 #include "types.h"
 
-#define __ramfunc__ __attribute__((long_call, section(".ramfunc")))
-#define __bootsig__ __attribute__((section(".boot_signature")))
-#define __header__ __attribute__((section(".header")))
-
 /// Data synchronization barrier
 static inline void dsb(void) {
 	asm volatile ("dsb sy" : : : "memory");

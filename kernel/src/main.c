@@ -10,7 +10,8 @@
 #include "debug.h"
 #include "usart.h"
 #include "gpio.h"
-#include "std.h"
+#include "cpu.h"
+#include "memory.h"
 #include "systick.h"
 #include "sections.h"
 
@@ -66,9 +67,9 @@ int main(void) {
 	systick_enable(1);
 	tick = 499;
 	while (1) {
-		if (tick >= 100) {
+		if (tick >= 500) {
 			tick = 0;
-			debug_print("Kernel\n");
+			debug_print("Kernel \n");
 			gpio_toggle(GPIOC, 8);
 		}
 	}

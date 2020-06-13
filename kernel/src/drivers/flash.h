@@ -2,7 +2,7 @@
 #define FLASH_H
 
 #include "types.h"
-#include "cpu.h"
+#include "sections.h"
 
 void flash_set_access_cycles(u8 access_cycles);
 

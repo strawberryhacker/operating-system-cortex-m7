@@ -118,14 +118,14 @@ void master_clock_select(enum clock_net net, enum master_presc presc,
         reg &= ~(0b111 << 4);
         reg |= (presc << 4);
         CLOCK->MCKR = reg;
-        while (!(CLOCK->SR & (1 << 3))) {}
+        while (!(CLOCK->SR & (1 << 3)));
 		
 		// Write divider
-		reg = CLOCK->MCKR;
-		reg &= ~(0b11 << 8);
-		reg |= (div << 8);
-		CLOCK->MCKR = reg;
-        while (!(CLOCK->SR & (1 << 3))) {}
+        reg = CLOCK->MCKR;
+        reg &= ~(0b11 << 8);
+        reg |= (div << 8);
+        CLOCK->MCKR = reg;
+        while (!(CLOCK->SR & (1 << 3)));
 		
     } else {
         // Write PRESC

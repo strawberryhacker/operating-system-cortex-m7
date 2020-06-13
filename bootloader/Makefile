@@ -39,19 +39,17 @@ driver-y += /src/drivers/usart.c
 driver-y += /src/drivers/gpio.c
 driver-y += /src/drivers/hash.c
 
-cpu-y += /src/cpu/nvic.c
-
 board-y += /src/board/serial.c
 board-y += /src/board/debug.c
 
-generic-y += /src/generic/print.c
+generic-y += /src/generic/sprint.c
 generic-y += /src/generic/crc.c
-generic-y += /src/generic/std.c
+generic-y += /src/generic/memory.c
+generic-y += /src/generic/panic.c
 
 asm-y += /src/boot/boot.s
 
 BOOT_OBJ := $(patsubst %.c, %.o, $(bootloader-y))
-CPU_OBJ := $(patsubst %.c, %.o, $(cpu-y))
 GENERIC_OBJ := $(patsubst %.c, %.o, $(generic-y))
 BOARD_OBJ := $(patsubst %.c, %.o, $(board-y))
 DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
@@ -62,7 +60,6 @@ OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(ASM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(BOARD_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(GENERIC_OBJ))
-OBJ += $(addprefix $(BUILDDIR), $(CPU_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers

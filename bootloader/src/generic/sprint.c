@@ -1,13 +1,20 @@
-#include "print.h"
+#include "sprint.h"
 
 
 static const char hex_table[16] = {'0', '1', '2', '3', '4', '5', '6', '7', 
-								   '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+                                   '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 // Static functions
 uint8_t print_uint_to_buffer(char* buffer, uint32_t value);
 uint32_t power(uint8_t base, uint8_t exp);
 
+/// Prints a formatted string to a output buffer. Supported functions are
+/// %s     - print a string
+/// %c     - print a char
+/// %u     - prtin a unsigned integer
+/// %u     - print a signed integer
+/// %[n]b  - print `x` bits in a binary number
+/// %[n]h  - print `x` bytes in hexadecimal
 uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 
 	// Make some pointer to the data
