@@ -5,20 +5,21 @@ OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
 MEMORY {
-    kernel_header   (r) : ORIGIN = 0x00404000, LENGTH = 0x000200  /* 512 B  */
+    image_info      (r) : ORIGIN = 0x00404000, LENGTH = 0x000200  /* 512 B  */
     flash          (rx) : ORIGIN = 0x00404200, LENGTH = 0x1FBE00  /* 2 MiB  */
     boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x000020  /* 32 B   */
     sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x05DBE0  /* 384 kB */
 }
 
-STACK_SIZE = 0x500;
+STACK_SIZE = 8192;
+HEAP_SIZE = 262144;
 
 SECTIONS {
 
     /* Kernel header */
-    .kernel_header : {
-        KEEP(*(.kernel_header))
-    } > kernel_header
+    .image_info : {
+        KEEP(*(.image_info))
+    } > image_info
 
 
     /* Cortex-M7 vector table */
@@ -114,6 +115,16 @@ SECTIONS {
         *(.bss*)
         . = ALIGN(4);
         _bss_e = .;
+    } > sram
+
+
+    /* Heap section */
+    .heap (NOLOAD) : {
+        . = ALIGN(8);
+        _heap_s = .;
+        . = . + HEAP_SIZE;
+        . = ALIGN(8);
+        _heap_e = .;
     } > sram
 
 

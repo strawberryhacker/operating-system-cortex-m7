@@ -37,16 +37,16 @@ driver-y += /src/drivers/watchdog.c
 driver-y += /src/drivers/flash.c
 driver-y += /src/drivers/usart.c
 driver-y += /src/drivers/gpio.c
-driver-y += /src/drivers/icm.c
+driver-y += /src/drivers/hash.c
 
 cpu-y += /src/cpu/nvic.c
 
 board-y += /src/board/serial.c
 board-y += /src/board/debug.c
-board-y += /src/board/host_interface.c
 
 generic-y += /src/generic/print.c
 generic-y += /src/generic/crc.c
+generic-y += /src/generic/std.c
 
 asm-y += /src/boot/boot.s
 

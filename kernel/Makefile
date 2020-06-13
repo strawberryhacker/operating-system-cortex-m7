@@ -46,6 +46,7 @@ board-y += /src/board/debug.c
 
 generic-y += /src/generic/print.c
 generic-y += /src/generic/crc.c
+generic-y += /src/generic/std.c
 
 asm-y += /src/boot/boot.s
 

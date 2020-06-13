@@ -10,36 +10,32 @@
 #include "debug.h"
 #include "usart.h"
 #include "gpio.h"
+#include "std.h"
 #include "systick.h"
+#include "sections.h"
 
 static volatile u32 tick = 0;
 extern u32 _end;
 
-struct kernel_header {
+struct image_info {
+	u32 major_version;
+	u32 minor_version;
 	u32 boot_start;
 	u32 boot_size;
 	u32 kernel_start;
-	u32 kernel_size;
+	u32 kernel_max_size;
 };
-
-__attribute__((section(".kernel_header"))) struct kernel_header header = {
-	.boot_start = 0x00400000,
-	.boot_size = 0x4000,
-	.kernel_start = 0x00404000,
-	.kernel_size = 0x456456
-};
-
 
 __bootsig__ u8 boot_signature[32];
 
-void memcpy(const void* src, void* dest, u32 size) {
-	const u8* src_ptr = (const u8 *)src;
-	u8* dest_ptr = (u8 *)dest;
-
-	while (size--) {
-		*dest_ptr++ = *src_ptr++;
-	}
-}
+__image_info__ struct image_info header = {
+	.major_version = 0,
+	.minor_version = 1,
+	.boot_start = 0x00400000,
+	.boot_size = 0x4000,
+	.kernel_start = 0x00404000,
+	.kernel_max_size = 0x001FBE00
+};
 
 int main(void) {
 	// Disable the watchdog timer
@@ -68,13 +64,11 @@ int main(void) {
 	// Configure the systick
 	systick_set_rvr(300000);
 	systick_enable(1);
-
-	debug_print("Kernel started yo...\n");
-	
+	tick = 499;
 	while (1) {
-		if (tick >= 500) {
+		if (tick >= 100) {
 			tick = 0;
-			debug_print("Hello from kernel\n");
+			debug_print("Kernel\n");
 			gpio_toggle(GPIOC, 8);
 		}
 	}
@@ -87,9 +81,10 @@ void systick_handler() {
 void usart1_handler(void) {
 	u8 rec_byte = usart_read(USART1);
 	if (rec_byte == 0) {
-		memcpy("StayInHouse", boot_signature, 11);
+		memory_copy("StayInBootloader", boot_signature, 16);
+		dmb();
 		// Perform a soft reset
-		asm volatile ("cpsid i" : : : "memory");
+		cpsid_i();
 		*((u32 *)0x400E1800) = 0xA5000000 | 0b1;
 	}
 }

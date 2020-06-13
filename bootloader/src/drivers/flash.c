@@ -23,6 +23,7 @@ __ramfunc__ u8 flash_erase_write(u32 page, const u8* buffer) {
 	// Write to the internal latch buffer
     volatile u32* flash_dest = (volatile u32 *)(0x00400000 + 512 * page);
     u32* src_ptr = (u32 *)buffer;
+    
 	for (int i = 0; i < 512; i += 4) {
 		*flash_dest++ = *src_ptr++;
 	}
