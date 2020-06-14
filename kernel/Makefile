@@ -49,25 +49,30 @@ generic-y += /src/generic/crc.c
 generic-y += /src/generic/memory.c
 generic-y += /src/generic/panic.c
 
+mm-y += /src/mm/mm.c
+
 asm-y += /src/boot/boot.s
 
+ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))
 BOOT_OBJ := $(patsubst %.c, %.o, $(bootloader-y))
 GENERIC_OBJ := $(patsubst %.c, %.o, $(generic-y))
 BOARD_OBJ := $(patsubst %.c, %.o, $(board-y))
 DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
-ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))
+MM_OBJ := $(patsubst %.c, %.o, $(mm-y))
 
 OBJ += $(addprefix $(BUILDDIR), $(BOOT_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(ASM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(BOARD_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(GENERIC_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(MM_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers
 CPFLAGS += -I$(TOP)/src/board
 CPFLAGS += -I$(TOP)/src/generic
 CPFLAGS += -I$(TOP)/src/cpu
+CPFLAGS += -I$(TOP)/src/mm
 
 #-------------------------------------------------------------------------------
 # Rules

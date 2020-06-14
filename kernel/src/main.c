@@ -16,6 +16,9 @@
 #include "sections.h"
 #include "panic.h"
 #include "dram.h"
+#include "mm.h"
+
+#include <stddef.h>
 
 static volatile u32 tick = 0;
 extern u32 _end;
@@ -39,6 +42,18 @@ __image_info__ struct image_info header = {
 	.kernel_start = 0x00404000,
 	.kernel_max_size = 0x001FBE00
 };
+
+extern struct mm_region* regions[4];
+
+static void print_region(struct mm_region* region) {
+	struct mm_desc* iter = region->first_desc;
+
+	while (iter != NULL) {
+		debug_print("Node address: %4h, node next: %4h, node size: %d\n",
+			(u32)iter, (u32)(iter->next), iter->size & 0xFFFFFFF);
+		iter = iter->next;
+	}
+}
 
 int main(void) {
 	// Disable the watchdog timer
@@ -69,29 +84,25 @@ int main(void) {
 	// Configure the systick
 	systick_set_rvr(300000);
 	systick_enable(1);
+	
+	debug_print("\n\nKernel started\n");
 
-	volatile u32* dram_addr = (volatile u32 *)0x70000000;
-	for (u32 i = 0; i < 524288; i++) {
-		if ((i % 1000) == 0) {
-			debug_print("DRAM 4k page written\n");
-		}
-		*dram_addr++ = 0xcafecafe;
-	}
-	dram_addr = (volatile u32 *)0x70000000;
-	for (u32 i = 0; i < 524288; i++) {
-		if ((i % 1000) == 0) {
-			debug_print("DRAM 4k page OK\n");
-		}
-		if (*dram_addr++ != 0xcafecafe) {
-			panic("DRAM ERROR");
-		}
-	}
+	mm_init();
+	print_region(regions[DRAM_BANK_1]);
+	debug_print("\n");
+	mm_gp_alloc(64, DRAM_BANK_1);
+	//mm_gp_alloc(64, DRAM_BANK_1);
+
+	
+	print_region(regions[DRAM_BANK_1]);
+	debug_print("End\n");
+
 
 	tick = 499;
 	while (1) {
 		if (tick >= 500) {
 			tick = 0;
-			debug_print("Kernel hello\n");
+			
 			gpio_toggle(GPIOC, 8);
 		}
 	}

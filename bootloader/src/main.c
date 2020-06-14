@@ -151,6 +151,7 @@ int main(void) {
 		}
 	} else {
 		// The boot signature must be cleared so that its not used twice
+		debug_print("Boot signature present\n");
 		memory_fill(boot_signature, 0, 32);
 	}
 
