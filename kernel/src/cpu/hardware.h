@@ -206,12 +206,56 @@ typedef struct {
 	_w  u32 UIHVAL[8];
 } icm_reg;
 
+typedef struct {
+	_rw u32 PRAS;
+	_rw u32 PRBS;
+} matrix_pri_reg;
+
+typedef struct {
+	_rw u32 MCFG[13];
+	_r  u32 RESERVED1[3];
+	_rw u32 SCFG[9];
+	_r  u32 RESERVED2[7];
+	matrix_pri_reg PRI[9];
+	_r  u32 RESERVED3[14];
+	_rw u32 MRCR;
+	_rw u32 RESERVED4[3];
+	_rw u32 CAN0;
+	_rw u32 SYSIO;
+	_rw u32 PCCR;
+	_rw u32 DYNCKG;
+	_r  u32 RESERVED5;
+	_rw u32 SMCNFCS;
+	_r  u32 RESERVED6[47];
+	_rw u32 WPMR;
+	_r  u32 WPSR;
+} matrix_reg;
+
+typedef struct {
+	_rw u32 MR;
+	_rw u32 TR;
+	_rw u32 CR;
+	_r  u32 RESERVED;
+	_rw u32 LPR;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_r  u32 IMR;
+	_r  u32 ISR;
+	_rw u32 MDR;
+	_rw u32 CFR1;
+	_rw u32 OCMS;
+	_w  u32 OCMS_KEY1;
+	_w  u32 OCMS_KEY2;
+} dram_reg;
+
 #define CLOCK ((clock_reg *)0x400E0600)
 #define FLASH ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
 #define SYSTICK ((systick_reg *)0xE000E010)
 #define NVIC ((nvic_reg *)0xE000E100)
 #define ICM ((icm_reg *)0x40048000)
+#define MATRIX ((matrix_reg *)0x40088000)
+#define DRAM ((dram_reg *)0x40084000)
 
 #define GPIOA ((gpio_reg *)0x400E0E00)
 #define GPIOB ((gpio_reg *)0x400E1000)

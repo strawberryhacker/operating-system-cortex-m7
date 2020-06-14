@@ -14,6 +14,8 @@
 #include "memory.h"
 #include "systick.h"
 #include "sections.h"
+#include "panic.h"
+#include "dram.h"
 
 static volatile u32 tick = 0;
 extern u32 _end;
@@ -52,6 +54,8 @@ int main(void) {
 	plla_init(1, 25, 0xFF);
 	master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
 	
+	dram_init();
+
 	// Initialize serial communication
 	serial_init();
 	debug_init();
@@ -65,11 +69,29 @@ int main(void) {
 	// Configure the systick
 	systick_set_rvr(300000);
 	systick_enable(1);
+
+	volatile u32* dram_addr = (volatile u32 *)0x70000000;
+	for (u32 i = 0; i < 524288; i++) {
+		if ((i % 1000) == 0) {
+			debug_print("DRAM 4k page written\n");
+		}
+		*dram_addr++ = 0xcafecafe;
+	}
+	dram_addr = (volatile u32 *)0x70000000;
+	for (u32 i = 0; i < 524288; i++) {
+		if ((i % 1000) == 0) {
+			debug_print("DRAM 4k page OK\n");
+		}
+		if (*dram_addr++ != 0xcafecafe) {
+			panic("DRAM ERROR");
+		}
+	}
+
 	tick = 499;
 	while (1) {
 		if (tick >= 500) {
 			tick = 0;
-			debug_print("Kernel\n");
+			debug_print("Kernel hello\n");
 			gpio_toggle(GPIOC, 8);
 		}
 	}

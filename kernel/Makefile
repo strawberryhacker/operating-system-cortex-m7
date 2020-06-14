@@ -38,6 +38,8 @@ driver-y += /src/drivers/flash.c
 driver-y += /src/drivers/usart.c
 driver-y += /src/drivers/gpio.c
 driver-y += /src/drivers/hash.c
+driver-y += /src/drivers/dram.c
+driver-y += /src/drivers/matrix.c
 
 board-y += /src/board/serial.c
 board-y += /src/board/debug.c
