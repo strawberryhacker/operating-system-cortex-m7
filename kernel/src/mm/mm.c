@@ -11,10 +11,15 @@ extern u32 _heap_s;
 extern u32 _heap_e;
 
 #define MM_GET_REGION(size) (((size) >> 29) & 0b111)
+#define MM_SET_REGION(size, region) (((size) & ~(0b111 << 29)) | ((region) << 29))
+
 #define MM_GET_SIZE(size) ((size) & 0xFFFFFFF)
+#define MM_SET_SIZE(size, new_size) (((size) & ~0xFFFFFFF) | (new_size))
+
 #define MM_IS_USED(size) ((size) & (1 << 28))
 #define MM_SET_USED(size) ((size) | (1 << 28))
 #define MM_SET_FREE(size) ((size) & ~(1 << 28))
+
 
 /// Sets the 28 lower bits to the size
 static inline void mm_set_size(u32* size, u32 new_size) {
@@ -42,7 +47,7 @@ struct mm_region dram_bank_1 = {
     .start_addr = 0x70000000,
     .end_addr = 0x700FFFFF,
     .name = "DRAM_BANK_1",
-    .min_alloc = 256
+    .min_alloc = 12
 };
 
 struct mm_region dram_bank_2 = {
@@ -62,8 +67,8 @@ void mm_init(void) {
 
         if ((curr_region->start_addr == 0) && (curr_region->end_addr == 0)) {
             // The address has to be fetched from the linker script
-            curr_region->start_addr = (u32)(&_heap_s);
-            curr_region->end_addr = (u32)(&_heap_e);
+            curr_region->start_addr = (u32)&_heap_s;
+            curr_region->end_addr = (u32)&_heap_e;
         }
 
         // Align the start address upwards
@@ -97,7 +102,10 @@ void mm_init(void) {
         curr_region->last_desc = desc_end;
         curr_region->first_desc = &curr_region->first_obj;
         curr_region->first_obj.next = desc_start;
+
         desc_start->next = desc_end;
+        desc_start->size = MM_SET_SIZE(0, curr_region->size);
+        desc_start->size = MM_SET_REGION(desc_start->size, index);
         desc_end->next = NULL;
         desc_end->size = 0;
 
@@ -122,8 +130,9 @@ void mm_list_insert(struct mm_desc* desc, struct mm_desc* first,
     // descriptor right after the block to insert
     u32 iter_size = MM_GET_SIZE(iter->size);
     u32 desc_size = MM_GET_SIZE(desc->size);
+
     if ((u32)iter + iter_size == (u32)desc) {
-        mm_set_size(&(iter->size), iter_size + desc_size);
+        iter->size = MM_SET_SIZE(iter->size, iter_size + desc_size);
         desc = iter;
     }
 
@@ -146,7 +155,7 @@ void mm_list_insert(struct mm_desc* desc, struct mm_desc* first,
     }
 }
 
-void* mm_gp_alloc(u32 size, enum mm_region_e region_e) {
+void* mm_alloc(u32 size, enum mm_region_e region_e) {
     struct mm_region* region = regions[region_e];
 
     void* return_ptr = NULL;
@@ -154,7 +163,6 @@ void* mm_gp_alloc(u32 size, enum mm_region_e region_e) {
     size += sizeof(struct mm_desc);
 
     // Check if the requested memory is too small for the selected region
-    debug_print("Min alloc: %d\n", region->min_alloc);
     if (size < region->min_alloc) {
         size = region->min_alloc;
     }
@@ -169,11 +177,8 @@ void* mm_gp_alloc(u32 size, enum mm_region_e region_e) {
     struct mm_desc* iter_prev = region->first_desc;
 
     // Try to find a free block which is big enough
-    if (iter->next == NULL) {
-        debug_print("dammit\n");
-    }
     while (iter->next != NULL) {
-        debug_print("Block size: %d\n", MM_GET_SIZE(iter->size));
+
         if (MM_GET_SIZE(iter->size) >= size) {
             break;
         }
@@ -189,22 +194,23 @@ void* mm_gp_alloc(u32 size, enum mm_region_e region_e) {
     // `iter` is pointing to a block which is large enough to hold the
     // memory
     iter->size = MM_SET_USED(iter->size);
-    return_ptr = (void *)iter;
+    iter->size = MM_SET_REGION(iter->size, region_e);
+    return_ptr = (void *)((u32)iter + sizeof(struct mm_desc));
 
     u32 curr_block_size = MM_GET_SIZE(iter->size);
-    if (size + region->min_alloc <= curr_block_size) {
 
+    iter_prev->next = iter->next;
+
+    if (size + region->min_alloc <= curr_block_size) {
         // `iter` can contain more than the requested memory
         struct mm_desc* new_desc = (struct mm_desc *)((u32)iter + size);
         new_desc->size = (region_e << 29) | ((curr_block_size - size) & 
             0xFFFFFFF);
 
-        iter_prev->next = iter->next;
         region->allocated += size;
-        mm_set_size(&(iter->size), size);
+        iter->size = MM_SET_SIZE(iter->size, size);
         mm_list_insert(new_desc, region->first_desc, region->last_desc);
     } else {
-        iter_prev->next = iter->next;
         region->allocated += curr_block_size;
     }
 
@@ -215,13 +221,41 @@ void* mm_alloc_4k(u32 size);
 
 void* mm_alloc_1k(u32 size);
 
-void mm_free(void* memory);
+void mm_free(void* memory) {
+    // Add the block to the free list
+    if (memory == NULL) {
+        panic("Trying to free NULL");
+    }
+    // Note! Check the desc address. It should be bus-accessible
+
+    struct mm_desc* desc = (struct mm_desc *)((u32)memory - sizeof(struct mm_desc));
+
+    u8 reg_index = MM_GET_REGION(desc->size);
+
+    struct mm_region* region = regions[reg_index];
+    
+    if (MM_IS_USED(desc->size)) {
+        // OK the memory is used
+        mm_list_insert(desc, region->first_desc, region->last_desc);
+        region->allocated -= MM_GET_SIZE(desc->size);
+    }
+}
 
 
-u32 mm_get_size(enum mm_region_e region);
+u32 mm_get_size(enum mm_region_e region) {
+    return regions[region]->size;
+}
 
-u32 mm_get_alloc(enum mm_region_e region);
+u32 mm_get_alloc(enum mm_region_e region) {
+    return regions[region]->allocated;
+}
 
-u32 mm_get_free(enum mm_region_e region);
+u32 mm_get_free(enum mm_region_e region) {
+    u32 alloc = regions[region]->allocated;
+    u32 total = regions[region]->size;
+    return (total - alloc);
+}
 
-u32 mm_get_frag(enum mm_region_e region);
+u32 mm_get_frag(enum mm_region_e region) {
+    return 0;
+}

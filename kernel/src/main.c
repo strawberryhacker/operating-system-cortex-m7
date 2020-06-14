@@ -45,7 +45,7 @@ __image_info__ struct image_info header = {
 
 extern struct mm_region* regions[4];
 
-static void print_region(struct mm_region* region) {
+void print_region(struct mm_region* region) {
 	struct mm_desc* iter = region->first_desc;
 
 	while (iter != NULL) {
@@ -88,21 +88,12 @@ int main(void) {
 	debug_print("\n\nKernel started\n");
 
 	mm_init();
-	print_region(regions[DRAM_BANK_1]);
-	debug_print("\n");
-	mm_gp_alloc(64, DRAM_BANK_1);
-	//mm_gp_alloc(64, DRAM_BANK_1);
-
 	
-	print_region(regions[DRAM_BANK_1]);
-	debug_print("End\n");
-
 
 	tick = 499;
 	while (1) {
 		if (tick >= 500) {
 			tick = 0;
-			
 			gpio_toggle(GPIOC, 8);
 		}
 	}

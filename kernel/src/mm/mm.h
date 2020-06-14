@@ -42,7 +42,8 @@ struct mm_region {
 
 void mm_init(void);
 
-void* mm_gp_alloc(u32 size, enum mm_region_e region);
+/// Allocate a custom memory size
+void* mm_alloc(u32 size, enum mm_region_e region);
 
 void* mm_alloc_4k(u32 size);
 
