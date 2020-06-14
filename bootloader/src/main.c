@@ -14,6 +14,7 @@
 #include "memory.h"
 #include "hash.h"
 #include "panic.h"
+#include "gpio.h"
 
 /// Defines the start byte in the transmission protocol
 #define PACKET_START 0b10101010
@@ -83,7 +84,7 @@ __image_info__ const struct image_info boot_info = {
 
 /// Temporarily location for the hash table. The computed hash will first be
 /// stored here, then written to the flash buffer, then written to the flash
-__attribute__((__aligned__(128))) struct hash kernel_hash;
+__attribute__((aligned(128))) struct hash kernel_hash;
 
 /// The `boot signature` is shared between the kernel and the bootloader. This
 /// way the kenel can force the bootloader to skip image loading after a soft
@@ -92,6 +93,8 @@ __bootsig__ u8 boot_signature[32];
 
 /// Used for performing an erase-write on a flash page in the lower 32 KiB 
 u8 flash_buffer[512];
+
+static volatile u32 tick = 0;
 
 int main(void) {
 	// The first stage of the bootloader disables watchdog and configures a 
@@ -156,14 +159,32 @@ int main(void) {
 	// processing packages from the host PC
 	serial_init();
 
+	// Configure the on-board LED
+	gpio_set(GPIOC, 8);
+	gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
+	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
+
+	// Configure the systick
+	systick_set_rvr(300000);
+	systick_enable(1);
+
 	// Enable all interrupt with a configurable priority
 	cpsie_i();
 
 	// ACK the host so that it knows the bootloader is ready to receive data
 	host_ack(NO_ERROR);
 	u32 page_counter = 0;
+	u8 led_state = 0;
 	
 	while (1) {
+		if ((tick >= 240) && (led_state == 0)) {
+			gpio_clear(GPIOC, 8);
+			led_state = 1;
+		} else if (tick > 250) {
+			gpio_set(GPIOC, 8);
+			tick = 0;
+			led_state = 0;
+		}
 		if (packet_flag) {
 			// Currently only fixed 8k erase and page write is supported
 
@@ -343,4 +364,8 @@ void usart1_handler() {
 			break;
 		}
 	}
+}
+
+void systick_handler() {
+	tick++;
 }

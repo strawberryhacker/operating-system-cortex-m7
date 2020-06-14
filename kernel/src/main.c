@@ -69,7 +69,7 @@ int main(void) {
 	while (1) {
 		if (tick >= 500) {
 			tick = 0;
-			debug_print("Hello from kernel\n");
+			debug_print("Kernel\n");
 			gpio_toggle(GPIOC, 8);
 		}
 	}

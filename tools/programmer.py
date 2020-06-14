@@ -28,7 +28,7 @@ class flasher:
         try:
             self.com = serial.Serial(port=self.com_port, 
                                      baudrate=115200,
-                                     dsrdtr=True);
+                                     rtscts=True);
 
         except serial.SerialException as e:
             print(e)
@@ -62,7 +62,7 @@ class flasher:
 
         # Go to the bootloader
         print("Vanilla bootloader starting...")
-        self.serial_print(bytearray([0]))
+        self.serial_print(bytearray([23, 234, 2, 0]))
 
         self.wait_ack()
 
