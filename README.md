@@ -1,6 +1,17 @@
-# Vanilla
+# Summary
 
 Vanilla is a single-core operating system for the ARMv7 architecture.
+
+# Building
+
+Build the bootloader by `cd bootloader && make`
+
+Flash the bootloader binary at address 0x00400000
+
+Change the serial port in line 92 in the Makefile
+
+Build and upload the kernel with `cd kernel && make`
+
 
 ## Coming soon
 
