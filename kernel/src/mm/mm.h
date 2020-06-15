@@ -3,28 +3,36 @@
 
 #include "types.h"
 
-#define MM_REGION_NAME_LENGTH 32
+#define PHYSMEM_NAME_LENGTH 32
 
 /// The region is encoded as three bits, allowing up to eight different regions
-enum mm_region_e {
-    SRAM,
-    DRAM_BANK_1,
-    DRAM_BANK_2
+enum physmem_gp {
+    GP_SRAM,
+    GP_DRAM_BANK_1,
+    GP_DRAM_BANK_2_1k,
+    GP_DRAM_BANK_2_4k
 };
 
-struct mm_desc {
-    struct mm_desc* next;
+enum physmem_e {
+    SRAM,
+    DRAM_BANK_1
+};
+
+struct mm_node {
+    struct mm_node* next;
 
     // The size bits is contiaining other information as well
-    // [31:29] - mm region
+    // [31:29] - physical memory
     // [28]    - status (1 for used)
     u32 size;
 };
 
-struct mm_region {
+struct physmem {
+    // Marks the unaligned start and end address
     u32 start_addr;
     u32 end_addr;
 
+    // Currently allocated size and total size
     u32 size;
     u32 allocated;
 
@@ -33,30 +41,34 @@ struct mm_region {
     u32 min_alloc;
 
     // Contains the name of the memory region
-    char name[MM_REGION_NAME_LENGTH];
+    char name[PHYSMEM_NAME_LENGTH];
 
-    struct mm_desc* first_desc;
-    struct mm_desc first_obj;
-    struct mm_desc* last_desc;
+    // The `root_obj` will contain the first node in the free linked list, and 
+    // point to the fist node in the physical memory. The `root_node` is 
+    // pointing to the `root_obj`. The `last_node` will point to the last 
+    // node in the physical memory, and have size zero. 
+    struct mm_node* root_node;
+    struct mm_node root_obj;
+    struct mm_node* last_node;
 };
 
 void mm_init(void);
 
 /// Allocate a custom memory size
-void* mm_alloc(u32 size, enum mm_region_e region);
+void* mm_alloc(u32 size, enum physmem_gp region);
 
-void* mm_alloc_4k(u32 size);
+void* mm_alloc_4k(u32 count);
 
-void* mm_alloc_1k(u32 size);
+void* mm_alloc_1k(u32 count);
 
 void mm_free(void* memory);
 
-u32 mm_get_size(enum mm_region_e region);
+u32 mm_get_size(enum physmem_e physmem);
 
-u32 mm_get_alloc(enum mm_region_e region);
+u32 mm_get_alloc(enum physmem_e physmem);
 
-u32 mm_get_free(enum mm_region_e region);
+u32 mm_get_free(enum physmem_e physmem);
 
-u32 mm_get_frag(enum mm_region_e region);
+u32 mm_get_frag(enum physmem_e physmem);
 
 #endif

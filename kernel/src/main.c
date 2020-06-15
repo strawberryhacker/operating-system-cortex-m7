@@ -43,16 +43,17 @@ __image_info__ struct image_info header = {
 	.kernel_max_size = 0x001FBE00
 };
 
-extern struct mm_region* regions[4];
+extern struct physmem* regions[4];
 
-void print_region(struct mm_region* region) {
-	struct mm_desc* iter = region->first_desc;
+void print_region(struct physmem* region) {
+	struct mm_node* iter = region->root_node;
 
 	while (iter != NULL) {
 		debug_print("Node address: %4h, node next: %4h, node size: %d\n",
 			(u32)iter, (u32)(iter->next), iter->size & 0xFFFFFFF);
 		iter = iter->next;
 	}
+	debug_print("\n");
 }
 
 int main(void) {
@@ -85,10 +86,8 @@ int main(void) {
 	systick_set_rvr(300000);
 	systick_enable(1);
 	
-	debug_print("\n\nKernel started\n");
-
-	mm_init();
-	
+	debug_print("Kernel started\n");
+	mm_init();	
 
 	tick = 499;
 	while (1) {
