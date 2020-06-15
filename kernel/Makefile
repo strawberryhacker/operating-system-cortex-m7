@@ -29,7 +29,8 @@ ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 #-------------------------------------------------------------------------------
 SRC +=
 
-bootloader-y += /src/main.c
+kernel-y += /src/main.c
+kernel-y += /src/bootloader.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c
@@ -54,13 +55,13 @@ mm-y += /src/mm/mm.c
 asm-y += /src/boot/boot.s
 
 ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))
-BOOT_OBJ := $(patsubst %.c, %.o, $(bootloader-y))
+KERNEL_OBJ := $(patsubst %.c, %.o, $(kernel-y))
 GENERIC_OBJ := $(patsubst %.c, %.o, $(generic-y))
 BOARD_OBJ := $(patsubst %.c, %.o, $(board-y))
 DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
 MM_OBJ := $(patsubst %.c, %.o, $(mm-y))
 
-OBJ += $(addprefix $(BUILDDIR), $(BOOT_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(ASM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(BOARD_OBJ))
@@ -73,6 +74,7 @@ CPFLAGS += -I$(TOP)/src/board
 CPFLAGS += -I$(TOP)/src/generic
 CPFLAGS += -I$(TOP)/src/cpu
 CPFLAGS += -I$(TOP)/src/mm
+CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------
 # Rules

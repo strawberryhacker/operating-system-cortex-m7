@@ -5,56 +5,20 @@
 #include "clock.h"
 #include "watchdog.h"
 #include "flash.h"
-#include "serial.h"
 #include "nvic.h"
 #include "debug.h"
 #include "usart.h"
 #include "gpio.h"
 #include "cpu.h"
-#include "memory.h"
 #include "systick.h"
-#include "sections.h"
 #include "panic.h"
 #include "dram.h"
 #include "mm.h"
+#include "bootloader.h"
 
 #include <stddef.h>
 
 static volatile u32 tick = 0;
-extern u32 _end;
-
-struct image_info {
-	u32 major_version;
-	u32 minor_version;
-	u32 boot_start;
-	u32 boot_size;
-	u32 kernel_start;
-	u32 kernel_max_size;
-};
-
-__bootsig__ u8 boot_signature[32];
-
-__image_info__ struct image_info header = {
-	.major_version = 0,
-	.minor_version = 1,
-	.boot_start = 0x00400000,
-	.boot_size = 0x4000,
-	.kernel_start = 0x00404000,
-	.kernel_max_size = 0x001FBE00
-};
-
-extern struct physmem* regions[4];
-
-void print_region(struct physmem* region) {
-	struct mm_node* iter = region->root_node;
-
-	while (iter != NULL) {
-		debug_print("Node address: %4h, node next: %4h, node size: %d\n",
-			(u32)iter, (u32)(iter->next), iter->size & 0xFFFFFFF);
-		iter = iter->next;
-	}
-	debug_print("\n");
-}
 
 int main(void) {
 	// Disable the watchdog timer
@@ -72,8 +36,10 @@ int main(void) {
 	
 	dram_init();
 
+	// Enable the kernel to do firmware upgrades
+	bootloader_init();
+
 	// Initialize serial communication
-	serial_init();
 	debug_init();
 
 	cpsie_i();
@@ -86,12 +52,12 @@ int main(void) {
 	systick_set_rvr(300000);
 	systick_enable(1);
 	
-	debug_print("Kernel started\n");
+	debug_print("Hello from kernel\n");
 	mm_init();	
 
 	tick = 499;
 	while (1) {
-		if (tick >= 500) {
+		if (tick >= 25) {
 			tick = 0;
 			gpio_toggle(GPIOC, 8);
 		}
@@ -100,15 +66,4 @@ int main(void) {
 
 void systick_handler() {
 	tick++;
-}
-
-void usart1_handler(void) {
-	u8 rec_byte = usart_read(USART1);
-	if (rec_byte == 0) {
-		memory_copy("StayInBootloader", boot_signature, 16);
-		dmb();
-		// Perform a soft reset
-		cpsid_i();
-		*((u32 *)0x400E1800) = 0xA5000000 | 0b1;
-	}
 }

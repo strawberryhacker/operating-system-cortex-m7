@@ -5,7 +5,6 @@
 
 #define PHYSMEM_NAME_LENGTH 32
 
-/// The region is encoded as three bits, allowing up to eight different regions
 enum physmem_gp {
     GP_SRAM,
     GP_DRAM_BANK_1,
@@ -21,9 +20,8 @@ enum physmem_e {
 struct mm_node {
     struct mm_node* next;
 
-    // The size bits is contiaining other information as well
-    // [31:29] - physical memory
-    // [28]    - status (1 for used)
+    // [31..28] - physical memory index
+    // [27..0]  - memory block size
     u32 size;
 };
 
@@ -54,14 +52,15 @@ struct physmem {
 
 void mm_init(void);
 
-/// Allocate a custom memory size
-void* mm_alloc(u32 size, enum physmem_gp region);
+
+void* mm_alloc(u32 size, enum physmem_e region);
 
 void* mm_alloc_4k(u32 count);
 
 void* mm_alloc_1k(u32 count);
 
 void mm_free(void* memory);
+
 
 u32 mm_get_size(enum physmem_e physmem);
 
