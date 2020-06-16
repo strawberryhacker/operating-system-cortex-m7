@@ -1,6 +1,7 @@
 /// Copyright (C) StrawberryHacker
 
 #include "gpio.h"
+#include "debug.h"
 
 void gpio_set_function(gpio_reg* port, u8 pin, enum gpio_func func) {
     // Check if the pin is a system pin. In this case the system function must
@@ -53,5 +54,19 @@ void gpio_toggle(gpio_reg* port, u8 pin) {
         port->CODR = (1 << pin);
     } else {
         port->SODR = (1 << pin);
+    }
+}
+
+u8 gpio_get_pin_status(gpio_reg* port, u8 pin) {
+    return (port->PDSR & (1 << pin)) ? 1 : 0;
+}
+
+void gpio_set_pull(gpio_reg* port, u8 pin, enum gpio_pull pull) {
+    if (pull == GPIO_PULL_DOWN) {
+        port->PUDR = (1 << pin);
+        port->PPDER = (1 << pin);
+    } else {
+        port->PUER = (1 << pin);
+        port->PPDDR = (1 << pin);
     }
 }

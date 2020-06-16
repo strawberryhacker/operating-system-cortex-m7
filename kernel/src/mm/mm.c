@@ -127,10 +127,10 @@ void mm_init(void) {
 /// Inserts a `mm_node` into the free list, and combines adjacent blocks if 
 /// present. `first` should be a pointer to the pysical memory root object.
 /// `last` should be a pointer to the last node
-void mm_list_insert(struct mm_node* node, struct mm_node* first, 
+void mm_list_insert(struct mm_node* node, struct mm_node* root, 
     struct mm_node* last) {
 
-    struct mm_node* iter = first;
+    struct mm_node* iter = root;
     while (iter->next < node) {
         iter = iter->next;
     }

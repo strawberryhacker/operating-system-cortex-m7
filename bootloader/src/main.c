@@ -3,6 +3,7 @@
 #include "types.h"
 #include "clock.h"
 #include "watchdog.h"
+#include "hardware.h"
 #include "flash.h"
 #include "serial.h"
 #include "debug.h"
@@ -116,11 +117,26 @@ int main(void) {
 	
 	// This serial port is optional
 	debug_init();
+
+	// Initialize the boot pin
+	peripheral_clock_enable(12);
+	gpio_set_function(GPIOC, 14, GPIO_FUNC_OFF);
+	gpio_set_direction(GPIOC, 14, GPIO_INPUT);
+	gpio_set_pull(GPIOC, 14, GPIO_PULL_UP);
+
 	
-	// Chech for the boot signature which is forcing the bootloader to skip
-	// image loading
-	if (memory_compare(boot_signature, "StayInBootloader", 16) == 0) {
-		
+	// Check the boot signature and the boot pin to determine is the chip should
+	// be forces to enter the bootloader
+	u8 force_bootloader = 0;
+	if (gpio_get_pin_status(GPIOC, 14) == 0) {
+		force_bootloader = 1;
+		debug_print("Boot pin triggered\n");
+	}
+	if (memory_compare(boot_signature, "StayInBootloader", 16)) {
+		force_bootloader = 1;
+	} 
+
+	if (force_bootloader == 0) {
 		// This will make a `image_info` pointing to the first kernel page (p32)
 		const struct image_info* kernel_info = 
 			(const struct image_info *)0x00404000;
@@ -151,9 +167,9 @@ int main(void) {
 		}
 	} else {
 		// The boot signature must be cleared so that its not used twice
-		debug_print("Boot signature present\n");
 		memory_fill(boot_signature, 0, 32);
 	}
+	debug_print("Bootloader started...\n");
 
 	// Either a go-to-bootloader request or a non valid image condition has
 	// occured. Start up the serial interfaces, enables interrupts and begin
@@ -266,6 +282,7 @@ void jump_to_image(u32 base_addr) {
 	}
 	
 	// Deinitialize all serial interfaces
+	debug_flush();
 	serial_deinit();
 	debug_deinit();
 	
@@ -274,6 +291,7 @@ void jump_to_image(u32 base_addr) {
 	
 	// Reset the clock tree and flash. After this function the CPU runs on the
 	// internal RC oscillator at 12 MHz
+	peripheral_clock_disable(12);
 	clock_tree_reset();
 	flash_set_access_cycles(1);
 	

@@ -19,6 +19,11 @@ enum gpio_dir {
     GPIO_OUTPUT
 };
 
+enum gpio_pull {
+    GPIO_PULL_UP,
+    GPIO_PULL_DOWN
+};
+
 void gpio_set_function(gpio_reg* port, u8 pin, enum gpio_func func);
 
 void gpio_set_direction(gpio_reg* port, u8 pin, enum gpio_dir dir);
@@ -28,5 +33,9 @@ void gpio_set(gpio_reg* port, u8 pin);
 void gpio_clear(gpio_reg* port, u8 pin);
 
 void gpio_toggle(gpio_reg* port, u8 pin);
+
+u8 gpio_get_pin_status(gpio_reg* port, u8 pin);
+
+void gpio_set_pull(gpio_reg* port, u8 pin, enum gpio_pull pull);
 
 #endif
