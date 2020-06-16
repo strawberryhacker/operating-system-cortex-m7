@@ -266,6 +266,7 @@ int main(void) {
 					if (!(flash_erase_write(30, flash_buffer))) {
 						panic("Flash error");
 					}
+
 					jump_to_image(KERNEL_IMAGE_ADDR);
 				}
 			}

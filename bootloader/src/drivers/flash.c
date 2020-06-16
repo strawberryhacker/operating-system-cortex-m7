@@ -47,6 +47,15 @@ __ramfunc__ u8 flash_erase_write(u32 page, const u8* buffer) {
 	if (status & 0b1110) {
 		return 0;
 	}
+
+    // Verify the flash
+    const u8* src_1 = (const u8 *)(0x00400000 + 512 * page);
+    for (u32 i = 0; i < 512; i++) {
+        if (*src_1++ != *buffer++) {
+            return 0;
+        }
+    }
+
 	return 1;
 }
 
@@ -87,6 +96,7 @@ __ramfunc__ u8 flash_erase_image(u32 size) {
         }
         sect_8k_base += 16;
     }
+
     return 1;
 }
 
@@ -119,5 +129,14 @@ __ramfunc__ u8 flash_write_image_page(u32 page, const u8* buffer) {
     if (status & 0b1110) {
         return 0;
     }
+
+    // Verify the flash
+    const u8* src_1 = (const u8 *)(0x00404000 + page * 512);
+    for (u32 i = 0; i < 512; i++) {
+        if (*src_1++ != *buffer++) {
+            return 0;
+        }
+    }
+
     return 1;
 }
