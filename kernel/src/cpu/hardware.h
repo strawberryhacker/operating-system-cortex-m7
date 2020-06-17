@@ -248,6 +248,59 @@ typedef struct {
 	_w  u32 OCMS_KEY2;
 } dram_reg;
 
+typedef struct {
+	_r  u32 CPUID;
+	_rw u32 ICSR;
+	_rw u32 VTOR;
+	_rw u32 AIRCR;
+	_rw u32 SCR;
+	_rw u32 CCR;
+	_rw u8  SHPR[12];
+	_rw u32 SHCSR;
+	_rw u32 CFSR;
+	_rw u32 HFSR;
+	_rw u32 DFSR;
+	_rw u32 MMFAR;
+	_rw u32 BFAR;
+	_rw u32 AFSR;
+	_r  u32 ID_PFR[2];
+	_r  u32 ID_DFR;
+	_r  u32 ID_AFR;
+	_r  u32 ID_MFR[4];
+	_r  u32 ID_ISAR[5];
+    _r  u32 RESERVED0[1];
+	_r  u32 CLIDR;
+	_r  u32 CTR;
+	_r  u32 CCSIDR;
+	_rw u32 CSSELR;
+	_rw u32 CPACR;
+    _r  u32 RESERVED3[93];
+	_w  u32 STIR;
+    _r  u32 RESERVED4[15];
+	_r  u32 MVFR0;
+	_r  u32 MVFR1;
+	_r  u32 MVFR2;
+	_r  u32 RESERVED5[1];
+	_w  u32 ICIALLU;
+    _r  u32 RESERVED6[1];
+	_w  u32 ICIMVAU;
+	_w  u32 DCIMVAC;
+	_w  u32 DCISW;
+	_w  u32 DCCMVAU;
+	_w  u32 DCCMVAC;
+	_w  u32 DCCSW;
+	_w  u32 DCCIMVAC;
+	_w  u32 DCCISW;
+    _r  u32 RESERVED7[6];
+	_rw u32 ITCMCR;
+	_rw u32 DTCMCR;
+	_rw u32 AHBPCR;
+	_rw u32 CACR;
+	_rw u32 AHBSCR;
+    _r  u32 RESERVED8[1];
+	_rw u32 ABFSR;
+} scb_reg;
+
 #define CLOCK ((clock_reg *)0x400E0600)
 #define FLASH ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
@@ -256,6 +309,7 @@ typedef struct {
 #define ICM ((icm_reg *)0x40048000)
 #define MATRIX ((matrix_reg *)0x40088000)
 #define DRAM ((dram_reg *)0x40084000)
+#define SCB ((scb_reg *)0xE000ED00)
 
 #define GPIOA ((gpio_reg *)0x400E0E00)
 #define GPIOB ((gpio_reg *)0x400E1000)
