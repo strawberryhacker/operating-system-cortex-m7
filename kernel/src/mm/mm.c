@@ -95,13 +95,12 @@ void mm_init(void) {
             sizeof(struct mm_node));
         
         // Update the total size of the memory including the first node, but
-        // excluding the last node. This will also be the`size` field of the
-        // first node
+        // excluding the last node. All sizes are calculated like this
         physmem->size = (physmem->end_addr - physmem->start_addr -
             sizeof(struct mm_node));
 
-        // The first node will not contain any data so the size hould be zero,
-        // and it will point to the first physical node
+        // The first node will not contain any data hence the size should be 
+        // zero, and it will point to the first physical node
         physmem->root_obj.size = 0;
         physmem->root_obj.next = node_start;
 
@@ -109,7 +108,6 @@ void mm_init(void) {
         physmem->last_node = node_end;
         physmem->root_node = &physmem->root_obj;
         
-        // Update the conteint of the first physical node
         node_start->next = node_end;
         node_start->size = MM_SET_SIZE(0, physmem->size);
         node_start->size = MM_SET_REGION(node_start->size, index);
@@ -173,12 +171,9 @@ void mm_list_insert(struct mm_node* node, struct mm_node* root,
     }
 }
 
-/// Allicates `size` number of bytes from the physical memory with index 
-/// `physmem_e`
-void* mm_gp_alloc(u32 size, enum physmem_gp index) {
+/// Allocates `size` number of bytes from a physical memory
+void* mm_gp_alloc(u32 size, enum physmem_e index) {
     
-    // Get a pointer to the physical memory. This will include all the 
-    // information about the region, nodes and size. 
     struct physmem* physmem = physical_memories[index];
     void* return_ptr = NULL;
 
@@ -215,15 +210,17 @@ void* mm_gp_alloc(u32 size, enum physmem_gp index) {
     // The `iter` is pointing to a memory block which is large enough to
     // contain the requested memory.
     iter->size = MM_SET_REGION(iter->size, index);
-    return_ptr = (void *)((u32)iter + sizeof(struct mm_node));
-
     u32 curr_block_size = MM_GET_SIZE(iter->size);
+
+    return_ptr = (void *)((u32)iter + sizeof(struct mm_node));
 
     // Remove the current block from the list
     iter_prev->next = iter->next;
+
+    // Check if the remaining part of the block is big enough to contain a new
+    // memory block
     if (size + physmem->min_alloc <= curr_block_size) {
 
-        // The `iter` node can contain more than the requested memory
         struct mm_node* new_node = (struct mm_node *)((u32)iter + size);
         new_node->size = (index << 28) | ((curr_block_size - size) & 0xFFFFFFF);
 
@@ -240,16 +237,25 @@ void* mm_gp_alloc(u32 size, enum physmem_gp index) {
     return return_ptr;
 }
 
+/// Allocated `size` number of bytes from a none-reserved region. The size 
+/// might still be padded according to the physical memory settings
 void* mm_alloc(u32 size, enum physmem_e region) {
+    // The 1k and 4k physical memories are reserved
+    if ((region == DRAM_BANK_2_4k) || (region == DRAM_BANK_2_1k)) {
+        panic("Wrong parameter");
+    }
+
     return mm_gp_alloc(size, region);
 }
 
+/// Allocates a number of 4k pages
 void* mm_alloc_4k(u32 count) {
-    return mm_gp_alloc(count * 4096, GP_DRAM_BANK_2_4k);
+    return mm_gp_alloc(count * 4096, DRAM_BANK_2_4k);
 }
 
+/// Allocates a number of 1k pages
 void* mm_alloc_1k(u32 count) {
-    return mm_gp_alloc(count * 1024, GP_DRAM_BANK_2_1k);   
+    return mm_gp_alloc(count * 1024, DRAM_BANK_2_1k);   
 }
 
 /// Free the memory pointed to by `memory`

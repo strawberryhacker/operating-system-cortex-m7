@@ -194,7 +194,7 @@ int main(void) {
 	u8 led_state = 0;
 	
 	while (1) {
-		if ((tick >= 240) && (led_state == 0)) {
+		if ((tick >= 245) && (led_state == 0)) {
 			gpio_clear(GPIOC, 8);
 			led_state = 1;
 		} else if (tick > 250) {

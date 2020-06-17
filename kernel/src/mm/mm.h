@@ -5,16 +5,11 @@
 
 #define PHYSMEM_NAME_LENGTH 32
 
-enum physmem_gp {
-    GP_SRAM,
-    GP_DRAM_BANK_1,
-    GP_DRAM_BANK_2_1k,
-    GP_DRAM_BANK_2_4k
-};
-
 enum physmem_e {
     SRAM,
-    DRAM_BANK_1
+    DRAM_BANK_1,
+    DRAM_BANK_2_1k,
+    DRAM_BANK_2_4k
 };
 
 struct mm_node {
@@ -46,8 +41,8 @@ struct physmem {
     // pointing to the `root_obj`. The `last_node` will point to the last 
     // node in the physical memory, and have size zero. 
     struct mm_node* root_node;
-    struct mm_node root_obj;
     struct mm_node* last_node;
+    struct mm_node root_obj;
 };
 
 void mm_init(void);

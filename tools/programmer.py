@@ -28,8 +28,7 @@ class flasher:
         try:
             self.com = serial.Serial(port=self.com_port, 
                                      baudrate=115200,
-                                     rtscts=True,
-                                     dsrdtr=True);
+                                     rtscts=True);
 
         except serial.SerialException as e:
             print(e)
