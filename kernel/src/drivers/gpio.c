@@ -55,3 +55,17 @@ void gpio_toggle(gpio_reg* port, u8 pin) {
         port->SODR = (1 << pin);
     }
 }
+
+u8 gpio_get_pin_status(gpio_reg* port, u8 pin) {
+    return (port->PDSR & (1 << pin)) ? 1 : 0;
+}
+
+void gpio_set_pull(gpio_reg* port, u8 pin, enum gpio_pull pull) {
+    if (pull == GPIO_PULL_DOWN) {
+        port->PUDR = (1 << pin);
+        port->PPDER = (1 << pin);
+    } else {
+        port->PUER = (1 << pin);
+        port->PPDDR = (1 << pin);
+    }
+}

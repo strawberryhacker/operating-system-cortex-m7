@@ -311,6 +311,8 @@ void jump_to_image(u32 base_addr) {
 	// Update stack pointer and program counter
 	volatile u32* image_base = (volatile u32 *)base_addr;
 
+	// The intruction pipeline flush after the update of stackpointer ensures
+	// that the new stack pointer is used right away!
 	asm volatile (
 	"mov r0, %0		\n\t"
 	"ldr r1, [r0]	\n\t"
@@ -318,6 +320,7 @@ void jump_to_image(u32 base_addr) {
 	"ldr r0, [r0]	\n\t"
 	"orr r0, r0, #1	\n\t"
 	"mov sp, r1		\n\t"
+	"isb sy         \n\t"
 	"mov pc, r0		\n\t"
 	: : "l" (image_base) : "r0", "r1", "memory"
 	);

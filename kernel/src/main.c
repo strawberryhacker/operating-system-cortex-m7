@@ -64,6 +64,6 @@ int main(void) {
 	}
 }
 
-void systick_handler() {
+void systick_handler(void) {
 	tick++;
 }

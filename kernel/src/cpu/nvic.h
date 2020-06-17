@@ -29,7 +29,7 @@ static inline void nvic_disable(u8 irq_number) {
 }
 
 static inline u8 nvic_is_enabled(u8 irq_number) {
-    if (NVIC->ISER[irq_number >> 5] = (1 << (irq_number & 0b11111))) {
+    if (NVIC->ISER[irq_number >> 5] & (1 << (irq_number & 0b11111))) {
         return 1;
     } else {
         return 0;
@@ -45,7 +45,7 @@ static inline void nvic_clear_pending(u8 irq_number) {
 }
 
 static inline u8 nvic_is_pending(u8 irq_number) {
-    if (NVIC->ISPR[irq_number >> 5] = (1 << (irq_number & 0b11111))) {
+    if (NVIC->ISPR[irq_number >> 5] & (1 << (irq_number & 0b11111))) {
         return 1;
     } else {
         return 0;
@@ -112,7 +112,7 @@ static inline void nmi_set_pending(void) {
     SCB->ICSR = (1 << 31);
 }
 
-static inline u8 nvic_is_pending(void) {
+static inline u8 vector_is_pending(void) {
     if (SCB->ICSR & (1 << 22)) {
         return 1;
     } else {

@@ -86,20 +86,20 @@ Vector_table:
 	.word	startup
 
 	// Cortex-M7 core interrupts
+	.word	nmi_handler          // NMI
+	.word	hard_fault_handler   // Hard fault
+	.word	mem_fault_handler    // Memory fault
+	.word	bus_fault_handler    // Bus fault
+	.word	usage_fault_handler  // Usage fault 
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
+	.word	svc_handler          // SVC
 	.word	default_handler
 	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	systick_handler    // Systick
+	.word	pendsv_handler       // PendSV
+	.word	systick_handler      // Systick
 
 	// Paripheral interrupts
 	.word	default_handler
@@ -115,8 +115,8 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	usart0_handler     // USART0
-	.word	usart1_handler     // USART1
+	.word	usart0_handler      // USART0
+	.word	usart1_handler      // USART1
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -187,3 +187,24 @@ Vector_table:
 
 	.weak usart0_handler
 	.thumb_set usart0_handler, default_handler
+
+	.weak nmi_handler
+	.thumb_set nmi_handler, default_handler
+
+	.weak hard_fault_handler
+	.thumb_set hard_fault_handler, default_handler
+
+	.weak mem_fault_handler
+	.thumb_set mem_fault_handler, default_handler
+
+	.weak bus_fault_handler
+	.thumb_set bus_fault_handler, default_handler
+
+	.weak usage_fault_handler
+	.thumb_set usage_fault_handler, default_handler
+
+	.weak svc_handler
+	.thumb_set svc_handler, default_handler
+
+	.weak pendsv_handler
+	.thumb_set pendsv_handler, default_handler

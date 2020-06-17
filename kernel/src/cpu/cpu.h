@@ -40,4 +40,16 @@ static inline void cpsid_f(void) {
 	asm volatile ("cpsid f" : : : "memory");
 }
 
+/// Sets the interrupt base priority
+static inline void set_basepri(u32 pri) {
+	asm volatile ("msr basepri, %0" : : "r"(pri) : "memory");
+}
+
+/// Gets the interrupt base priority
+static inline u32 get_basepri(void) {
+	u32 basepri;
+	asm volatile ("mrs %0, basepri" : "=r"(basepri));
+	return basepri;
+}
+
 #endif
