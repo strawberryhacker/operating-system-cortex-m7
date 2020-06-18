@@ -1,6 +1,6 @@
 # Summary
 
-Vanilla is a single-core operating system for the ARMv7 architecture.
+Vanilla is a single-core operating system for the ARMv7 architecture. It will work on all Cortex-M7 chip from Microchip, however the SAME70 Xplained might be the best choice as it don't require any port. 
 
 # Building
 
@@ -13,18 +13,24 @@ Change the serial port in line 92 in the Makefile
 Build and upload the kernel with `cd kernel && make`
 
 
-## Coming soon
+## Upcoming features
 
 - Safe bootloader w/hash check &check;
 - Python kernel programmer &check;
 - Basic driver support &check;
+- SD card support
+- General purpose DMA core itegrated with the scheduler
 - Multiclass scheduler w/FPU support and lazy stacking
+- Runtime statistics
+- Memory statistics
 - System calls
-- Runtime program execution (.elf .bin)
+- Locks
+- Runtime program execution (.bin)
 - LCD support with video playback (raw format)
 - FAT32 stack
 - TCP/IP stack
 - Server support
+- Audio interface
 
 # Bootloader
 
