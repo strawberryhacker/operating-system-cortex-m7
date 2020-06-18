@@ -29,8 +29,10 @@ ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 #-------------------------------------------------------------------------------
 SRC +=
 
-kernel-y += /src/main.c
-kernel-y += /src/bootloader.c
+obj-y += /src/main.c
+obj-y += /src/bootloader.c
+
+kernel-y += /src/kernel/kernel_boot.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c
@@ -41,10 +43,12 @@ driver-y += /src/drivers/gpio.c
 driver-y += /src/drivers/hash.c
 driver-y += /src/drivers/dram.c
 driver-y += /src/drivers/matrix.c
-driver-y += /src/drivers/sd.c
+driver-y += /src/drivers/sd_protocol.c
+driver-y += /src/drivers/mmc.c
 
 board-y += /src/board/serial.c
 board-y += /src/board/debug.c
+board-y += /src/board/sd.c
 
 generic-y += /src/generic/sprint.c
 generic-y += /src/generic/crc.c
@@ -63,6 +67,7 @@ GENERIC_OBJ := $(patsubst %.c, %.o, $(generic-y))
 BOARD_OBJ := $(patsubst %.c, %.o, $(board-y))
 DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
 MM_OBJ := $(patsubst %.c, %.o, $(mm-y))
+OBJ_OBJ := $(patsubst %.c, %.o, $(obj-y))
 
 OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
@@ -70,6 +75,7 @@ OBJ += $(addprefix $(BUILDDIR), $(ASM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(BOARD_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(GENERIC_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(MM_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(OBJ_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers
@@ -77,6 +83,7 @@ CPFLAGS += -I$(TOP)/src/board
 CPFLAGS += -I$(TOP)/src/generic
 CPFLAGS += -I$(TOP)/src/cpu
 CPFLAGS += -I$(TOP)/src/mm
+CPFLAGS += -I$(TOP)/src/kernel
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------

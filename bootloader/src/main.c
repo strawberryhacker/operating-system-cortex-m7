@@ -119,16 +119,16 @@ int main(void) {
 	debug_init();
 
 	// Initialize the boot pin
-	peripheral_clock_enable(12);
-	gpio_set_function(GPIOC, 14, GPIO_FUNC_OFF);
-	gpio_set_direction(GPIOC, 14, GPIO_INPUT);
-	gpio_set_pull(GPIOC, 14, GPIO_PULL_UP);
+	peripheral_clock_enable(10);
+	gpio_set_function(GPIOA, 10, GPIO_FUNC_OFF);
+	gpio_set_direction(GPIOA, 10, GPIO_INPUT);
+	gpio_set_pull(GPIOA, 10, GPIO_PULL_UP);
 
 	
 	// Check the boot signature and the boot pin to determine is the chip should
 	// be forces to enter the bootloader
 	u8 force_bootloader = 0;
-	if (gpio_get_pin_status(GPIOC, 14) == 0) {
+	if (gpio_get_pin_status(GPIOA, 11) == 0) {
 		force_bootloader = 1;
 		debug_print("Boot pin triggered\n");
 	}
