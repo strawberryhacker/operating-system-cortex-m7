@@ -301,6 +301,46 @@ typedef struct {
 	_rw u32 ABFSR;
 } scb_reg;
 
+typedef struct {
+	_w  u32 ICIALLU;
+	_r  u32 RESERVED;
+	_w  u32 ICIMVAU;
+	_w  u32 DCIMVAU;
+	_w  u32 DCISW;
+	_w  u32 DCCMVAU;
+	_w  u32 DCCMVAC;
+	_w  u32 DCCSW;
+	_w  u32 DCCIMVAC;
+	_w  u32 DCCISW;
+	_r  u32 DONT_USE;
+} cache_reg;
+
+typedef struct {
+	_w  u32 CR;
+	_rw u32 MR;
+	_rw u32 DTOR;
+	_rw u32 SDCR;
+	_rw u32 ARG;
+	_w  u32 CMD;
+	_rw u32 BLKR;
+	_rw u32 CSTOR;
+	_r  u32 RESP[4];
+	_r  u32 RDR;
+	_w  u32 TDR;
+	_r  u32 RESERVED1[2];
+	_r  u32 SR;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_r  u32 IMR;
+	_rw u32 DMA;
+	_rw u32 CFG;
+	_r  u32 RESERVED2[35];
+	_rw u32 WPMR;
+	_r  u32 WPSR;
+	_r  u32 RESERVED3[69];
+	_rw u32 FIFO[256];
+} mmc_reg;
+
 #define CLOCK ((clock_reg *)0x400E0600)
 #define FLASH ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
@@ -310,6 +350,8 @@ typedef struct {
 #define MATRIX ((matrix_reg *)0x40088000)
 #define DRAM ((dram_reg *)0x40084000)
 #define SCB ((scb_reg *)0xE000ED00)
+#define CACHE ((scb_reg *)0xE000EF50)
+#define MMC ((mmc_reg *)0x40000000)
 
 #define GPIOA ((gpio_reg *)0x400E0E00)
 #define GPIOB ((gpio_reg *)0x400E1000)

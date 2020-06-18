@@ -57,7 +57,7 @@ int main(void) {
 
 	tick = 499;
 	while (1) {
-		if (tick >= 25) {
+		if (tick >= 250) {
 			tick = 0;
 			gpio_toggle(GPIOC, 8);
 		}

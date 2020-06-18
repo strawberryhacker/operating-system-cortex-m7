@@ -41,6 +41,7 @@ driver-y += /src/drivers/gpio.c
 driver-y += /src/drivers/hash.c
 driver-y += /src/drivers/dram.c
 driver-y += /src/drivers/matrix.c
+driver-y += /src/drivers/sd.c
 
 board-y += /src/board/serial.c
 board-y += /src/board/debug.c
@@ -51,6 +52,8 @@ generic-y += /src/generic/memory.c
 generic-y += /src/generic/panic.c
 
 mm-y += /src/mm/mm.c
+mm-y += /src/mm/mpu.c
+mm-y += /src/mm/cache.c
 
 asm-y += /src/boot/boot.s
 
