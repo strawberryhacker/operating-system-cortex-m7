@@ -5,10 +5,17 @@
 #include "mmc.h"
 
 struct sd_card {
-    u32 rca;
+    u32  rca;
     char cid_name[6];
-    u8  initialized : 1;
-    u8  high_capacity : 1;
+    u8   initialized : 1;
+    u8   high_capacity : 1;
+    u8   four_bit_bus_support : 1;
+    u8   past_v1_10 :1;
+    u8   high_speed : 1;
+
+    // Size and max transfer speed
+    u32  k_size;
+    u32  block_count;
 };
 
 // R1

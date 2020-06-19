@@ -45,9 +45,10 @@ void kernel_boot(void) {
 	systick_set_rvr(300000);
 	systick_enable(1);
 	
-	debug_print("- - - - Vanilla kernel started - - - -\n");
+	debug_print("\n\n- - - - Vanilla kernel started - - - -\n");
 	mm_init();
 
-	sd_init();
-	sd_protocol_init();
+	// Work in progress...
+	//sd_init();
+	//sd_protocol_init();
 }

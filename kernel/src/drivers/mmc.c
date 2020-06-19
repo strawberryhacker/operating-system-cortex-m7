@@ -1,6 +1,7 @@
 #include "mmc.h"
 #include "hardware.h"
 #include "panic.h"
+#include "debug.h"
 
 void mmc_init(void) {
 
@@ -117,7 +118,14 @@ u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
 }
 
 u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc) {
-    
+
+    // Check if force byte transfer has to be used
+    if (block_size & 0b11) {
+        MMC->MR |= (1 << 13);
+    } else {
+        MMC->MR &= ~(1 << 13);
+    }
+
     // Check if the MMC has to force byte transfer
     if (((cmd >> 19) & 0b111) == 4) {
         MMC->BLKR = (block_size % 512) & 0xFFFF;
@@ -128,14 +136,18 @@ u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc
     // Initiate transfer
     MMC->ARG = arg;
     MMC->CMD = cmd;
-
+    u32 time_out = 1000;
     u32 status;
     do {
         status = MMC->SR;
+        if (time_out-- > 1){
+            panic("Timeout");
+        }
     } while (!(status & 0b1));
 
     // Check error flags
     if (status & 0x21FB0000) {
+        debug_print("Reg: %32b\n", status & 0x21FB0000);
         panic("CMD failed");
         return 0;
     }
@@ -190,16 +202,19 @@ u32 mmc_read_data(void) {
 }
 
 void mmc_read_data_reverse(u8* buffer, u32 word_count) {
-    while (word_count--) {
+    for (uint8_t i = 0; i < word_count; i++) {
         // Wait for data to appear in the RX register
         while (!(MMC->SR & (1 << 1)));
 
         u32 reg = MMC->RDR;
 
-        *buffer++ = (reg >> 24) & 0xFF;
-        *buffer++ = (reg >> 16) & 0xFF;
-        *buffer++ = (reg >> 8) & 0xFF;
-        *buffer++ = reg & 0xFF;
+        // Grab a pointer to the last byte
+        buffer += word_count * 4;
+
+        *buffer-- = (reg >> 24) & 0xFF;
+        *buffer-- = (reg >> 16) & 0xFF;
+        *buffer-- = (reg >> 8) & 0xFF;
+        *buffer-- = reg & 0xFF;
     }
 }
 

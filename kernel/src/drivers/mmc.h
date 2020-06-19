@@ -20,9 +20,16 @@ enum mmc_dma_chunk {
 #define MMC_CMD_READ        (1 << 18)
 #define MMC_CMD_WRITE       (0 << 18)
 
-#define MMC_CMD_NO_DATA     (0 << 17)
-#define MMC_CMD_START_DATA  (1 << 17)
-#define MMC_CMD_STOP_DATA   (2 << 17)
+#define MMC_CMD_SINGLE      (0 << 19)
+#define MMC_CMD_MULTIPLE    (1 << 19)
+#define MMC_CMD_STREAM      (2 << 19)
+#define MMC_CMD_BYTE        (4 << 19)
+#define MMC_CMD_BLOCK       (5 << 19)
+
+#define MMC_CMD_NO_DATA     (0 << 16)
+#define MMC_CMD_START_DATA  (1 << 16)
+#define MMC_CMD_STOP_DATA   (2 << 16)
+
 #define MMC_CMD_EXT_LATENCY (1 << 12)
 
 #define MMC_CMD_OPEN_DRAIN  (1 << 11)
