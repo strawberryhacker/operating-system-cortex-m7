@@ -11,6 +11,7 @@
 #include "mm.h"
 #include "sd.h"
 #include "types.h"
+#include "sd_protocol.h"
 
 void kernel_boot(void) {
     // Disable the watchdog timer
@@ -48,4 +49,5 @@ void kernel_boot(void) {
 	mm_init();
 
 	sd_init();
+	sd_protocol_init();
 }

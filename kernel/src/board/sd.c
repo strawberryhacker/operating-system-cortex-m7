@@ -11,9 +11,6 @@ void sd_init(void) {
     gpio_set_function(GPIOA, 26, GPIO_FUNC_C);
     gpio_set_function(GPIOA, 27, GPIO_FUNC_C);
 
-    // Enable the MMC clock
-    peripheral_clock_enable(18);
-
     // Initialize the card connected pin
     peripheral_clock_enable(12);
     gpio_set_function(GPIOC, 16, GPIO_FUNC_OFF);

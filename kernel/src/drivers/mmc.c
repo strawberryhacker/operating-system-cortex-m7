@@ -3,7 +3,7 @@
 #include "panic.h"
 
 void mmc_init(void) {
-    
+
     // Using the default configuration
     MMC->MR &= ~0xFF00;
 
@@ -113,6 +113,7 @@ u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
             status = MMC->SR;
         } while (!(status & (1 << 5)) && !(status & (1 << 4))); 
     }
+    return 1;
 }
 
 u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc) {
@@ -159,6 +160,7 @@ u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc
             status = MMC->SR;
         } while (!(status & (1 << 5)) && !(status & (1 << 4))); 
     }
+    return 1;
 }
 
 u32 mmc_read_resp48(void) {
