@@ -42,3 +42,8 @@ The software embeds a flash bootloader residing inside flash at address 0x004000
 - kernel image not valid (SHA256 mismatch)
 - boot signature at address 0x20400000 says "StayInBootloader"
 - trigger the boot-pin during reset (pull GPIOA 11 low)
+
+In order to program the chip on-the-fly the kernel should provide the same serial interface as the bootloader. If the character `\0` is received it should write the boot signature and reset itself. However, when a software failure occurs, the kernel might mot be able to process the serial interrupts. Therefore two mechanisms has been added to ensure the bootloader will be usable.
+
+- Panic is safe to use. It will print the debug info and return straight to the bootloader
+- If the programming interface is not responding, the CPU has stopped somewhere. To bypyss the image loading stage in the bootloader; hold in SW0 while resetting the board. This will start up the bootloader.
