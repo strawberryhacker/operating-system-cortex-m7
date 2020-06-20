@@ -440,7 +440,7 @@ void sd_protocol_init(void) {
         }
         debug_print("HSS: %d\n", slot_1.high_speed);
     }
-
+    mmc_set_bus_freq(50000000);
 }
 
 void sd_write(u32 sector, u32 size, u8* buffer) {

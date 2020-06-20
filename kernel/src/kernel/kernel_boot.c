@@ -3,7 +3,6 @@
 #include "flash.h"
 #include "clock.h"
 #include "dram.h"
-#include "bootloader.h"
 #include "debug.h"
 #include "cpu.h"
 #include "gpio.h"
@@ -16,6 +15,14 @@
 void kernel_boot(void) {
     // Disable the watchdog timer
 	watchdog_disable();
+	
+	// Enable the coprocessor 10 and 11 for the FPU
+	*((u32 *)CPACR) = (0b11 << 20) | (0b11 << 22);
+	dsb();
+	isb();
+
+	// Disable systick interrupt
+	systick_disable();
 
 	// The CPU will run at 300 Mhz so the flash access cycles has to be updated
 	flash_set_access_cycles(7);
@@ -29,7 +36,7 @@ void kernel_boot(void) {
 	
 	dram_init();
 
-	// Enable the kernel to do firmware upgrades
+	// Make the kernel listen for firmware upgrade
 	bootloader_init();
 
 	// Initialize serial communication
@@ -40,10 +47,6 @@ void kernel_boot(void) {
 	// Configure the on-board LED
 	gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
 	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
-
-	// Configure the systick
-	systick_set_rvr(300000);
-	systick_enable(1);
 	
 	debug_print("\n\n- - - - Vanilla kernel started - - - -\n");
 	mm_init();

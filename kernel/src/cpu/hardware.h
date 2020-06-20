@@ -353,6 +353,8 @@ typedef struct {
 #define CACHE ((scb_reg *)0xE000EF50)
 #define MMC ((mmc_reg *)0x40000000)
 
+#define CPACR 0xE000ED88
+
 #define GPIOA ((gpio_reg *)0x400E0E00)
 #define GPIOB ((gpio_reg *)0x400E1000)
 #define GPIOC ((gpio_reg *)0x400E1200)

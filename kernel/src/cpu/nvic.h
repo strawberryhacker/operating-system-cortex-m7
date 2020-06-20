@@ -8,14 +8,14 @@
 #include "cpu.h"
 
 enum irq_priority {
-    IRQ_PRIORITY_0,
-    IRQ_PRIORITY_1,
-    IRQ_PRIORITY_2,
-    IRQ_PRIORITY_3,
-    IRQ_PRIORITY_4,
-    IRQ_PRIORITY_5,
-    IRQ_PRIORITY_6,
-    IRQ_PRIORITY_7
+	NVIC_PRI_0,
+    NVIC_PRI_1,
+	NVIC_PRI_2,
+	NVIC_PRI_3,
+	NVIC_PRI_4,
+	NVIC_PRI_5,
+	NVIC_PRI_6,
+	NVIC_PRI_7
 };
 
 static inline void nvic_enable(u8 irq_number) {

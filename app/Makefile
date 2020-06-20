@@ -3,7 +3,7 @@
 TOP = $(shell pwd)
 
 BUILDDIR = $(TOP)/build
-TARGET_NAME = kernel
+TARGET_NAME = app
 
 # Compilers
 CC      = arm-none-eabi-gcc
@@ -16,8 +16,9 @@ ARM_ASM = arm-none-eabi-as
 #-------------------------------------------------------------------------------
 CPFLAGS += -I$(TOP)/src
 
-CFLAGS += -x c -mthumb -O1 -ffunction-sections -mlong-calls -g3 -Wall
-CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections
+# -ffunction-sections
+CFLAGS += -x c -mthumb -O1  -mlong-calls -g3 -Wall
+CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-main -fpic
 
 LDFLAGS += -mthumb -Wl,-Map="$(BUILDDIR)/$(TARGET_NAME).map" -Wl,--start-group
 LDFLAGS += -Wl,--end-group -Wl,--gc-sections -mcpu=cortex-m7 -Tlinker.ld
@@ -30,64 +31,18 @@ ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 SRC +=
 
 obj-y += /src/main.c
-obj-y += /src/bootloader.c
 
-kernel-y += /src/kernel/kernel_boot.c
-kernel-y += /src/kernel/fault.c
-kernel-y += /src/kernel/sched.c
-kernel-y += /src/kernel/thread.c
+system-y += /src/system/syscall.c
 
-driver-y += /src/drivers/systick.c
-driver-y += /src/drivers/clock.c
-driver-y += /src/drivers/watchdog.c
-driver-y += /src/drivers/flash.c
-driver-y += /src/drivers/usart.c
-driver-y += /src/drivers/gpio.c
-driver-y += /src/drivers/hash.c
-driver-y += /src/drivers/dram.c
-driver-y += /src/drivers/matrix.c
-driver-y += /src/drivers/sd_protocol.c
-driver-y += /src/drivers/mmc.c
-
-board-y += /src/board/serial.c
-board-y += /src/board/debug.c
-board-y += /src/board/sd.c
-
-generic-y += /src/generic/sprint.c
-generic-y += /src/generic/crc.c
-generic-y += /src/generic/memory.c
-generic-y += /src/generic/panic.c
-
-mm-y += /src/mm/mm.c
-mm-y += /src/mm/mpu.c
-mm-y += /src/mm/cache.c
-
-asm-y += /src/boot/boot.s
-asm-y += /src/kernel/context.s
-
-ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))
-KERNEL_OBJ := $(patsubst %.c, %.o, $(kernel-y))
-GENERIC_OBJ := $(patsubst %.c, %.o, $(generic-y))
-BOARD_OBJ := $(patsubst %.c, %.o, $(board-y))
-DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
-MM_OBJ := $(patsubst %.c, %.o, $(mm-y))
 OBJ_OBJ := $(patsubst %.c, %.o, $(obj-y))
+SYSTEM_OBJ := $(patsubst %.c, %.o, $(system-y))
 
-OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
-OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
-OBJ += $(addprefix $(BUILDDIR), $(ASM_OBJ))
-OBJ += $(addprefix $(BUILDDIR), $(BOARD_OBJ))
-OBJ += $(addprefix $(BUILDDIR), $(GENERIC_OBJ))
-OBJ += $(addprefix $(BUILDDIR), $(MM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(OBJ_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(SYSTEM_OBJ))
 
 # Add include paths
-CPFLAGS += -I$(TOP)/src/drivers
-CPFLAGS += -I$(TOP)/src/board
 CPFLAGS += -I$(TOP)/src/generic
-CPFLAGS += -I$(TOP)/src/cpu
-CPFLAGS += -I$(TOP)/src/mm
-CPFLAGS += -I$(TOP)/src/kernel
+CPFLAGS += -I$(TOP)/src/system
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------
@@ -95,7 +50,7 @@ CPFLAGS += -I$(TOP)
 #-------------------------------------------------------------------------------
 .SECONDARY: $(OBJ)
 .PHONY: all elf bin lss hex
-all: elf lss bin hex program
+all: elf lss bin hex
 
 elf: $(BUILDDIR)/$(TARGET_NAME).elf
 bin: $(BUILDDIR)/$(TARGET_NAME).bin
@@ -103,7 +58,7 @@ lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
 program:
-	@python3 ../tools/programmer.py -com /dev/ttyS3 -f build/kernel.bin
+	@python3 ../tools/programmer.py -com /dev/ttyS3 -f build/app.bin
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O binary $< $@

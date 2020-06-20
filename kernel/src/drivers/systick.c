@@ -22,6 +22,6 @@ void systick_enable(u8 irq_enable) {
 	SYSTICK->CSR = reg;
 }
 
-void systick_reset(void) {
+void systick_disable(void) {
 	SYSTICK->CSR = 0;
 }
