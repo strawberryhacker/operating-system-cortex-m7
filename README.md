@@ -1,16 +1,23 @@
 # Summary
 
-Vanilla is a single-core operating system for the ARMv7 architecture. It will work on all Cortex-M7 processors from Microchip, however the SAME70 Xplained might be the best choice as it don't require any port. 
+Vanilla is a single-core operating system for the ARMv7 architecture. It will work on all Cortex-M7 processors from Microchip. The SAME70 Xplained board might be the best choice for testing as it don't require any port. I will make a custom board soon and explain the porting process - it's easy!
 
 # Building
 
-Build the bootloader by `cd bootloader && make`
+To compile this project `make` and `arm-none-eabi` is needed. In ubuntu they are installed by 
+```shell
+> sudo apt-get update -y
+> sudo apt-get install build-essential
+> sudo apt-get install -y gcc-arm-none-eabi
+```
 
-Flash the bootloader binary at address 0x00400000
+Go in the bootloader directory and type `make`
 
-Change the serial port in line 92 in the Makefile
+Flash the bootloader binary (in the build directory) at address 0x00400000. This can be done with Atmel Studio or OpenOCD
 
-Build and upload the kernel with `cd kernel && make`
+Line number 92 in the Makefile specify which COM port the programming script will use to connect to the board. In ubuntu it is /dev/ttySx and in windows COMx. Change this according to what COM port you use.
+
+Go to the kernel directory and tpye `make`. This will automatically flash the chip.
 
 
 ## Upcoming features
@@ -36,7 +43,7 @@ Everything will be completely bare metal - no libraries
 
 # Bootloader
 
-The software embeds a flash bootloader residing inside flash at address 0x00400000. It can open a serial connection with a host computer in order to download the new kernel. The bootloader will load the kernel image to address 0x00404000. The first page of the image must consist of the kernel header. Therefore the actual application and vector table starts at address 0x00404200. The bootloader is accessed in the following ways
+The software embeds a flash bootloader residing inside flash at address 0x00400000. It can open a serial connection with a host computer in order to download the new kernel. The bootloader will load the kernel to address 0x00404000. The first page of the image (512-bytes) must consist of the kernel header. Therefore the actual application and vector table starts at address 0x00404200. The bootloader is accessed in the following ways
 
 - kernel info struct not matching the bootloader info struct
 - kernel image not valid (SHA256 mismatch)
