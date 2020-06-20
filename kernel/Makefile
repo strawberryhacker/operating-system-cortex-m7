@@ -32,7 +32,7 @@ SRC +=
 obj-y += /src/main.c
 obj-y += /src/bootloader.c
 
-kernel-y += /src/kernel/kernel_boot.c
+kernel-y += /src/kernel/kernel_entry.c
 kernel-y += /src/kernel/fault.c
 kernel-y += /src/kernel/sched.c
 kernel-y += /src/kernel/thread.c
@@ -62,7 +62,7 @@ mm-y += /src/mm/mm.c
 mm-y += /src/mm/mpu.c
 mm-y += /src/mm/cache.c
 
-asm-y += /src/boot/boot.s
+asm-y += /src/entry/entry.s
 asm-y += /src/kernel/context.s
 
 ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))

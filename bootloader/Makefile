@@ -47,7 +47,7 @@ generic-y += /src/generic/crc.c
 generic-y += /src/generic/memory.c
 generic-y += /src/generic/panic.c
 
-asm-y += /src/boot/boot.s
+asm-y += /src/entry/entry.s
 
 BOOT_OBJ := $(patsubst %.c, %.o, $(bootloader-y))
 GENERIC_OBJ := $(patsubst %.c, %.o, $(generic-y))

@@ -2,7 +2,7 @@
 
 #include "types.h"
 #include "gpio.h"
-#include "kernel_boot.h"
+#include "kernel_entry.h"
 #include "sd.h"
 #include "debug.h"
 #include "clock.h"
@@ -46,7 +46,7 @@ struct tcb* threads[5];
 
 int main(void) {
 	// Run the kernel boot sequence
-	kernel_boot();
+	kernel_entry();
 
 	peripheral_clock_enable(10);	
 	gpio_set_function(GPIOA, 11, GPIO_FUNC_OFF);

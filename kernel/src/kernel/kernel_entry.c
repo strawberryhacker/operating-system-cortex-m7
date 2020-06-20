@@ -1,4 +1,4 @@
-#include "kernel_boot.h"
+#include "kernel_entry.h"
 #include "watchdog.h"
 #include "flash.h"
 #include "clock.h"
@@ -11,8 +11,9 @@
 #include "sd.h"
 #include "types.h"
 #include "sd_protocol.h"
+#include "bootloader.h"
 
-void kernel_boot(void) {
+void kernel_entry(void) {
     // Disable the watchdog timer
 	watchdog_disable();
 	

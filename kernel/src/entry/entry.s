@@ -25,10 +25,10 @@ vector_table_reg: .word 0xE000ED08
 /// segment and vector table relocation. Finally it calls `__libc_init_array`
 /// and branches to the main loop
 .section .text
-.global startup
-.type startup, %function
+.global entry
+.type entry, %function
 
-startup:
+entry:
     // Relocate .data segment
 	ldr r0, =_data_s
 	ldr r1, =_data_e
@@ -83,7 +83,7 @@ default_handler:
 .type Vector_table, %object
 Vector_table:
     .word	_stack_e
-	.word	startup
+	.word	entry
 
 	// Cortex-M7 core interrupts
 	.word	nmi_handler          // NMI
