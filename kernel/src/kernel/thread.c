@@ -1,5 +1,5 @@
 #include "thread.h"
-#include "sched.h"
+#include "scheduler.h"
 #include "mm.h"
 #include "debug.h"
 
@@ -57,9 +57,7 @@ struct tcb* thread_add(const char* name, void(*thread_ptr)(void* arg), u32 stack
     new_thread->stack_pointer = new_thread->stack_base + stack_size - 1;
 	new_thread->stack_pointer = stack_setup(new_thread->stack_pointer, thread_ptr, arg);
 	
-	debug_print("Stack pointer: %4h\n", new_thread->stack_pointer);
-	debug_print("Stack base: %4h\n", new_thread->stack_base);
-	// Make sure the list object points to the TCB
-	
+    new_thread->rq_node.obj = new_thread;
+
 	return new_thread;
 }

@@ -12,3 +12,7 @@ void bus_fault_handler(void) {
 void usage_fault_handler(void) {
     panic("Usage fault");
 }
+
+void hard_fault_handler(void) {
+    panic("Hard fault");
+}

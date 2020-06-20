@@ -234,6 +234,11 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
 
     // Mark the memory as allocated
     iter->next = (struct mm_node *)0xC0DEBABE;
+
+    if (return_ptr == NULL) {
+        panic("NULL pointer returned");
+    }
+
     return return_ptr;
 }
 

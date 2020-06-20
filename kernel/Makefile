@@ -34,8 +34,13 @@ obj-y += /src/bootloader.c
 
 kernel-y += /src/kernel/kernel_entry.c
 kernel-y += /src/kernel/fault.c
-kernel-y += /src/kernel/sched.c
+kernel-y += /src/kernel/scheduler.c
 kernel-y += /src/kernel/thread.c
+kernel-y += /src/kernel/list.c
+kernel-y += /src/kernel/rt.c
+kernel-y += /src/kernel/app.c
+kernel-y += /src/kernel/background.c
+kernel-y += /src/kernel/idle.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c

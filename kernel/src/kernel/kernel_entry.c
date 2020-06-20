@@ -18,9 +18,9 @@ void kernel_entry(void) {
 	watchdog_disable();
 	
 	// Enable the coprocessor 10 and 11 for the FPU
-	*((u32 *)CPACR) = (0b11 << 20) | (0b11 << 22);
-	dsb();
-	isb();
+	//*((u32 *)CPACR) = (0b11 << 20) | (0b11 << 22);
+	//dsb();
+	//isb();
 
 	// Disable systick interrupt
 	systick_disable();
