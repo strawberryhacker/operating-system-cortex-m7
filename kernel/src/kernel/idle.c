@@ -9,23 +9,12 @@
 
 #include <stddef.h>
 
-struct list rt_rq = { .first = NULL, .size = 0 };
-struct list rt_bq = { .first = NULL, .size = 0 };
-
 static struct thread* idle_pick_thread(struct rq* rq) {
-    //printl("Idle pick next thread");
-    struct list_node* tmp = rt_rq.first;
-
-    if ((struct thread *)tmp->obj == NULL) {
-        panic("No idle thread");
-    }
-
-    return (struct thread *)tmp->obj;
+    return rq->idle;
 }
 
 static void idle_enqueue(struct thread* thread, struct rq* rq) {
-    print("IDLE enqueue\n");
-    list_insert_first(&thread->rq_node, &rt_rq);
+    rq->idle = thread;
 }
 
 static void idle_dequeue(struct thread* thread, struct rq* rq) {

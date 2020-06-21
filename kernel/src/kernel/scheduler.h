@@ -7,6 +7,15 @@
 #include "list.h"
 #include "dlist.h"
 
+#define SYSTICK_RVR 300000
+
+enum sched_class {
+    REAL_TIME,
+    APPLICAION,
+    BACKGROUND,
+    IDLE
+};
+
 /// Info structure used for initializing new threads
 struct thread_info {
     char name[32];
@@ -19,13 +28,16 @@ struct thread_info {
 
     // Optional thread argument
     void* arg;
+
+    enum sched_class class;
 };
 
 struct rq {
     struct dlist app_rq;
     struct dlist background_rq;
     struct dlist rt_rq;
-    struct dlist idle_rq;
+    
+    struct thread* idle;
 
     struct dlist sleep_q;
     struct dlist blocked_q;
@@ -40,7 +52,14 @@ struct thread {
     u32* stack_base;
 
     // Runqueue list node
-    struct list_node rq_node;
+    struct dlist_node rq_node;
+    struct dlist_node thread_node;
+
+    const struct scheduling_class* class;
+
+    // If the thread is sleeping this value will hold the tick it should wake 
+    // on
+    u64 tick_to_wake;
 };
 
 /// Each scheduling class will have its own set of functions defined in this
@@ -62,5 +81,9 @@ extern const struct scheduling_class idle_class;
 
 /// Sets up the interrupts and starts the scheduler
 void scheduler_start(void);
+
+void scheduler_enqueue_delay(struct thread* thread);
+
+void reschedule(void);
 
 #endif

@@ -4,6 +4,12 @@
 #include "scheduler.h"
 #include "mm.h"
 #include "print.h"
+#include "cpu.h"
+
+/// The main CPU runqueue
+extern struct rq cpu_rq;
+extern volatile u64 tick;
+extern volatile struct thread* curr_thread;
 
 void thread_exit(void) {
     while (1);
@@ -42,7 +48,6 @@ u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
 	return stack_pointer;
 }
 
-
 struct thread* new_thread(struct thread_info* thread_info) {
 
     // Compute how many 1k pages are needed to store the stack and the thread
@@ -62,6 +67,32 @@ struct thread* new_thread(struct thread_info* thread_info) {
         thread_info->thread, thread_info->arg);
 	
     thread->rq_node.obj = thread;
+    thread->thread_node.obj = thread;
+
+    // Update the scheduling class
+    if (thread_info->class == REAL_TIME) {
+        thread->class = &rt_class;
+    } else if (thread_info->class == APPLICAION) {
+        thread->class = &app_class;
+    } else if (thread_info->class == BACKGROUND) {
+        thread->class = &background_class;
+    } else if (thread_info->class == IDLE) {
+        thread->class = &idle_class;
+    }
+
+    // Enqueue the thread
+    thread->class->enqueue(thread, &cpu_rq);
+
+    thread->tick_to_wake = 0;
 
 	return thread;
+}
+
+void thread_sleep(u64 ms) {
+    curr_thread->tick_to_wake = tick + ms * SYSTICK_RVR;
+    
+    scheduler_enqueue_delay((struct thread *)curr_thread);
+
+    // Reschedule
+    reschedule();
 }

@@ -13,6 +13,8 @@ extern __bootsig__ u8 boot_signature[32];
 void panic_handler(const char* file_name, u32 line_number,
     const char* reason) {
     
+    cpsid_f();
+    
     print("Panic! %s \n", reason);
     print("File: %s \n", file_name);
     print("Line: %d \n", line_number);
@@ -26,7 +28,6 @@ void panic_handler(const char* file_name, u32 line_number,
     dmb();
     
     // Perform a soft reset
-    cpsid_i();
     *((u32 *)0x400E1800) = 0xA5000000 | 0b1;
 
     while (1);

@@ -12,6 +12,7 @@ uint32_t power(uint8_t base, uint8_t exp);
 /// Prints a formatted string to a output buffer. Supported functions are
 /// %s     - print a string
 /// %c     - print a char
+/// %e     - print a happy message
 /// %u     - prtin a unsigned integer
 /// %u     - print a signed integer
 /// %[n]b  - print `x` bits in a binary number
@@ -140,6 +141,13 @@ uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 						size += 2;
 					}
 					break;
+				}
+				case 'e' : {
+					for (u8 i = 0; i < opt_fmt; i++) {
+						*dest_ptr++ = ':';
+						*dest_ptr++ = 'D';
+						size += 2;
+					}
 				}
 			}
 			
