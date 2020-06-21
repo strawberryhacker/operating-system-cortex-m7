@@ -22,7 +22,8 @@ static void app_sleep(struct thread* thread, u32 ms) {
 }
 
 /// Real-time scheduling class
-struct sched_class app_class = {
+const struct scheduling_class app_class = {
+    .next        = &background_class,
     .pick_thread = app_pick_thread,
     .enqueue     = app_enqueue,
     .dequeue     = app_dequeue,

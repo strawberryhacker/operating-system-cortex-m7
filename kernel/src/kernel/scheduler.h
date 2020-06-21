@@ -26,14 +26,21 @@ struct thread {
     struct list_node rq_node;
 };
 
-struct sched_class {
+struct scheduling_class {
+    // Link to the next scheduling class
+    const struct scheduling_class* next;
+
     struct thread* (*pick_thread)(void);
-
-    void (*enqueue)(struct thread* thread);
-    void (*dequeue)(struct thread* thread);
-
-    void (*sleep)(struct thread* thread, u32 ms);
+    void           (*enqueue)(struct thread* thread);
+    void           (*dequeue)(struct thread* thread);
+    void           (*sleep)(struct thread* thread, u32 ms);
 };
+
+/// These are the different scheduling classes defined in it own files.
+extern const struct scheduling_class rt_class;
+extern const struct scheduling_class app_class;
+extern const struct scheduling_class background_class;
+extern const struct scheduling_class idle_class;
 
 
 void scheduler_start(void);

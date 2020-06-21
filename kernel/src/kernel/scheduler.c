@@ -11,14 +11,9 @@ volatile struct thread* curr_thread;
 volatile struct thread* next_thread;
 
 void scheduler_run(void);
-struct thread* scheduler(void);
+struct thread* core_scheduler(void);
 
 extern struct thread* new_thread(struct thread_info* thread_info);
-
-extern struct sched_class rt_class;
-extern struct sched_class app_class;
-extern struct sched_class background_class;
-extern struct sched_class idle_class;
 
 volatile u32 switches = 0;
 
@@ -60,7 +55,7 @@ void scheduler_start(void) {
 	// The `scheduler_run` does not care about the `curr_thread`. However it 
 	// MUST be set in order for the cotext switch to work. If the `curr_thread`
 	// is not set, this will give an hard fault.
-	next_thread = scheduler();
+	next_thread = core_scheduler();
 	curr_thread = next_thread;
 
 	if (next_thread != idle) {
@@ -71,7 +66,7 @@ void scheduler_start(void) {
 
 void systick_handler(void) {
 	
-	next_thread = scheduler();
+	next_thread = core_scheduler();
 	if (next_thread != idle) {
 		print("Error: %4h\n", next_thread);
 		print_flush();
@@ -82,26 +77,22 @@ void systick_handler(void) {
 	pendsv_set_pending();
 }
 
-struct thread* scheduler(void) {
+struct thread* core_scheduler(void) {
 	// This is the core scheduler
-	struct thread* t;
+	struct thread* thread;
 
-	t = rt_class.pick_thread();
-	if (t == NULL) {
-		// The real-time scheduler runqueue is empty
-		t = app_class.pick_thread();
-		if (t == NULL) {
-			// No application threads need to be scheduled
-			t = background_class.pick_thread();
-			if (t == NULL) {
-				// No background threads need to run
-				t = idle_class.pick_thread();
-				if (t == NULL) {
-					panic("No threads can run");
-				}
-			}
+	// The first scheduling class is the real-time class
+	const struct scheduling_class* class = &rt_class;
+
+	// Go through all the scheduling classes
+	for (class = &rt_class; class != NULL; class = class->next) {
+		thread = class->pick_thread();
+
+		if (thread) {
+			return thread;
 		}
 	}
-
-	return t;
+	panic("Core scheduler error");
+	
+	return NULL;
 }

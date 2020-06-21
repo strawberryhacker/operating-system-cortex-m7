@@ -22,7 +22,8 @@ static void background_sleep(struct thread* thread, u32 ms) {
 }
 
 /// Real-time scheduling class
-struct sched_class background_class = {
+const struct scheduling_class background_class = {
+    .next        = &idle_class,
     .pick_thread = background_pick_thread,
     .enqueue     = background_enqueue,
     .dequeue     = background_dequeue,

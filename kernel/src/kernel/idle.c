@@ -35,7 +35,8 @@ static void idle_sleep(struct thread* thread, u32 ms) {
 }
 
 /// Real-time scheduling class
-struct sched_class idle_class = {
+const struct scheduling_class idle_class = {
+    .next        = NULL,
     .pick_thread = idle_pick_thread,
     .enqueue     = idle_enqueue,
     .dequeue     = idle_dequeue,
