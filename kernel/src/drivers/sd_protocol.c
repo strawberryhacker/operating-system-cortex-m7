@@ -1,12 +1,11 @@
 #include "sd_protocol.h"
-#include "debug.h"
+#include "print.h"
 #include "hardware.h"
-#include "mmc.h"
 #include "clock.h"
 #include "panic.h"
 #include "memory.h"
 
-/// When coding this part the SD protocol specification will prove useful.
+/// When coding this part the SD protocol specification will be handy
 /// It can be found here 
 /// http://academy.cba.mit.edu/classes/networking_communications/SD/SD.pdf
 ///
@@ -129,11 +128,11 @@ u8 sd_exec_cmd_6(void) {
     u32 resp = mmc_read_resp48();
 
     if ((buffer[35] << 8) | buffer[34]) {
-        debug_print("Card is busy\n");
+        print("Card is busy\n");
         return 0;
     }
     if ((buffer[47] & 0xF) == 0xF) {
-        debug_print("High speed error\n");
+        print("High speed error\n");
         return 1;
     }
     if (resp & 0xFFF80000) {
@@ -313,7 +312,7 @@ static void csd_decode(const u8* csd) {
         
         // This card should be a SDSC card
         if (slot_1.high_capacity) {
-            debug_print("Warning\n");
+            print("Warning\n");
         }
 
     } else if (csd_structure == 1) {
@@ -323,7 +322,7 @@ static void csd_decode(const u8* csd) {
 
         // This card should be a SDHC card
         if (!slot_1.high_capacity) {
-            debug_print("Warning\n");
+            print("Warning\n");
         }
     } else {
         panic("CSD structure error");
@@ -333,7 +332,7 @@ static void csd_decode(const u8* csd) {
 /// Performs the SD protocol initialization sequence and brings the card to the
 /// transfer state
 void sd_protocol_init(void) {
-    debug_print("Starting SD protocol init sequence...\n");
+    print("Starting SD protocol init sequence...\n");
 
     // Enable the MMC clock
     peripheral_clock_enable(18);
@@ -378,7 +377,7 @@ void sd_protocol_init(void) {
     if (!sd_exec_acmd_41()) {
         panic("ACMD41 failed");
     }
-    debug_print("SDHC support: %d\n", slot_1.high_capacity);
+    print("SDHC support: %d\n", slot_1.high_capacity);
 
     // CMD11 is not in use because the host does not require to switch to 1.8V
 
@@ -387,17 +386,17 @@ void sd_protocol_init(void) {
     if (!sd_exec_cmd_2(cid)) {
         panic("Can't retrieve CID register");
     }
-    debug_print("Card detected with ID - ");
+    print("Card detected with ID - ");
     for (u8 i = 0; i < 6; i++) {
-        debug_print("%c", slot_1.cid_name[i]);
+        print("%c", slot_1.cid_name[i]);
     }
-    debug_print("\n");
+    print("\n");
 
     // CMD3
     if (!sd_exec_cmd_3()) {
         panic("Can't retrieve RCA address");
     }
-    debug_print("RCA: %4h\n", slot_1.rca);
+    print("RCA: %4h\n", slot_1.rca);
 
     // The card is in date transfer mode
 
@@ -409,7 +408,7 @@ void sd_protocol_init(void) {
 
     csd_decode(csd);
 
-    debug_print("Size: %d\n", slot_1.k_size);
+    print("Size: %d\n", slot_1.k_size);
 
     // CMD7
     if (!sd_exec_cmd_7()) {
@@ -421,7 +420,7 @@ void sd_protocol_init(void) {
     if (!sd_exec_acmd_51()) {
         panic("ACMD51 failed");
     }
-    debug_print("4-bit support: %d\n", slot_1.four_bit_bus_support);
+    print("4-bit support: %d\n", slot_1.four_bit_bus_support);
     
     // ACMD6 - if appropriate change the bus width (0b00 for 1-bit and 0b10 
     // for 4-bit)
@@ -438,7 +437,7 @@ void sd_protocol_init(void) {
         if (!sd_exec_cmd_6()) {
             panic("CMD6 failed");
         }
-        debug_print("HSS: %d\n", slot_1.high_speed);
+        print("HSS: %d\n", slot_1.high_speed);
     }
     mmc_set_bus_freq(50000000);
 }

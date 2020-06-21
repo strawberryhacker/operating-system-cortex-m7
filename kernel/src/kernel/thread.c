@@ -1,7 +1,7 @@
 #include "thread.h"
 #include "scheduler.h"
 #include "mm.h"
-#include "debug.h"
+#include "print.h"
 
 void thread_exit(void) {
     while (1);
@@ -41,20 +41,20 @@ u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
 }
 
 
-struct tcb* thread_add(struct thread_info* thread_info) {
+struct thread* new_thread(struct thread_info* thread_info) {
 
     // Compute how many 1k pages are needed to store the stack and the thread
-    u32 size = sizeof(struct tcb) + thread_info->stack_size * 4;
+    u32 size = sizeof(struct thread) + thread_info->stack_size * 4;
     u32 size_1k = size / 1024;
     if (size % 512) {
         size_1k++;
     }
 	
     // Allocate the TCB and the stack
-    struct tcb* thread = (struct tcb *)mm_alloc_1k(size_1k);
+    struct thread* thread = (struct thread *)mm_alloc_1k(size_1k);
 
     // Calculate the stack base and the stack pointer
-    thread->stack_base = (u32 *)((u8 *)thread + sizeof(struct tcb));
+    thread->stack_base = (u32 *)((u8 *)thread + sizeof(struct thread));
     thread->stack_pointer = thread->stack_base + thread_info->stack_size - 1;
 	thread->stack_pointer = stack_setup(thread->stack_pointer, 
         thread_info->thread, thread_info->arg);

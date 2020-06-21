@@ -1,7 +1,7 @@
 /// Copyright (C) StrawberryHacker
 
 #include "panic.h"
-#include "debug.h"
+#include "print.h"
 #include "sections.h"
 #include "memory.h"
 #include "cpu.h"
@@ -13,10 +13,10 @@ extern __bootsig__ u8 boot_signature[32];
 void panic_handler(const char* file_name, u32 line_number,
     const char* reason) {
     
-    debug_print("Panic! %s \n", reason);
-    debug_print("File: %s \n", file_name);
-    debug_print("Line: %d \n", line_number);
-    debug_flush();
+    print("Panic! %s \n", reason);
+    print("File: %s \n", file_name);
+    print("Line: %d \n", line_number);
+    print_flush();
 
     // The panic is used when the system is in an unrecoverable state or should
     // not proceed. The flash image is still "valid" so the bootloader will run

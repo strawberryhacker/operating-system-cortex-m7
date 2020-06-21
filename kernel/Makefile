@@ -55,7 +55,7 @@ driver-y += /src/drivers/sd_protocol.c
 driver-y += /src/drivers/mmc.c
 
 board-y += /src/board/serial.c
-board-y += /src/board/debug.c
+board-y += /src/board/print.c
 board-y += /src/board/sd.c
 
 generic-y += /src/generic/sprint.c

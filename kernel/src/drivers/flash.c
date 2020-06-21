@@ -2,7 +2,6 @@
 
 #include "flash.h"
 #include "hardware.h"
-#include "serial.h"
 
 void flash_set_access_cycles(u8 access_cycles) {
     u32 reg = FLASH->FMR;

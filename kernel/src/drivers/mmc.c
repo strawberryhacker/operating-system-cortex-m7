@@ -1,7 +1,7 @@
 #include "mmc.h"
 #include "hardware.h"
 #include "panic.h"
-#include "debug.h"
+#include "print.h"
 
 void mmc_init(void) {
 
@@ -147,7 +147,7 @@ u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc
 
     // Check error flags
     if (status & 0x21FB0000) {
-        debug_print("Reg: %32b\n", status & 0x21FB0000);
+        print("Reg: %32b\n", status & 0x21FB0000);
         panic("CMD failed");
         return 0;
     }

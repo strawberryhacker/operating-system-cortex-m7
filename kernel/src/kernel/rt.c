@@ -3,19 +3,20 @@
 
 #include <stddef.h>
 
-static struct tcb* rt_pick_thread(void) {
+static struct thread* rt_pick_thread(void) {
+    //printl("RT pick next thread");
     return NULL;
 }
 
-static void rt_enqueue(struct tcb* thread) {
+static void rt_enqueue(struct thread* thread) {
     
 }
 
-static void rt_dequeue(struct tcb* thread) {
+static void rt_dequeue(struct thread* thread) {
     
 }
 
-static void rt_sleep(struct tcb* thread, u32 ms) {
+static void rt_sleep(struct thread* thread, u32 ms) {
     
 }
 

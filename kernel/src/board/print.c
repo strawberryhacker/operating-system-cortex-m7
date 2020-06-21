@@ -1,6 +1,6 @@
 /// Copyright (C) StrawberryHacker
 
-#include "debug.h"
+#include "print.h"
 #include "gpio.h"
 #include "clock.h"
 #include "usart.h"
@@ -15,7 +15,7 @@ static char debug_buffer[64];
 
 /// Initializes the serial port 0 of the SBC to 115200, one stop bit, no parity
 /// and enables receive complete interrupt
-void debug_init(void) {
+void print_init(void) {
 
     // Map the right function to the pins
     gpio_set_function(GPIOB, 0, GPIO_FUNC_C);
@@ -38,14 +38,14 @@ void debug_init(void) {
 }
 
 /// Releases the serial resources used
-void debug_deinit(void) {
+void print_deinit(void) {
 	peripheral_clock_disable(13);
 	usart_deinit(USART0);
 	nvic_disable(13);
 	nvic_clear_pending(13);
 }
 
-void debug_print(const char* data, ...) {
+void print(const char* data, ...) {
     va_list obj;
     va_start(obj, data);
 
@@ -59,9 +59,26 @@ void debug_print(const char* data, ...) {
     }
 }
 
+void printl(const char* data, ...) {
+    va_list obj;
+    va_start(obj, data);
+
+    // Pass forward the VA object containing the optional arguments
+    u32 size = print_to_buffer_va(debug_buffer, data, obj);
+
+    // Transmit the formated buffer on serial port 0
+    char* src = debug_buffer;
+    while (size--) {
+        usart_write(USART0, *src++);
+    }
+    
+    // Print a new line
+    usart_write(USART0, '\n');
+}
+
 /// The `serial_print` function only checks is the USART transmit buffer is 
 /// ready, and does not block to the character is transmitted. If all characters
 /// needs to be transmitted before proceeding, this function can be called
-void debug_flush(void) {
+void print_flush(void) {
 	usart_flush(USART0);
 }

@@ -1,5 +1,4 @@
 #include "mm.h"
-#include "debug.h"
 #include "panic.h"
 
 #include <stddef.h>

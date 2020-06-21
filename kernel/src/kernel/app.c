@@ -1,21 +1,23 @@
 #include "app.h"
 #include "scheduler.h"
+#include "print.h"
 
 #include <stddef.h>
 
-static struct tcb* app_pick_thread(void) {
+static struct thread* app_pick_thread(void) {
+    //printl("App pick next thread");
     return NULL;
 }
 
-static void app_enqueue(struct tcb* thread) {
+static void app_enqueue(struct thread* thread) {
     
 }
 
-static void app_dequeue(struct tcb* thread) {
+static void app_dequeue(struct thread* thread) {
     
 }
 
-static void app_sleep(struct tcb* thread, u32 ms) {
+static void app_sleep(struct thread* thread, u32 ms) {
     
 }
 

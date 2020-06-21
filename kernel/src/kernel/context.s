@@ -78,9 +78,9 @@ pendsv_handler:
 ///  ----
 
 .section .text
-.global sched_run
-.type sched_run, %function
-sched_run:
+.global scheduler_run
+.type scheduler_run, %function
+scheduler_run:
 	ldr r1, =next_thread
 	ldr r0, [r1]
 	ldr r1, [r0]

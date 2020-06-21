@@ -1,4 +1,3 @@
-#include "debug.h"
 #include "panic.h"
 #include "gpio.h"
 

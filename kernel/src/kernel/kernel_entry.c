@@ -3,7 +3,7 @@
 #include "flash.h"
 #include "clock.h"
 #include "dram.h"
-#include "debug.h"
+#include "print.h"
 #include "cpu.h"
 #include "gpio.h"
 #include "systick.h"
@@ -41,7 +41,8 @@ void kernel_entry(void) {
 	bootloader_init();
 
 	// Initialize serial communication
-	debug_init();
+	print_init();
+	print("\n\n- - - - Vanilla kernel started - - - -\n");
 
 	cpsie_i();
 	
@@ -50,7 +51,12 @@ void kernel_entry(void) {
 	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
 	gpio_set(GPIOC, 8);
 
-	debug_print("\n\n- - - - Vanilla kernel started - - - -\n");
+	// Configure the on board button
+	peripheral_clock_enable(10);	
+	gpio_set_function(GPIOA, 11, GPIO_FUNC_OFF);
+	gpio_set_direction(GPIOA, 11, GPIO_INPUT);
+	gpio_set_pull(GPIOA, 11, GPIO_PULL_UP);
+	
 	mm_init();
 
 	// Work in progress...

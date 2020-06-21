@@ -3,29 +3,36 @@
 #include "systick.h"
 #include "cpu.h"
 #include "panic.h"
-#include "debug.h"
+#include "print.h"
 
 #include <stddef.h>
 
-volatile struct tcb* curr_thread;
-volatile struct tcb* next_thread;
+volatile struct thread* curr_thread;
+volatile struct thread* next_thread;
 
-void sched_run(void);
-void scheduler(void);
+void scheduler_run(void);
+struct thread* scheduler(void);
 
-extern struct tcb* thread_add(struct thread_info* thread_info);
+extern struct thread* new_thread(struct thread_info* thread_info);
 
 extern struct sched_class rt_class;
 extern struct sched_class app_class;
 extern struct sched_class background_class;
 extern struct sched_class idle_class;
 
+volatile u32 switches = 0;
+
 static void idle_thread(void* arg) {
-	debug_print("xD ");
+	print("xD ");
 	while (1) {
-		debug_print("x");
+		for (volatile u32 i = 0; i < 100000; i++) {
+			asm volatile ("nop");
+		}
+		print("S: %d\n", switches);
 	}
 }
+
+static struct thread* idle;
 
 void scheduler_start(void) {
 	// Systick interrupt should be disabled
@@ -39,10 +46,10 @@ void scheduler_start(void) {
 		.thread     = idle_thread,
 		.arg        = NULL
 	};
-	struct tcb* idle = thread_add(&idle_info);
+	idle = new_thread(&idle_info);
 
-	debug_print("OK\n");
-	debug_flush();
+	print("OK\n");
+	print_flush();
 
 	idle_class.enqueue(idle);
 
@@ -50,46 +57,51 @@ void scheduler_start(void) {
 	systick_set_rvr(300000);
 	systick_enable(1);
 
-	scheduler();
+	// The `scheduler_run` does not care about the `curr_thread`. However it 
+	// MUST be set in order for the cotext switch to work. If the `curr_thread`
+	// is not set, this will give an hard fault.
+	next_thread = scheduler();
+	curr_thread = next_thread;
 
-	if (idle != (struct tcb *)next_thread) {
-		panic("Something is wrong");
+	if (next_thread != idle) {
+		panic("Fuck");
 	}
-	debug_print("IDLE: \t%4h\nNext: \t%4h\n", idle, next_thread);
-	// Update the first thread to run
-
-	next_thread = idle;
-	curr_thread = idle;
-
-	sched_run();
+	scheduler_run();
 }
 
 void systick_handler(void) {
 	
-	//scheduler();
-	next_thread = curr_thread;
-	
+	next_thread = scheduler();
+	if (next_thread != idle) {
+		print("Error: %4h\n", next_thread);
+		print_flush();
+		panic("Fuck");
+	}
+	switches++;
 	// Pend the PendSV handler
 	pendsv_set_pending();
 }
 
-void scheduler(void) {
-	// This is the scheduler	
+struct thread* scheduler(void) {
+	// This is the core scheduler
+	struct thread* t;
 
-	next_thread = rt_class.pick_thread();
-	if (next_thread == NULL) {
+	t = rt_class.pick_thread();
+	if (t == NULL) {
 		// The real-time scheduler runqueue is empty
-		next_thread = app_class.pick_thread();
-		if (next_thread == NULL) {
+		t = app_class.pick_thread();
+		if (t == NULL) {
 			// No application threads need to be scheduled
-			next_thread = background_class.pick_thread();
-			if (next_thread == NULL) {
+			t = background_class.pick_thread();
+			if (t == NULL) {
 				// No background threads need to run
-				next_thread = idle_class.pick_thread();
-				if (next_thread == NULL) {
+				t = idle_class.pick_thread();
+				if (t == NULL) {
 					panic("No threads can run");
 				}
 			}
 		}
 	}
+
+	return t;
 }

@@ -3,33 +3,34 @@
 #include "list.h"
 #include "thread.h"
 #include "panic.h"
-#include "debug.h"
+#include "print.h"
 
 #include <stddef.h>
 
 struct list rt_rq = { .first = NULL, .size = 0 };
 struct list rt_bq = { .first = NULL, .size = 0 };
 
-static struct tcb* idle_pick_thread(void) {
+static struct thread* idle_pick_thread(void) {
+    //printl("Idle pick next thread");
     struct list_node* tmp = rt_rq.first;
 
-    if ((struct tcb *)tmp->obj == NULL) {
+    if ((struct thread *)tmp->obj == NULL) {
         panic("No idle thread");
     }
 
-    return (struct tcb *)tmp->obj;
+    return (struct thread *)tmp->obj;
 }
 
-static void idle_enqueue(struct tcb* thread) {
-    debug_print("IDLE enqueue\n");
+static void idle_enqueue(struct thread* thread) {
+    print("IDLE enqueue\n");
     list_insert_first(&thread->rq_node, &rt_rq);
 }
 
-static void idle_dequeue(struct tcb* thread) {
+static void idle_dequeue(struct thread* thread) {
     
 }
 
-static void idle_sleep(struct tcb* thread, u32 ms) {
+static void idle_sleep(struct thread* thread, u32 ms) {
     
 }
 

@@ -17,7 +17,7 @@ struct thread_info {
     void* arg;
 };
 
-struct tcb {
+struct thread {
     // The first element in the `tcb` has to be the stack pointer
     u32* stack_pointer;
     u32* stack_base;
@@ -27,12 +27,12 @@ struct tcb {
 };
 
 struct sched_class {
-    struct tcb* (*pick_thread)(void);
+    struct thread* (*pick_thread)(void);
 
-    void (*enqueue)(struct tcb* thread);
-    void (*dequeue)(struct tcb* thread);
+    void (*enqueue)(struct thread* thread);
+    void (*dequeue)(struct thread* thread);
 
-    void (*sleep)(struct tcb* thread, u32 ms);
+    void (*sleep)(struct thread* thread, u32 ms);
 };
 
 

@@ -2,7 +2,6 @@
 
 #include "hash.h"
 #include "hardware.h"
-#include "debug.h"
 #include "panic.h"
 
 /// This descriptor describes ICM block number `1`. It must be aligned by 

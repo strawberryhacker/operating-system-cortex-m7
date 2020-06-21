@@ -1,21 +1,23 @@
 #include "background.h"
 #include "scheduler.h"
+#include "print.h"
 
 #include <stddef.h>
 
-static struct tcb* background_pick_thread(void) {
+static struct thread* background_pick_thread(void) {
+    //printl("Background pick next thread");
     return NULL;
 }
 
-static void background_enqueue(struct tcb* thread) {
+static void background_enqueue(struct thread* thread) {
     
 }
 
-static void background_dequeue(struct tcb* thread) {
+static void background_dequeue(struct thread* thread) {
     
 }
 
-static void background_sleep(struct tcb* thread, u32 ms) {
+static void background_sleep(struct thread* thread, u32 ms) {
     
 }
 
