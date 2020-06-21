@@ -11,6 +11,7 @@
 #include "systick.h"
 #include "mm.h"
 #include "sd.h"
+#include "nvic.h"
 #include "types.h"
 #include "sd_protocol.h"
 #include "bootloader.h"
@@ -26,6 +27,7 @@ void kernel_entry(void) {
 
 	// Disable systick interrupt
 	systick_disable();
+	systick_clear_pending();
 
 	// The CPU will run at 300 Mhz so the flash access cycles has to be updated
 	flash_set_access_cycles(7);

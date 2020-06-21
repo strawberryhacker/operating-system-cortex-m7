@@ -286,6 +286,10 @@ void jump_to_image(u32 base_addr) {
 	debug_flush();
 	serial_deinit();
 	debug_deinit();
+	systick_reset();
+
+	// Clear eny pending systick interrupt
+	*(u32 *)0xE000ED04 = (1 << 25);
 	
 	// Disable all interrupts with configurable priority
 	cpsid_i();
