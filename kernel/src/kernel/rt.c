@@ -5,16 +5,16 @@
 
 #include <stddef.h>
 
-static struct thread* rt_pick_thread(void) {
+static struct thread* rt_pick_thread(struct rq* rq) {
     //printl("RT pick next thread");
     return NULL;
 }
 
-static void rt_enqueue(struct thread* thread) {
+static void rt_enqueue(struct thread* thread, struct rq* rq) {
     
 }
 
-static void rt_dequeue(struct thread* thread) {
+static void rt_dequeue(struct thread* thread, struct rq* rq) {
     
 }
 
@@ -23,6 +23,5 @@ const struct scheduling_class rt_class = {
     .next        = &app_class,
     .pick_thread = rt_pick_thread,
     .enqueue     = rt_enqueue,
-    .dequeue     = rt_dequeue,
-    .sleep       = rt_sleep 
+    .dequeue     = rt_dequeue
 };

@@ -49,9 +49,9 @@ struct scheduling_class {
     // Link to the next scheduling class
     const struct scheduling_class* next;
 
-    struct thread* (*pick_thread)(void);
-    void           (*enqueue)(struct thread* thread);
-    void           (*dequeue)(struct thread* thread);
+    struct thread* (*pick_thread)(struct rq* rq);
+    void           (*enqueue)(struct thread* thread, struct rq* rq);
+    void           (*dequeue)(struct thread* thread, struct rq* rq);
 };
 
 /// These are the different scheduling classes in the kernel

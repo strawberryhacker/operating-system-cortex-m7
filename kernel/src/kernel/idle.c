@@ -12,7 +12,7 @@
 struct list rt_rq = { .first = NULL, .size = 0 };
 struct list rt_bq = { .first = NULL, .size = 0 };
 
-static struct thread* idle_pick_thread(void) {
+static struct thread* idle_pick_thread(struct rq* rq) {
     //printl("Idle pick next thread");
     struct list_node* tmp = rt_rq.first;
 
@@ -23,12 +23,12 @@ static struct thread* idle_pick_thread(void) {
     return (struct thread *)tmp->obj;
 }
 
-static void idle_enqueue(struct thread* thread) {
+static void idle_enqueue(struct thread* thread, struct rq* rq) {
     print("IDLE enqueue\n");
     list_insert_first(&thread->rq_node, &rt_rq);
 }
 
-static void idle_dequeue(struct thread* thread) {
+static void idle_dequeue(struct thread* thread, struct rq* rq) {
     
 }
 
@@ -37,6 +37,5 @@ const struct scheduling_class idle_class = {
     .next        = NULL,
     .pick_thread = idle_pick_thread,
     .enqueue     = idle_enqueue,
-    .dequeue     = idle_dequeue,
-    .sleep       = idle_sleep 
+    .dequeue     = idle_dequeue
 };

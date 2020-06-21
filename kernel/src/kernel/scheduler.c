@@ -12,26 +12,58 @@
 volatile struct thread* curr_thread;
 volatile struct thread* next_thread;
 
-void scheduler_run(void);
-struct thread* core_scheduler(void);
+/// Main CPU runqueue structure
+struct rq cpu_rq = {0};
 
+/// The function which is starting the scheduler is defined in contex.s. It 
+/// sets up the stack for the first thread to run, switches from MSP to PSP, and
+/// places the thread function in the LR. This will start executing the first
+/// thread
+void scheduler_run(void);
+
+/// The scheduler has to add the idle thread
 extern struct thread* new_thread(struct thread_info* thread_info);
+
+static struct thread* idle;
 
 volatile u32 switches = 0;
 
+/// The idle thread is scheduled by the lowest priority scheduling class
 static void idle_thread(void* arg) {
-	print("xD ");
+	printl("Idle thread");
 	while (1) {
-		for (volatile u32 i = 0; i < 100000; i++) {
+		for (volatile u32 i = 0; i < 1000000; i++) {
 			asm volatile ("nop");
 		}
 		print("S: %d\n", switches);
 	}
 }
 
-static struct thread* idle;
+/// Iterates through all the scheduling classes picks the next thread to run
+static struct thread* core_scheduler(void) {
+	// This is the core scheduler
+	struct thread* thread;
 
+	// The first scheduling class is the real-time class
+	const struct scheduling_class* class = &rt_class;
+
+	// Go through all the scheduling classes
+	for (class = &rt_class; class != NULL; class = class->next) {
+		thread = class->pick_thread(&cpu_rq);
+
+		if (thread) {
+			return thread;
+		}
+	}
+	panic("Core scheduler error");
+	
+	return NULL;
+}
+
+/// Configures the SysTick and PendSV interrupt priorities, add the idle thread
+/// and starts the scheduler
 void scheduler_start(void) {
+
 	// Systick interrupt should be disabled
 	systick_set_priority(NVIC_PRI_6);
 	pendsv_set_priority(NVIC_PRI_7);
@@ -48,7 +80,7 @@ void scheduler_start(void) {
 	print("OK\n");
 	print_flush();
 
-	idle_class.enqueue(idle);
+	idle_class.enqueue(idle, &cpu_rq);
 
 	cpsid_f();
 	systick_set_rvr(300000);
@@ -63,11 +95,12 @@ void scheduler_start(void) {
 	if (next_thread != idle) {
 		panic("Fuck");
 	}
+	// Start executing the first thread
 	scheduler_run();
 }
 
 void systick_handler(void) {
-	
+	// Call the core scheduler
 	next_thread = core_scheduler();
 	if (next_thread != idle) {
 		print("Error: %4h\n", next_thread);
@@ -75,26 +108,7 @@ void systick_handler(void) {
 		panic("Fuck");
 	}
 	switches++;
+
 	// Pend the PendSV handler
 	pendsv_set_pending();
-}
-
-struct thread* core_scheduler(void) {
-	// This is the core scheduler
-	struct thread* thread;
-
-	// The first scheduling class is the real-time class
-	const struct scheduling_class* class = &rt_class;
-
-	// Go through all the scheduling classes
-	for (class = &rt_class; class != NULL; class = class->next) {
-		thread = class->pick_thread();
-
-		if (thread) {
-			return thread;
-		}
-	}
-	panic("Core scheduler error");
-	
-	return NULL;
 }
