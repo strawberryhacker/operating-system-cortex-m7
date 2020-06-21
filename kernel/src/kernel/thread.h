@@ -2,8 +2,9 @@
 #define THREAD_H
 
 #include "types.h"
+#include "scheduler.h"
 
-struct tcb* thread_add(const char* name, void(*thread_ptr)(void* arg), u32 stack_size, u32* arg);
+struct tcb* thread_add(struct thread_info* thread_info);
 
 void thread_print_list(void);
 

@@ -7,7 +7,7 @@ void thread_exit(void) {
     while (1);
 }
 
-u32* stack_setup(u32* stack_pointer, void(*thread_ptr)(void* arg), void* arg) {
+u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
     // Top padding
     stack_pointer--;
 
@@ -15,7 +15,7 @@ u32* stack_setup(u32* stack_pointer, void(*thread_ptr)(void* arg), void* arg) {
     *stack_pointer-- = 0x1000000;
 
     // Set the PC
-    *stack_pointer-- = (u32)thread_ptr;
+    *stack_pointer-- = (u32)thread;
 
     // Set the LR
     *stack_pointer-- = (u32)thread_exit;
@@ -41,23 +41,25 @@ u32* stack_setup(u32* stack_pointer, void(*thread_ptr)(void* arg), void* arg) {
 }
 
 
-struct tcb* thread_add(const char* name, void(*thread_ptr)(void* arg), u32 stack_size, u32* arg) {
-    u32 size = sizeof(struct tcb) + stack_size* 4;
+struct tcb* thread_add(struct thread_info* thread_info) {
+
+    // Compute how many 1k pages are needed to store the stack and the thread
+    u32 size = sizeof(struct tcb) + thread_info->stack_size * 4;
     u32 size_1k = size / 1024;
-    
     if (size % 512) {
         size_1k++;
     }
 	
     // Allocate the TCB and the stack
-    struct tcb* new_thread = (struct tcb *)mm_alloc_1k(size_1k);
+    struct tcb* thread = (struct tcb *)mm_alloc_1k(size_1k);
 
     // Calculate the stack base and the stack pointer
-    new_thread->stack_base = (u32 *)((u8 *)new_thread + sizeof(struct tcb));
-    new_thread->stack_pointer = new_thread->stack_base + stack_size - 1;
-	new_thread->stack_pointer = stack_setup(new_thread->stack_pointer, thread_ptr, arg);
+    thread->stack_base = (u32 *)((u8 *)thread + sizeof(struct tcb));
+    thread->stack_pointer = thread->stack_base + thread_info->stack_size - 1;
+	thread->stack_pointer = stack_setup(thread->stack_pointer, 
+        thread_info->thread, thread_info->arg);
 	
-    new_thread->rq_node.obj = new_thread;
+    thread->rq_node.obj = thread;
 
-	return new_thread;
+	return thread;
 }

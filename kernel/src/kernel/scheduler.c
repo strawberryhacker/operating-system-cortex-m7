@@ -13,9 +13,7 @@ volatile struct tcb* next_thread;
 void sched_run(void);
 void scheduler(void);
 
-extern struct tcb* thread_add(const char* name, void(*thread_ptr)(void* arg),
-	u32 stack_size, u32* arg);
-
+extern struct tcb* thread_add(struct thread_info* thread_info);
 
 extern struct sched_class rt_class;
 extern struct sched_class app_class;
@@ -25,7 +23,7 @@ extern struct sched_class idle_class;
 static void idle_thread(void* arg) {
 	debug_print("xD ");
 	while (1) {
-		// Do nothing really
+		debug_print("x");
 	}
 }
 
@@ -35,7 +33,13 @@ void scheduler_start(void) {
 	pendsv_set_priority(NVIC_PRI_7);
 	
 	// Add the IDLE to the list
-	struct tcb* idle = thread_add("IDLE", idle_thread, 32, NULL);
+	struct thread_info idle_info = {
+		.name       = "Idle",
+		.stack_size = 100,
+		.thread     = idle_thread,
+		.arg        = NULL
+	};
+	struct tcb* idle = thread_add(&idle_info);
 
 	debug_print("OK\n");
 	debug_flush();
