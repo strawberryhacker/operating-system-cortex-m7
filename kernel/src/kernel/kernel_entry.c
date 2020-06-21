@@ -48,7 +48,8 @@ void kernel_entry(void) {
 	// Configure the on-board LED
 	gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
 	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
-	
+	gpio_set(GPIOC, 8);
+
 	debug_print("\n\n- - - - Vanilla kernel started - - - -\n");
 	mm_init();
 

@@ -24,5 +24,5 @@ int main(void) {
 	gpio_set_direction(GPIOA, 11, GPIO_INPUT);
 	gpio_set_pull(GPIOA, 11, GPIO_PULL_UP);
 
-	sched_start();
+	scheduler_start();
 }

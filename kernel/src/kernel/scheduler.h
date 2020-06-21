@@ -22,6 +22,7 @@ struct sched_class {
     void (*sleep)(struct tcb* thread, u32 ms);
 };
 
-void sched_start(void);
+
+void scheduler_start(void);
 
 #endif

@@ -13,14 +13,17 @@
 .global pendsv_handler
 .type pendsv_handler, %function
 
+/// The PendSV handler is a software triggered interrupt, which is triggered 
+/// after the scheduler has picked the next thread to run. It is configured with
+/// the lowest priority and will execute when all other interrupt is done 
+/// executing.
+/// This exeption will perform the context switch between two threads. Since 
+/// it is running in an exception, the exeption will automatically stack some
+/// registers. This is known as a stack frame.  
 pendsv_handler:
-	// Disable interrupts during the execution
-	cpsid f
-
 	// Get the PSP which the threads are using
 	mrs r0, psp
-
-	tst lr, #0x10
+	isb
 
 	stmdb r0!, {r4-r11}
 
@@ -40,10 +43,6 @@ pendsv_handler:
 	ldmia r2!, {r4-r11}
 	msr psp, r2
 	isb
-
-	cpsie f
-
-	nop
     
     bx lr
 

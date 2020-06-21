@@ -26,11 +26,10 @@ static void idle_thread(void* arg) {
 	debug_print("xD ");
 	while (1) {
 		// Do nothing really
-		debug_print("xD ");
 	}
 }
 
-void sched_start(void) {
+void scheduler_start(void) {
 	// Systick interrupt should be disabled
 	systick_set_priority(NVIC_PRI_6);
 	pendsv_set_priority(NVIC_PRI_7);
@@ -54,6 +53,10 @@ void sched_start(void) {
 	}
 	debug_print("IDLE: \t%4h\nNext: \t%4h\n", idle, next_thread);
 	// Update the first thread to run
+
+	next_thread = idle;
+	curr_thread = idle;
+
 	sched_run();
 }
 
