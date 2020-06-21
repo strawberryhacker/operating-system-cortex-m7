@@ -23,19 +23,5 @@ void print_dlist(struct dlist* list) {
 
 int main(void) {
 	kernel_entry();
-
-	struct dlist dlist = { .first = NULL, .last = NULL, .size = 0 };
-
-	struct dlist_node* nodes = mm_alloc(sizeof(struct dlist_node) * 10, SRAM);
-	print_dlist(&dlist);
-	nodes[6].obj = 6;
-	nodes[1].obj = 1;
-	dlist_insert_last(&nodes[6], &dlist);
-	print_dlist(&dlist);
-
-	dlist_insert_before(&nodes[1], &nodes[6], &dlist);
-	print_dlist(&dlist);
-
-	while (1);
 	scheduler_start();
 }

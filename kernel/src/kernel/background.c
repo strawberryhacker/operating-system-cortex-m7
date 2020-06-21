@@ -19,10 +19,6 @@ static void background_dequeue(struct thread* thread) {
     
 }
 
-static void background_sleep(struct thread* thread, u32 ms) {
-    
-}
-
 /// Background scheduling class
 const struct scheduling_class background_class = {
     .next        = &idle_class,

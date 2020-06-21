@@ -32,10 +32,6 @@ static void idle_dequeue(struct thread* thread) {
     
 }
 
-static void idle_sleep(struct thread* thread, u32 ms) {
-    
-}
-
 /// Idle scheduling class
 const struct scheduling_class idle_class = {
     .next        = NULL,

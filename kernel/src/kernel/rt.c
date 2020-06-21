@@ -18,10 +18,6 @@ static void rt_dequeue(struct thread* thread) {
     
 }
 
-static void rt_sleep(struct thread* thread, u32 ms) {
-    
-}
-
 /// Real-time scheduling class
 const struct scheduling_class rt_class = {
     .next        = &app_class,

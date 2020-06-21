@@ -5,6 +5,7 @@
 
 #include "types.h"
 #include "list.h"
+#include "dlist.h"
 
 /// Info structure used for initializing new threads
 struct thread_info {
@@ -21,15 +22,15 @@ struct thread_info {
 };
 
 struct rq {
-    struct list app_rq;
-    struct list background_rq;
-    struct list rt_rq;
-    struct list idle_rq;
+    struct dlist app_rq;
+    struct dlist background_rq;
+    struct dlist rt_rq;
+    struct dlist idle_rq;
 
-    struct list sleep_q;
-    struct list block_q;
+    struct dlist sleep_q;
+    struct dlist blocked_q;
 
-    struct list threads;
+    struct dlist threads;
 };
 
 /// Main thread control block
@@ -51,7 +52,6 @@ struct scheduling_class {
     struct thread* (*pick_thread)(void);
     void           (*enqueue)(struct thread* thread);
     void           (*dequeue)(struct thread* thread);
-    void           (*sleep)(struct thread* thread, u32 ms);
 };
 
 /// These are the different scheduling classes in the kernel

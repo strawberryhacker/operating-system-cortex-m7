@@ -19,10 +19,6 @@ static void app_dequeue(struct thread* thread) {
     
 }
 
-static void app_sleep(struct thread* thread, u32 ms) {
-    
-}
-
 /// Application scheduling class
 const struct scheduling_class app_class = {
     .next        = &background_class,
