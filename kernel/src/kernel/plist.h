@@ -1,7 +1,8 @@
 /// Copyright (C) StrawberryHacker
 
-#ifndef APP_H
-#define APP_H
+#ifndef PLIST_H
+#define PLIST_H
+
 
 
 #endif

@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "background.h"
 #include "scheduler.h"
 #include "print.h"
@@ -21,7 +23,7 @@ static void background_sleep(struct thread* thread, u32 ms) {
     
 }
 
-/// Real-time scheduling class
+/// Background scheduling class
 const struct scheduling_class background_class = {
     .next        = &idle_class,
     .pick_thread = background_pick_thread,

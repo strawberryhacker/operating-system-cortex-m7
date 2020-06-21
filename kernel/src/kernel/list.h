@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef LIST_H
 #define LIST_H
 

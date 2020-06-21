@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "kernel_entry.h"
 #include "watchdog.h"
 #include "flash.h"

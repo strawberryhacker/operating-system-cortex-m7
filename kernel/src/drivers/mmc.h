@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef MMC_H
 #define MMC_H
 

@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "cache.h"
 #include "hardware.h"
 

@@ -1,9 +1,12 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
 #include "types.h"
 #include "list.h"
 
+/// Info structure used for initializing new threads
 struct thread_info {
     char name[32];
 
@@ -17,6 +20,19 @@ struct thread_info {
     void* arg;
 };
 
+struct rq {
+    struct list app_rq;
+    struct list background_rq;
+    struct list rt_rq;
+    struct list idle_rq;
+
+    struct list sleep_q;
+    struct list block_q;
+
+    struct list threads;
+};
+
+/// Main thread control block
 struct thread {
     // The first element in the `tcb` has to be the stack pointer
     u32* stack_pointer;
@@ -26,6 +42,8 @@ struct thread {
     struct list_node rq_node;
 };
 
+/// Each scheduling class will have its own set of functions defined in this
+/// struct. 
 struct scheduling_class {
     // Link to the next scheduling class
     const struct scheduling_class* next;
@@ -36,13 +54,13 @@ struct scheduling_class {
     void           (*sleep)(struct thread* thread, u32 ms);
 };
 
-/// These are the different scheduling classes defined in it own files.
+/// These are the different scheduling classes in the kernel
 extern const struct scheduling_class rt_class;
 extern const struct scheduling_class app_class;
 extern const struct scheduling_class background_class;
 extern const struct scheduling_class idle_class;
 
-
+/// Sets up the interrupts and starts the scheduler
 void scheduler_start(void);
 
 #endif

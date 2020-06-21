@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "idle.h"
 #include "scheduler.h"
 #include "list.h"
@@ -34,7 +36,7 @@ static void idle_sleep(struct thread* thread, u32 ms) {
     
 }
 
-/// Real-time scheduling class
+/// Idle scheduling class
 const struct scheduling_class idle_class = {
     .next        = NULL,
     .pick_thread = idle_pick_thread,

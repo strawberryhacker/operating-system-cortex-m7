@@ -1,7 +1,7 @@
 /// Copyright (C) StrawberryHacker
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#ifndef PRINT_H
+#define PRINT_H
 
 #include "types.h"
 

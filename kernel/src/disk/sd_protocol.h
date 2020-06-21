@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef SD_PROTOCOL_H
 #define SD_PROTOCOL_H
 

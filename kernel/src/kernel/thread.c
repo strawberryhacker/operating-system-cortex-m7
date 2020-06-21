@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "thread.h"
 #include "scheduler.h"
 #include "mm.h"

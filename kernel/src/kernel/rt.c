@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "rt.h"
 #include "scheduler.h"
 

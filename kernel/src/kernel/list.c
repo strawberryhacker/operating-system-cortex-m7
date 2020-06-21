@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "list.h"
 #include "panic.h"
 

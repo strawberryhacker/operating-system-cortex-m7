@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "mm.h"
 #include "panic.h"
 

@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "scheduler.h"
 #include "nvic.h"
 #include "systick.h"

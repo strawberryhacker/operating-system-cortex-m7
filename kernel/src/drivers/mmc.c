@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "mmc.h"
 #include "hardware.h"
 #include "panic.h"

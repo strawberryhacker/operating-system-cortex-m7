@@ -37,6 +37,7 @@ kernel-y += /src/kernel/fault.c
 kernel-y += /src/kernel/scheduler.c
 kernel-y += /src/kernel/thread.c
 kernel-y += /src/kernel/list.c
+kernel-y += /src/kernel/plist.c
 kernel-y += /src/kernel/rt.c
 kernel-y += /src/kernel/app.c
 kernel-y += /src/kernel/background.c
@@ -51,8 +52,9 @@ driver-y += /src/drivers/gpio.c
 driver-y += /src/drivers/hash.c
 driver-y += /src/drivers/dram.c
 driver-y += /src/drivers/matrix.c
-driver-y += /src/drivers/sd_protocol.c
 driver-y += /src/drivers/mmc.c
+
+disk-y += /src/disk/sd_protocol.c
 
 board-y += /src/board/serial.c
 board-y += /src/board/print.c
@@ -77,6 +79,7 @@ BOARD_OBJ := $(patsubst %.c, %.o, $(board-y))
 DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
 MM_OBJ := $(patsubst %.c, %.o, $(mm-y))
 OBJ_OBJ := $(patsubst %.c, %.o, $(obj-y))
+DISK_OBJ := $(patsubst %.c, %.o, $(disk-y))
 
 OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
@@ -85,6 +88,7 @@ OBJ += $(addprefix $(BUILDDIR), $(BOARD_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(GENERIC_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(MM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(OBJ_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(DISK_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers
@@ -93,6 +97,7 @@ CPFLAGS += -I$(TOP)/src/generic
 CPFLAGS += -I$(TOP)/src/cpu
 CPFLAGS += -I$(TOP)/src/mm
 CPFLAGS += -I$(TOP)/src/kernel
+CPFLAGS += -I$(TOP)/src/disk
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------

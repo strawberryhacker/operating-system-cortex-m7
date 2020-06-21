@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef MM_H
 #define MM_H
 

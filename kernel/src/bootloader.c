@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "bootloader.h"
 #include "sections.h"
 #include "types.h"

@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "sd_protocol.h"
 #include "print.h"
 #include "hardware.h"
