@@ -5,6 +5,7 @@
 #include "mm.h"
 #include "print.h"
 #include "cpu.h"
+#include "panic.h"
 
 /// The main CPU runqueue
 extern struct rq cpu_rq;
@@ -12,6 +13,7 @@ extern volatile u64 tick;
 extern volatile struct thread* curr_thread;
 
 void thread_exit(void) {
+    panic("Exit");
     while (1);
 }
 

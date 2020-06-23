@@ -5,6 +5,7 @@
 
 #include "types.h"
 #include "panic.h"
+#include "cpu.h"
 
 struct spinlock {
     u32 lock;
@@ -32,12 +33,11 @@ static inline void spinlock_aquire(struct spinlock* spinlock) {
       u32 status = 0;
 
       do {
-          u32 value = ldrex(&spinlock->lock);
-
-          if (value == 0) {
-              status = strex(&spinlock->lock, 1);
-          }
+          while (ldrex(&spinlock->lock));
+          status = strex(&spinlock->lock, 1);
       } while (status);
+
+      dmb();
 
       if (spinlock->lock != 1) {
         panic("Lock");
@@ -45,16 +45,8 @@ static inline void spinlock_aquire(struct spinlock* spinlock) {
 }
 
 static inline void spinlock_release(struct spinlock* spinlock) {
-    u32 status = 0;
-    
-    do {
-        ldrex(&spinlock->lock);
-        status = strex(&spinlock->lock, 0);
-    } while (status);
-
-    if (spinlock->lock != 0) {
-        panic("Lock");
-    }
+    dmb();
+    spinlock->lock = 0;
 }
 
 #endif
