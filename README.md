@@ -39,7 +39,7 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - Server support
 - Audio interface
 
-Everything will be completely bare metal - no libraries
+Everything will be completely bare metal - no libraries - literally
 
 # Bootloader
 
