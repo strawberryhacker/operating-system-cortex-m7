@@ -8,8 +8,13 @@
 /// Inserts a `node` in the first in the `dlist`
 void dlist_insert_first(struct dlist_node* node, struct dlist* list) {
     // Check if the list contains the `node`
-    if (dlist_search(node, list)) {
-        panic("Node is in the list");
+    if ((node->next != NULL) || (node->prev != NULL)) {
+        panic("List error");
+    }
+
+    // The node might still be in the first location
+    if (node == list->first) {
+        panic("List error");
     }
 
     if (list->first) {
@@ -30,8 +35,13 @@ void dlist_insert_first(struct dlist_node* node, struct dlist* list) {
 /// Insert `node` last in the `dlist`
 void dlist_insert_last(struct dlist_node* node, struct dlist* list) {
     // Check if the list contains the `node`
-    if (dlist_search(node, list)) {
-        panic("Node is in the list");
+    if ((node->next != NULL) || (node->prev != NULL)) {
+        panic("List error");
+    }
+
+    // The node might still be in the first location
+    if (node == list->first) {
+        panic("List error");
     }
 
     if (list->last) {
@@ -53,13 +63,14 @@ void dlist_insert_last(struct dlist_node* node, struct dlist* list) {
 void dlist_insert_after(struct dlist_node* i_node, struct dlist_node* a_node,
     struct dlist* list) {
 
-    // Check if the list contains the `i_node`
-    if (dlist_search(i_node, list)) {
-        panic("Node is in the list");
+    // Check if the list contains the `node`
+    if ((i_node->next != NULL) || (i_node->prev != NULL)) {
+        panic("List error");
     }
-    // Check if the list contains the `a_node`
-    if (dlist_search(a_node, list) == 0) {
-        panic("Node is in not the list");
+
+    // The node might still be in the first location
+    if (i_node == list->first) {
+        panic("List error");
     }
     
     // Check if the `a_node` is the last node
@@ -84,13 +95,14 @@ void dlist_insert_after(struct dlist_node* i_node, struct dlist_node* a_node,
 void dlist_insert_before(struct dlist_node* i_node, struct dlist_node* b_node,
     struct dlist* list) {
 
-    // Check if the list contains the `i_node`
-    if (dlist_search(i_node, list)) {
-        panic("Node is in the list");
+    // Check if the list contains the `node`
+    if ((i_node->next != NULL) || (i_node->prev != NULL)) {
+        panic("List error");
     }
-    // Check if the list contains the `b_node`
-    if (dlist_search(b_node, list) == 0) {
-        panic("Node is in not the list");
+
+    // The node might still be in the first location
+    if (i_node == list->first) {
+        panic("List error");
     }
 
     // Check if the `b_node` is the first node
@@ -139,6 +151,10 @@ struct dlist_node* dlist_remove_first(struct dlist* list) {
         panic("List error");
     }
 
+    // Disable the links
+    first->next = NULL;
+    first->prev = NULL;
+
     return first;
 }
 
@@ -169,6 +185,10 @@ struct dlist_node* dlist_remove_last(struct dlist* list) {
         panic("List error");
     }
 
+    // Disable the links
+    last->next = NULL;
+    last->prev = NULL;
+
     return last;
 }
 
@@ -176,11 +196,6 @@ struct dlist_node* dlist_remove_last(struct dlist* list) {
 /// node might be the first or the last element. In this case the `dlist->first`
 /// and `dlist->last` has to be updated
 struct dlist_node* dlist_remove(struct dlist_node* node, struct dlist* list) {
-    // Check if the list contains the node
-    if (dlist_search(node, list) == 0) {
-        panic("Node is not in the list");
-    }
-
     // If the node is either the first or the last element the size is 
     // automatically decremented
     if (node == list->first) {
@@ -198,6 +213,10 @@ struct dlist_node* dlist_remove(struct dlist_node* node, struct dlist* list) {
         }
         list->size--;
     }
+
+    // Remove the links
+    node->next = NULL;
+    node->prev = NULL;
 
     return node;
 }

@@ -13,6 +13,8 @@ void print(const char* data, ...);
 
 void printl(const char* data, ...);
 
+void print_raw(const char* data);
+
 void print_flush(void);
 
 #endif

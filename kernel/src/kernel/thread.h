@@ -8,8 +8,6 @@
 
 struct thread* new_thread(struct thread_info* thread_info);
 
-void thread_print_list(void);
-
 void thread_sleep(u64 ms);
 
 #endif

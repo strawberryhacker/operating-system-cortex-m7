@@ -42,6 +42,7 @@ kernel-y += /src/kernel/rt.c
 kernel-y += /src/kernel/app.c
 kernel-y += /src/kernel/background.c
 kernel-y += /src/kernel/idle.c
+kernel-y += /src/kernel/syscall.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c
@@ -71,6 +72,7 @@ mm-y += /src/mm/cache.c
 
 asm-y += /src/entry/entry.s
 asm-y += /src/kernel/context.s
+asm-y += /src/kernel/svc.s
 
 ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))
 KERNEL_OBJ := $(patsubst %.c, %.o, $(kernel-y))

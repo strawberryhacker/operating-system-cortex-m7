@@ -8,17 +8,18 @@
 #include "dlist.h"
 
 #define SYSTICK_RVR 300000
+#define THREAD_MAX_NAME_LEN 32
 
 enum sched_class {
     REAL_TIME,
-    APPLICAION,
+    APPLICATION,
     BACKGROUND,
     IDLE
 };
 
 /// Info structure used for initializing new threads
 struct thread_info {
-    char name[32];
+    char name[THREAD_MAX_NAME_LEN];
 
     // Requested stack size in words
     u32 stack_size;
@@ -55,11 +56,20 @@ struct thread {
     struct dlist_node rq_node;
     struct dlist_node thread_node;
 
+    // 
     const struct scheduling_class* class;
+
+    // Name of the thread
+    char name[THREAD_MAX_NAME_LEN];
+    u8 name_len;
 
     // If the thread is sleeping this value will hold the tick it should wake 
     // on
     u64 tick_to_wake;
+
+    // These are for calulating runtime statistics
+    u64 runtime_curr;
+    u64 runtime_new;
 };
 
 /// Each scheduling class will have its own set of functions defined in this

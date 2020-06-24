@@ -76,6 +76,12 @@ void printl(const char* data, ...) {
     usart_write(USART0, '\n');
 }
 
+void print_raw(const char* data) {
+    while (*data) {
+        usart_write(USART0, *data++);
+    }
+}
+
 /// The `serial_print` function only checks is the USART transmit buffer is 
 /// ready, and does not block to the character is transmitted. If all characters
 /// needs to be transmitted before proceeding, this function can be called

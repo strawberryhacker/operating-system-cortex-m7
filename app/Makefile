@@ -16,12 +16,14 @@ ARM_ASM = arm-none-eabi-as
 #-------------------------------------------------------------------------------
 CPFLAGS += -I$(TOP)/src
 
-# -ffunction-sections
+#-ffunction-sections
 CFLAGS += -x c -mthumb -O1  -mlong-calls -g3 -Wall
 CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-main -fpic
+CFLAGS += -nostdlib
 
 LDFLAGS += -mthumb -Wl,-Map="$(BUILDDIR)/$(TARGET_NAME).map" -Wl,--start-group
-LDFLAGS += -Wl,--end-group -Wl,--gc-sections -mcpu=cortex-m7 -Tlinker.ld
+LDFLAGS += -Wl,--end-group -mcpu=cortex-m7 -Tlinker.ld --specs=nosys.specs
+LDFLAGS += -Wl,--gc-sections -fpic
 
 ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 

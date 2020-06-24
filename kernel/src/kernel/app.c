@@ -7,16 +7,21 @@
 #include <stddef.h>
 
 static struct thread* app_pick_thread(struct rq* rq) {
-    //printl("App pick next thread");
-    return NULL;
+    if (rq->app_rq.first == NULL) {
+        return NULL;
+    }
+
+    struct dlist_node* node = dlist_remove_first(&rq->app_rq);
+
+    return (struct thread *)node->obj;
 }
 
 static void app_enqueue(struct thread* thread, struct rq* rq) {
-    
+    dlist_insert_last(&thread->rq_node, &rq->app_rq);
 }
 
 static void app_dequeue(struct thread* thread, struct rq* rq) {
-    
+    dlist_remove(&thread->rq_node, &rq->app_rq);
 }
 
 /// Application scheduling class

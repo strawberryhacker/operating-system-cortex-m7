@@ -7,16 +7,21 @@
 #include <stddef.h>
 
 static struct thread* background_pick_thread(struct rq* rq) {
-    //printl("Background pick next thread");
-    return NULL;
+    if (rq->background_rq.first == NULL) {
+        return NULL;
+    }
+    
+    struct dlist_node* node = dlist_remove_first(&rq->background_rq);
+
+    return (struct thread *)node->obj;
 }
 
 static void background_enqueue(struct thread* thread, struct rq* rq) {
-    
+    dlist_insert_last(&thread->rq_node, &rq->background_rq);
 }
 
 static void background_dequeue(struct thread* thread, struct rq* rq) {
-    
+    dlist_remove(&thread->rq_node, &rq->background_rq);
 }
 
 /// Background scheduling class

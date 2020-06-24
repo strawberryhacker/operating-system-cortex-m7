@@ -10,6 +10,8 @@ MEMORY {
 
 STACK_SIZE = 8192;
 
+ENTRY(main)
+
 SECTIONS {
     /* Code */
     .text : {
@@ -20,6 +22,8 @@ SECTIONS {
         *(.text*)
         *(.glue_7)
         *(.glue_7t)
+        *(.gnu.linkonce.t.*)
+        *(.gnu.linkonce.r.*)
 
         . = ALIGN(4);
         KEEP(*(.init))

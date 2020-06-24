@@ -32,3 +32,12 @@ void memory_fill(void* dest, u8 fill, u32 size) {
         *dest_ptr++ = fill;
     }
 }
+
+u32 string_len(const char* src) {
+    u32 ret = 0;
+
+    while (*src++) {
+        ret++;
+    }
+    return ret;
+}

@@ -5,6 +5,7 @@
 #include "systick.h"
 #include "cpu.h"
 #include "panic.h"
+#include "gpio.h"
 #include "print.h"
 
 #include <stddef.h>
@@ -19,6 +20,7 @@ struct rq cpu_rq = {0};
 
 /// Knernel tick will increment each time the SysTick handler runs
 volatile u64 tick = 0;
+volatile u64 stats_tick = 0;
 volatile u32 reschedule_pending = 0;
 
 /// The function which is starting the scheduler is defined in contex.s. It 
@@ -27,22 +29,17 @@ volatile u32 reschedule_pending = 0;
 /// thread
 void scheduler_run(void);
 
-/// The scheduler has to add the idle thread
 extern struct thread* new_thread(struct thread_info* thread_info);
 
-/// The idle thread is scheduled by the lowest priority scheduling class
 static void idle_thread(void* arg) {
-	printl("Idle thread");
 	while (1);
 }
 
-/// Iterates through all the scheduling classes picks the next thread to run
+/// Iterates through all the scheduling classes and picks the next thread to run
 static struct thread* core_scheduler(void) {
 
-	// The first scheduling class is the real-time class
 	const struct scheduling_class* class = &rt_class;
 
-	// Go through all the scheduling classes and check if it offers a thread
 	for (class = &rt_class; class != NULL; class = class->next) {
 		struct thread* thread = class->pick_thread(&cpu_rq);
 
@@ -94,20 +91,7 @@ void scheduler_start(void) {
 	scheduler_run();
 }
 
-void systick_handler(void) {
-	
-	// Compute the runtime of the current running thread
-	if (reschedule_pending) {
-		reschedule_pending = 0;
-
-		// Calculate the runtime
-		u32 cvr = systick_get_cvr();
-		tick += (u64)(SYSTICK_RVR - cvr);
-	} else {
-		// No reschedule is pending so the runtime is SYSTICK_RVR
-		tick += SYSTICK_RVR;
-	}
-
+static void process_expired_delays(void) {
 	// Go over the delay queue and move threads with expired delays back into 
 	// the running queue
 	struct dlist_node* iter = cpu_rq.sleep_q.first;
@@ -130,7 +114,44 @@ void systick_handler(void) {
 		}
 		iter = iter->next;
 	}
+}
 
+void calculate_runtime(void) {
+	struct dlist_node* iter = cpu_rq.threads.first;
+
+	while (iter != NULL) {
+		struct thread* t = (struct thread *)iter->obj;
+		t->runtime_curr = t->runtime_new;
+		t->runtime_new = 0;
+		iter = iter->next;
+	}
+}
+
+void systick_handler(void) {
+	// Compute the runtime of the current running thread
+	u64 curr_runtime;
+	if (reschedule_pending) {
+		reschedule_pending = 0;
+		// Calculate the runtime
+		u32 cvr = systick_get_cvr();
+		curr_runtime = (u64)(SYSTICK_RVR - cvr);
+	} else {
+		// No reschedule is pending so the runtime is SYSTICK_RVR
+		curr_runtime = SYSTICK_RVR;
+	}
+
+	tick += curr_runtime;
+	stats_tick += curr_runtime;
+	curr_thread->runtime_new += curr_runtime;
+
+	if (stats_tick >= SYSTICK_RVR * 1000) {
+		stats_tick = 0;
+		calculate_runtime();
+	}
+	
+	process_expired_delays();
+
+	// Enqueue the thread
 	if (curr_thread->tick_to_wake == 0) {
 		// The current thread has to be enqueued again
 		curr_thread->class->enqueue((struct thread *)curr_thread, &cpu_rq);
@@ -139,7 +160,7 @@ void systick_handler(void) {
 	// Call the core scheduler
 	next_thread = core_scheduler();
 
-	// Pend the PendSV handler
+	// Pand the context switch
 	pendsv_set_pending();
 }
 
@@ -152,9 +173,6 @@ void reschedule(void) {
 
 /// This will enqueue the thread into the sorted `sleep_q` list. The first 
 /// node will have to lowest tick to wake
-
-/// first
-///  400 600 1000
 void scheduler_enqueue_delay(struct thread* thread) {
 	struct dlist_node* iter = cpu_rq.sleep_q.first;
 
