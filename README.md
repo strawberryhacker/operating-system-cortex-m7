@@ -28,10 +28,10 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - SD card support
 - General purpose DMA core itegrated with the scheduler
 - Multiclass scheduler w/FPU support and lazy stacking
-- Runtime statistics
-- Memory statistics
-- System calls
-- Locks
+- Runtime statistics &check;
+- Memory statistics 
+- System calls &check;
+- Locks &check;
 - Runtime program execution (.bin)
 - LCD support with video playback (raw format)
 - FAT32 stack
