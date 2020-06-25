@@ -10,8 +10,12 @@
 
 #include <stddef.h>
 
+/// MOVE THESE!!
 volatile struct thread* curr_thread;
 volatile struct thread* next_thread;
+
+/// Scheduler status
+volatile u8 scheduler_status;
 
 struct thread* idle;
 
@@ -59,6 +63,9 @@ void scheduler_start(void) {
 	// Systick interrupt should be disabled
 	systick_set_priority(NVIC_PRI_6);
 	pendsv_set_priority(NVIC_PRI_7);
+
+	// Enable the scheduler to run
+	scheduler_status = 1;
 	
 	// Add the IDLE to the list
 	struct thread_info idle_info = {
@@ -128,40 +135,42 @@ void calculate_runtime(void) {
 }
 
 void systick_handler(void) {
-	// Compute the runtime of the current running thread
-	u64 curr_runtime;
-	if (reschedule_pending) {
-		reschedule_pending = 0;
-		// Calculate the runtime
-		u32 cvr = systick_get_cvr();
-		curr_runtime = (u64)(SYSTICK_RVR - cvr);
-	} else {
-		// No reschedule is pending so the runtime is SYSTICK_RVR
-		curr_runtime = SYSTICK_RVR;
+	if (scheduler_status) {
+		// Compute the runtime of the current running thread
+		u64 curr_runtime;
+		if (reschedule_pending) {
+			reschedule_pending = 0;
+			// Calculate the runtime
+			u32 cvr = systick_get_cvr();
+			curr_runtime = (u64)(SYSTICK_RVR - cvr);
+		} else {
+			// No reschedule is pending so the runtime is SYSTICK_RVR
+			curr_runtime = SYSTICK_RVR;
+		}
+
+		tick += curr_runtime;
+		stats_tick += curr_runtime;
+		curr_thread->runtime_new += curr_runtime;
+
+		if (stats_tick >= SYSTICK_RVR * 1000) {
+			stats_tick = 0;
+			calculate_runtime();
+		}
+		
+		process_expired_delays();
+
+		// Enqueue the thread
+		if (curr_thread->tick_to_wake == 0) {
+			// The current thread has to be enqueued again
+			curr_thread->class->enqueue((struct thread *)curr_thread, &cpu_rq);
+		}
+
+		// Call the core scheduler
+		next_thread = core_scheduler();
+
+		// Pand the context switch
+		pendsv_set_pending();
 	}
-
-	tick += curr_runtime;
-	stats_tick += curr_runtime;
-	curr_thread->runtime_new += curr_runtime;
-
-	if (stats_tick >= SYSTICK_RVR * 1000) {
-		stats_tick = 0;
-		calculate_runtime();
-	}
-	
-	process_expired_delays();
-
-	// Enqueue the thread
-	if (curr_thread->tick_to_wake == 0) {
-		// The current thread has to be enqueued again
-		curr_thread->class->enqueue((struct thread *)curr_thread, &cpu_rq);
-	}
-
-	// Call the core scheduler
-	next_thread = core_scheduler();
-
-	// Pand the context switch
-	pendsv_set_pending();
 }
 
 /// The reschedule will pend the SysTick interrupt. This will compute the
@@ -195,4 +204,12 @@ void scheduler_enqueue_delay(struct thread* thread) {
 			dlist_insert_last(&thread->rq_node, &cpu_rq.sleep_q);
 		}
 	}
+}
+
+void suspend_scheduler(void) {
+	scheduler_status = 0;
+}
+
+void resume_scheduler(void) {
+	scheduler_status = 1;
 }

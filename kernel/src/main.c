@@ -6,6 +6,7 @@
 #include "thread.h"
 #include "print.h"
 #include "syscall.h"
+#include "mm.h"
 
 #include <stddef.h>
 

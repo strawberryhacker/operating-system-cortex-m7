@@ -61,6 +61,8 @@ u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
 /// scheduling class
 struct thread* new_thread(struct thread_info* thread_info) {
 
+    suspend_scheduler();
+
     // Compute how many 1k pages are needed to store the stack and the thread
     // control block
     u32 size = sizeof(struct thread) + thread_info->stack_size * 4;
@@ -116,6 +118,11 @@ struct thread* new_thread(struct thread_info* thread_info) {
     thread->tick_to_wake = 0;
     thread->runtime_curr = 0;
     thread->runtime_new = 0;
+
+    dmb();
+    dsb();
+
+    resume_scheduler();
 
 	return thread;
 }

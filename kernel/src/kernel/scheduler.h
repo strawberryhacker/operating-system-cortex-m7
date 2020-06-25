@@ -96,4 +96,8 @@ void scheduler_enqueue_delay(struct thread* thread);
 
 void reschedule(void);
 
+void suspend_scheduler(void);
+
+void resume_scheduler(void);
+
 #endif

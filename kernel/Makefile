@@ -43,6 +43,7 @@ kernel-y += /src/kernel/app.c
 kernel-y += /src/kernel/background.c
 kernel-y += /src/kernel/idle.c
 kernel-y += /src/kernel/syscall.c
+kernel-y += /src/kernel/dynamic_linker.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c
@@ -115,7 +116,7 @@ lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
 program:
-	@python3 ../tools/programmer.py -com /dev/ttyS3 -f build/kernel.bin
+	@python3 ../tools/kernel_prog.py -com /dev/ttyS3 -f build/kernel.bin
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O binary $< $@

@@ -13,9 +13,19 @@ void syscall_gpio_toggle(gpio_reg* port, u8 pin) {
     asm volatile ("svc #2");
 }
 
+void* syscall_mm_alloc(u32 size, enum physmem_e region) {
+    asm volatile("svc #3");
+}
+
+void syscall_mm_free(void* ptr) {
+    asm volatile ("svc #4");
+}
+
 /// Core SVC handler which does the unstacking of the SVC argument and function
 /// parameters
 void svc_handler_ext(u32* stack_ptr) {
+
+    // 05 fd 45 45
 
     // This functions is called from the SVC exception handler. Therefore the 
     // `stack_ptr` points to the base of the exception stack frame:
@@ -37,6 +47,14 @@ void svc_handler_ext(u32* stack_ptr) {
         }
         case 2 : {
             gpio_toggle((gpio_reg *)stack_ptr[0], (u8)stack_ptr[1]);
+            break;
+        } 
+        case 3 : {
+            stack_ptr[0] = (u32)mm_alloc(stack_ptr[0], (enum physmem_e)stack_ptr[1]);
+            break;
+        }
+        case 4 : {
+            mm_free((void *)stack_ptr[0]);
             break;
         }
     }

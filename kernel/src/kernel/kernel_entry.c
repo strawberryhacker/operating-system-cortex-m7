@@ -60,7 +60,7 @@ void kernel_entry(void) {
 	gpio_set_function(GPIOA, 11, GPIO_FUNC_OFF);
 	gpio_set_direction(GPIOA, 11, GPIO_INPUT);
 	gpio_set_pull(GPIOA, 11, GPIO_PULL_UP);
-	
+
 	mm_init();
 
 	// Work in progress...

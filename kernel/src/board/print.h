@@ -15,6 +15,8 @@ void printl(const char* data, ...);
 
 void print_raw(const char* data);
 
+void print_memory(const u32* memory, u32 size);
+
 void print_flush(void);
 
 #endif

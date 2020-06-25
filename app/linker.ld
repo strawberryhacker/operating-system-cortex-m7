@@ -5,7 +5,7 @@ OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
 MEMORY {
-    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 0x00100000 /* 1 MiB */
+    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 0x00010000 /* 65 KiB */
 }
 
 STACK_SIZE = 8192;
@@ -13,6 +13,12 @@ STACK_SIZE = 8192;
 ENTRY(main)
 
 SECTIONS {
+    /* Application information */
+    .app_info : {
+        KEEP(*(.app_info))
+    } > ram
+
+
     /* Code */
     .text : {
         . = ALIGN(4);
@@ -56,6 +62,28 @@ SECTIONS {
         KEEP(*(.fini_array))
 		KEEP(*(SORT(.fini_array.*)))
     } > ram
+
+
+    /* Global offset table */
+    .got : {
+        . = ALIGN(4);
+        _got_s = .;
+        KEEP(*(.got))
+        KEEP(*(.got*))
+        _got_e = .;
+        . = ALIGN(4);
+    } > ram
+
+
+    /* Procedure linkage table */
+    .plt : {
+        . = ALIGN(4);
+        _plt_s = .;
+        KEEP(*(.got.plt))
+        KEEP(*(.got.plt*))
+        _plt_e = .;
+        . = ALIGN(4);
+    }
 
 
     /* Constant data */

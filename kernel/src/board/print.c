@@ -82,6 +82,32 @@ void print_raw(const char* data) {
     }
 }
 
+void print_memory(const u32* memory, u32 size) {
+    const u8* src = (const u8 *)memory;
+    u8 line = 0;
+    u8 byte = 0;
+    u8 section = 0;
+    print("\n0x%4h:  ", (u32)src);
+    for (u32 i = 0; i < size; i++) {
+        if (line >= 2) {
+            line = 0;
+            if (section++ >= 8) {
+                section = 0;
+                print("\n");
+            }
+            print("\n0x%4h:  ", (u32)src);
+        }
+        print("%1h ", *src++);
+
+        if (byte++ >= 3) {
+            byte = 0;
+            line++;
+            print("   ");
+        }
+    }
+    print("\n\n");
+}
+
 /// The `serial_print` function only checks is the USART transmit buffer is 
 /// ready, and does not block to the character is transmitted. If all characters
 /// needs to be transmitted before proceeding, this function can be called

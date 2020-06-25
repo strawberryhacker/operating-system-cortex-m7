@@ -3,9 +3,16 @@
 
 #include "types.h"
 #include "hardware.h"
+#include "mm.h"
 
-void syscall_thread_sleep(u32 ms);
+#define NAKED __attribute__((naked))
 
-void syscall_gpio_toggle(gpio_reg* port, u8 pin);
+void syscall_thread_sleep(u32 ms) NAKED;
+
+void syscall_gpio_toggle(gpio_reg* port, u8 pin) NAKED;
+
+void* syscall_mm_alloc(u32 size, enum physmem_e region) NAKED;
+
+void syscall_mm_free(void* ptr) NAKED;
 
 #endif

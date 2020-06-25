@@ -122,11 +122,7 @@ uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 					break;
 				}
 				// Hexadecimal formating
-				case 'h' : {
-					*dest_ptr++ = '0';
-					*dest_ptr++ = 'x';
-					size += 2;
-					
+				case 'h' : {					
 					uint32_t fmt_hex = (uint32_t)va_arg(obj, int);
 					
 					for (uint8_t i = 0; i < opt_fmt; i++) {
