@@ -286,9 +286,6 @@ static u8 sd_exec_acmd_51(void) {
     // This has to do with the command set implemented. For example, a 
     // version 1.0 SD card does not support CMD6 and therefore not high-speed 
     // either
-    for (u32 i = 0; i < 8; i++) {
-        printl("CSR: %8b", csr[i]);
-    }
     if (csr[7] & 0b1111) {
         slot_1.past_v1_10 = 1;
     }
@@ -414,17 +411,11 @@ void sd_protocol_init(void) {
     if (!sd_exec_cmd_2(cid)) {
         panic("Can't retrieve CID register");
     }
-    print("Card detected with ID - ");
-    for (u8 i = 0; i < 6; i++) {
-        print("%c", slot_1.cid_name[i]);
-    }
-    print("\n");
 
     // CMD3
     if (!sd_exec_cmd_3()) {
         panic("Can't retrieve RCA address");
     }
-    print("RCA: %4h\n", slot_1.rca);
 
     // The card is in date transfer mode
 
@@ -457,20 +448,20 @@ void sd_protocol_init(void) {
         }
         mmc_set_bus_width(MMC_4_LANES);
     }
-    print("Checking high speed support\n");
+
     // Try to switch to high-speed mode if supported. This used CMD6 and 
     // requires SD card Version 1.10 or later
     if (slot_1.past_v1_10) {
         if (!sd_exec_cmd_6()) {
             panic("CMD6 failed");
         }
-        print("HSS: %d\n", slot_1.high_speed);
+        print("High-speed support: %d\n", slot_1.high_speed);
 
         // Turn on high-speed
         mmc_enable_high_speed();
     }
 
-    printl("SD card ready");
+    printl("SD card ready\n");
 
     mmc_set_bus_freq(50000000);
 }

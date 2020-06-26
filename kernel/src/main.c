@@ -16,7 +16,7 @@
 
 static void test_thread(void* arg) {
 	while (1) {
-		thread_sleep(500);
+		syscall_thread_sleep(500);
 		printl("Thread A says hello");
 	}
 }
@@ -35,18 +35,10 @@ int main(void) {
 	};
 
 	new_thread(&test_info);
-
-	//fat32_thread(NULL);
-	sd_read(0, 1, buf);
-
-	for (u32 i = 0; i < 512;) {
-		print("%1h  ", buf[i]);
-		if ((i++ % 10) == 0) {
-			print("\n");
-		}
-	}
+	/*
+	fat32_thread(NULL);
 
 	while (1);
-
+*/
 	scheduler_start();
 }

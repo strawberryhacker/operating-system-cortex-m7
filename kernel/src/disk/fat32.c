@@ -788,7 +788,7 @@ void fat32_thread(void* arg) {
 	}
 	
 	struct volume* tmp = volume_get('C');
-	print("Addr: 0x%4h\n", tmp);
+
 	// Print all the volumes on the system
 	print(BLUE "Displaying system volumes:\n");
 	struct volume* vol = volume_get_first();
@@ -853,13 +853,6 @@ u8 disk_mount(enum disk disk) {
 		panic("Read failed");
 	}
 
-	for (u32 i = 0; i < 512;) {
-		print("%1h  ", mount_buffer[i]);
-		if ((i++ % 10) == 0) {
-			print("\n");
-		}
-	}
-
 	// Check the boot signature in the MBR
 	if (fat_load16(mount_buffer + MBR_BOOT_SIG) != MBR_BOOT_SIG_VALUE) {
 		return 0;
@@ -875,12 +868,6 @@ u8 disk_mount(enum disk disk) {
 		partitions[i].size = fat_load32(mount_buffer + offset + PAR_SIZE);
 		partitions[i].type = mount_buffer[offset + PAR_TYPE];
 		partitions[i].status = mount_buffer[offset + PAR_STATUS];
-
-		printl("LBA: %d", partitions[i].lba);
-		printl("Size: %d", partitions[i].size);
-		printl("Type: %8b", partitions[i].type);
-		printl("Status: %8b", partitions[i].status);
-		print("\n");
 	}
 	
 	// Search for a valid FAT32 file systems on all valid paritions
