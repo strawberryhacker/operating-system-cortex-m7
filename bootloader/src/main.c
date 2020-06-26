@@ -192,6 +192,9 @@ int main(void) {
 	host_ack(NO_ERROR);
 	u32 page_counter = 0;
 	u8 led_state = 0;
+
+	// Must reset the packet ready flag
+	packet_flag = 0;
 	
 	while (1) {
 		if ((tick >= 245) && (led_state == 0)) {

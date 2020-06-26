@@ -4,7 +4,7 @@
 #include "print.h"
 #include "sd.h"
 #include "mm.h"
-#include "syscall.h"
+#include "system_call.h"
 #include "panic.h"
 
 #include <stddef.h>

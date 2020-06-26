@@ -63,6 +63,7 @@ void scheduler_start(void) {
 	// Systick interrupt should be disabled
 	systick_set_priority(NVIC_PRI_6);
 	pendsv_set_priority(NVIC_PRI_7);
+	svc_set_priority(NVIC_PRI_5);
 
 	// Enable the scheduler to run
 	scheduler_status = 1;

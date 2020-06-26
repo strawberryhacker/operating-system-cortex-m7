@@ -25,5 +25,3 @@ svc_handler:
 
     // The function will automatically return to the caller of SVC
     b svc_handler_ext
-
-    bx lr

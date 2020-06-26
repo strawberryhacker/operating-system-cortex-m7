@@ -341,17 +341,17 @@ typedef struct {
 	_rw u32 FIFO[256];
 } mmc_reg;
 
-#define CLOCK ((clock_reg *)0x400E0600)
-#define FLASH ((flash_reg *)0x400E0C00)
+#define CLOCK    ((clock_reg *)0x400E0600)
+#define FLASH    ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
-#define SYSTICK ((systick_reg *)0xE000E010)
-#define NVIC ((nvic_reg *)0xE000E100)
-#define ICM ((icm_reg *)0x40048000)
-#define MATRIX ((matrix_reg *)0x40088000)
-#define DRAM ((dram_reg *)0x40084000)
-#define SCB ((scb_reg *)0xE000ED00)
-#define CACHE ((scb_reg *)0xE000EF50)
-#define MMC ((mmc_reg *)0x40000000)
+#define SYSTICK  ((systick_reg *)0xE000E010)
+#define NVIC     ((nvic_reg *)0xE000E100)
+#define ICM      ((icm_reg *)0x40048000)
+#define MATRIX   ((matrix_reg *)0x40088000)
+#define DRAM     ((dram_reg *)0x40084000)
+#define SCB      ((scb_reg *)0xE000ED00)
+#define CACHE    ((scb_reg *)0xE000EF50)
+#define MMC      ((mmc_reg *)0x40000000)
 
 #define CPACR 0xE000ED88
 

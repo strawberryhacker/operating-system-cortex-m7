@@ -102,6 +102,7 @@ scheduler_run:
 	pop {lr}
 	add sp, sp, #4
 	
+	dmb
 	dsb
 	isb
 

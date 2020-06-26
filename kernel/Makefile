@@ -17,7 +17,7 @@ ARM_ASM = arm-none-eabi-as
 CPFLAGS += -I$(TOP)/src
 
 CFLAGS += -x c -mthumb -O3 -ffunction-sections -mlong-calls -g3 -Wall
-CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wunused-function
+CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections
 
 LDFLAGS += -mthumb -Wl,-Map="$(BUILDDIR)/$(TARGET_NAME).map" -Wl,--start-group
 LDFLAGS += -Wl,--end-group -Wl,--gc-sections -mcpu=cortex-m7 -Tlinker.ld
@@ -42,7 +42,7 @@ kernel-y += /src/kernel/rt.c
 kernel-y += /src/kernel/app.c
 kernel-y += /src/kernel/background.c
 kernel-y += /src/kernel/idle.c
-kernel-y += /src/kernel/syscall.c
+kernel-y += /src/kernel/system_call.c
 kernel-y += /src/kernel/dynamic_linker.c
 
 driver-y += /src/drivers/systick.c
@@ -69,6 +69,8 @@ generic-y += /src/generic/crc.c
 generic-y += /src/generic/memory.c
 generic-y += /src/generic/panic.c
 
+net-y += /src/net/ip.c
+
 mm-y += /src/mm/mm.c
 mm-y += /src/mm/mpu.c
 mm-y += /src/mm/cache.c
@@ -86,6 +88,7 @@ DRIVER_OBJ := $(patsubst %.c, %.o, $(driver-y))
 MM_OBJ := $(patsubst %.c, %.o, $(mm-y))
 OBJ_OBJ := $(patsubst %.c, %.o, $(obj-y))
 DISK_OBJ := $(patsubst %.c, %.o, $(disk-y))
+NET_OBJ := $(patsubst %.c, %.o, $(net-y))
 
 OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
@@ -95,6 +98,7 @@ OBJ += $(addprefix $(BUILDDIR), $(GENERIC_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(MM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(OBJ_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DISK_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(NET_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers
@@ -104,6 +108,7 @@ CPFLAGS += -I$(TOP)/src/cpu
 CPFLAGS += -I$(TOP)/src/mm
 CPFLAGS += -I$(TOP)/src/kernel
 CPFLAGS += -I$(TOP)/src/disk
+CPFLAGS += -I$(TOP)/src/net
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------

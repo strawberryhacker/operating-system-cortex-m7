@@ -1,4 +1,4 @@
-#include "syscall.h"
+#include "system_call.h"
 #include "print.h"
 #include "thread.h"
 #include "gpio.h"
@@ -36,11 +36,11 @@ void svc_handler_ext(u32* stack_ptr) {
     // at byte address PC - 2. Since the processor uses little endian, that
     // address is two bytes back from the value pointed to by PC. Therefore svc
     // argument is *PC - 2
-    u8 svc = ((char *)stack_ptr[6])[-2];
+    u8 svc = *((u8 *)stack_ptr[6] - 2);
 
     switch (svc) {
         case 1 : {
-            thread_sleep(stack_ptr[0]);
+            thread_sleep((u64)stack_ptr[0]);
             break;
         }
         case 2 : {

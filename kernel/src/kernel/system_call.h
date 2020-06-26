@@ -1,5 +1,5 @@
-#ifndef SYSCALL_H
-#define SYSCALL_H
+#ifndef SYSTEM_CALL_H
+#define SYSTEM_CALL_H
 
 #include "types.h"
 #include "hardware.h"

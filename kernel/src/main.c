@@ -5,7 +5,7 @@
 #include "kernel_entry.h"
 #include "thread.h"
 #include "print.h"
-#include "syscall.h"
+#include "system_call.h"
 #include "mm.h"
 #include "sd_protocol.h"
 #include "panic.h"
@@ -16,12 +16,14 @@
 
 static void test_thread(void* arg) {
 	while (1) {
-		syscall_thread_sleep(500);
 		printl("Thread A says hello");
+		syscall_thread_sleep(500);
 	}
 }
 
-volatile u8 buf[512];
+static void exit_thread(void* arg) {
+	printl("Exit thread started\n");
+}
 
 int main(void) {
 	kernel_entry();
@@ -34,11 +36,18 @@ int main(void) {
 		.arg        = NULL
 	};
 
-	new_thread(&test_info);
-	/*
-	fat32_thread(NULL);
+	struct thread_info exit_info = {
+		.name       = "exit",
+		.stack_size = 100,
+		.thread     = exit_thread,
+		.class      = REAL_TIME,
+		.arg        = NULL
+	};
 
-	while (1);
-*/
+	new_thread(&test_info);
+	//new_thread(&exit_info);
+	
+	//fat32_thread(NULL);
+
 	scheduler_start();
 }
