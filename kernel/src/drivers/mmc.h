@@ -83,4 +83,6 @@ void mmc_read_data_reverse(u8* buffer, u32 word_count);
 
 void mmc_write_data(u32 data);
 
+u32 mmc_read_status(void);
+
 #endif

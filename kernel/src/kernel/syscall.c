@@ -5,27 +5,25 @@
 
 /// Syscall arguments will automaticall be placed in the registers R0-R3 so 
 // the svc instructions can be called right away
-void syscall_thread_sleep(u32 ms) {
+void NOINLINE syscall_thread_sleep(u32 ms) {
     asm volatile ("svc #1");
 }
 
-void syscall_gpio_toggle(gpio_reg* port, u8 pin) {
+void NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin) {
     asm volatile ("svc #2");
 }
 
-void* syscall_mm_alloc(u32 size, enum physmem_e region) {
+void* NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region) {
     asm volatile("svc #3");
 }
 
-void syscall_mm_free(void* ptr) {
+void NOINLINE syscall_mm_free(void* ptr) {
     asm volatile ("svc #4");
 }
 
 /// Core SVC handler which does the unstacking of the SVC argument and function
 /// parameters
 void svc_handler_ext(u32* stack_ptr) {
-
-    // 05 fd 45 45
 
     // This functions is called from the SVC exception handler. Therefore the 
     // `stack_ptr` points to the base of the exception stack frame:
@@ -38,7 +36,7 @@ void svc_handler_ext(u32* stack_ptr) {
     // at byte address PC - 2. Since the processor uses little endian, that
     // address is two bytes back from the value pointed to by PC. Therefore svc
     // argument is *PC - 2
-    u8 svc = *((u8 *)stack_ptr[6] - 2);
+    u8 svc = ((char *)stack_ptr[6])[-2];
 
     switch (svc) {
         case 1 : {

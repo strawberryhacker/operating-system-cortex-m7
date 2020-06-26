@@ -54,12 +54,12 @@ struct sd_card {
 /// This SD protocol inplementation only support one slot access
 void sd_protocol_init(void);
 
-void sd_write(u32 sector, u32 size, u8* buffer);
+u8 sd_write(u32 sector, u32 count, u8* buffer);
 
-void sd_read(u32 sector, u32 size, u8* buffer);
+u8 sd_read(u32 sector, u32 count, u8* buffer);
 
-void sd_dma_write(u32 sector, u32 size, u8* buffer);
+u8 sd_dma_write(u32 sector, u32 count, u8* buffer);
 
-void sd_dma_read(u32 sector, u32 size, u8* buffer);
+u8 sd_dma_read(u32 sector, u32 count, u8* buffer);
 
 #endif

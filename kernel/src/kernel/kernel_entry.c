@@ -64,6 +64,6 @@ void kernel_entry(void) {
 	mm_init();
 
 	// Work in progress...
-	//sd_init();
-	//sd_protocol_init();
+	sd_init();
+	sd_protocol_init();
 }

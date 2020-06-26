@@ -233,10 +233,33 @@ static u8 sd_exec_acmd_41(void) {
     return 0;
 }
 
+/// Wait for the card to be ready
+static u8 sd_exec_cmd_13(void) {
+    u32 timeout = 100000;
+    u32 status;
+
+    do {
+        u32 cmd = SD_RESP_1 | 13;
+        u32 arg = slot_1.rca << 16;
+
+        if (!mmc_send_cmd(cmd, arg, 1)) {
+            return 0;
+        }
+        
+        if (timeout-- <= 1) {
+            return 0;
+        }
+
+        status = mmc_read_resp48();
+    } while (!(status & (1 << 8)));
+
+    return 1;
+}
+
 /// Retrieves the SCR register which contains information about the additional 
 /// features. This includes non-supported commands, bus width and physical 
 /// layer version.
-u8 sd_exec_acmd_51(void) {
+static u8 sd_exec_acmd_51(void) {
     // The next command will be an application command
     if (!sd_exec_cmd_55()) {
         return 0;
@@ -263,6 +286,9 @@ u8 sd_exec_acmd_51(void) {
     // This has to do with the command set implemented. For example, a 
     // version 1.0 SD card does not support CMD6 and therefore not high-speed 
     // either
+    for (u32 i = 0; i < 8; i++) {
+        printl("CSR: %8b", csr[i]);
+    }
     if (csr[7] & 0b1111) {
         slot_1.past_v1_10 = 1;
     }
@@ -418,7 +444,6 @@ void sd_protocol_init(void) {
     }
 
     // ACMD51
-    while (1);
     if (!sd_exec_acmd_51()) {
         panic("ACMD51 failed");
     }
@@ -432,7 +457,7 @@ void sd_protocol_init(void) {
         }
         mmc_set_bus_width(MMC_4_LANES);
     }
-
+    print("Checking high speed support\n");
     // Try to switch to high-speed mode if supported. This used CMD6 and 
     // requires SD card Version 1.10 or later
     if (slot_1.past_v1_10) {
@@ -440,22 +465,91 @@ void sd_protocol_init(void) {
             panic("CMD6 failed");
         }
         print("HSS: %d\n", slot_1.high_speed);
+
+        // Turn on high-speed
+        mmc_enable_high_speed();
     }
+
+    printl("SD card ready");
+
     mmc_set_bus_freq(50000000);
 }
 
-void sd_write(u32 sector, u32 size, u8* buffer) {
+u8 sd_read(u32 sector, u32 count, u8* buffer) {
+    u32 cmd = 0;
+    u32 arg = 0;
 
+    u32* buffer_word = (u32 *)buffer;
+
+    for (u32 i = 0; i < count; i++) {
+
+        // Check if the card is ready
+        if (!sd_exec_cmd_13()) {
+            panic("Card is not ready");
+        }
+
+        cmd = MMC_CMD_SINGLE | MMC_CMD_START_DATA | MMC_CMD_READ | SD_RESP_1 | 17;
+
+        // The argument is dependent upon the card capacity
+        if (slot_1.high_capacity) {
+            arg = sector + i;
+        } else {
+            arg = (sector + i) * 512;
+        }
+
+        mmc_send_adtc(cmd, arg, 512, 1, 1);
+
+        for (u8 j = 0; j < 128; j++) {
+            *buffer_word++ = mmc_read_data();
+        }
+
+        // Check for errors
+        u32 status = mmc_read_resp48();
+        if (status & 0xFFF80000) {
+            panic("Write error");
+        }
+    }
+    return 1;
 }
 
-void sd_read(u32 sector, u32 size, u8* buffer) {
+u8 sd_write(u32 sector, u32 count, u8* buffer) {
+    u32 cmd = 0;
+    u32 arg = 0;
 
+    u32* buffer_word = (u32 *)buffer;
+
+    for (u32 i = 0; i < count; i++) {
+        cmd = MMC_CMD_SINGLE | MMC_CMD_START_DATA | MMC_CMD_WRITE | SD_RESP_1 | 24;
+
+        // The argument is dependent upon the card capacity
+        if (slot_1.high_capacity) {
+            arg = sector + i;
+        } else {
+            arg = (sector + i) * 512;
+        }
+
+        mmc_send_adtc(cmd, arg, 512, 1, 1);
+
+        for (u8 j = 0; j < 128; j++) {
+            mmc_write_data(*buffer_word++);
+        }
+
+        // Check for errors
+        u32 status = mmc_read_resp48();
+        if (status & 0xFFF80000) {
+            panic("Read error");
+        }
+
+        // Wait for the card to return not busy
+        while (!(mmc_read_status() & (1 << 5)));
+    }
+    return 1;
 }
 
-void sd_dma_write(u32 sector, u32 size, u8* buffer) {
-
+u8 sd_dma_write(u32 sector, u32 count, u8* buffer) {
+    return 1;
 }
 
-void sd_dma_read(u32 sector, u32 size, u8* buffer) {
-
+u8 sd_dma_read(u32 sector, u32 count, u8* buffer) {
+    return 1;
 }

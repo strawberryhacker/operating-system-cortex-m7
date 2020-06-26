@@ -5,6 +5,8 @@
 
 #include "types.h"
 
+#define NOINLINE __attribute__((noinline))
+
 /// Data synchronization barrier
 static inline void dsb(void) {
 	asm volatile ("dsb sy" : : : "memory");
@@ -50,6 +52,103 @@ static inline u32 get_basepri(void) {
 	u32 basepri;
 	asm volatile ("mrs %0, basepri" : "=r"(basepri));
 	return basepri;
+}
+
+/// Functions for getting the processor registers
+__attribute__((always_inline)) static inline u32 cpu_get_r0(void) {
+    register u32 res;
+    asm volatile ("mov %0, r0 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r1(void) {
+    register u32 res;
+    asm volatile ("mov %0, r1 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r2(void) {
+    register u32 res;
+    asm volatile ("mov %0, r2 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r3(void) {
+    register u32 res;
+    asm volatile ("mov %0, r3 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r4(void) {
+    register u32 res;
+    asm volatile ("mov %0, r4 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r5(void) {
+    register u32 res;
+    asm volatile ("mov %0, r5 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r6(void) {
+    register u32 res;
+    asm volatile ("mov %0, r6 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r7(void) {
+    register u32 res;
+    asm volatile ("mov %0, r7 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r8(void) {
+    register u32 res;
+    asm volatile ("mov %0, r8 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r9(void) {
+    register u32 res;
+    asm volatile ("mov %0, r9 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r10(void) {
+    register u32 res;
+    asm volatile ("mov %0, r10 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r11(void) {
+    register u32 res;
+    asm volatile ("mov %0, r11 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r12(void) {
+    register u32 res;
+    asm volatile ("mov %0, r12 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_r13(void) {
+    register u32 res;
+    asm volatile ("mov %0, r13 \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_lr(void) {
+    register u32 res;
+    asm volatile ("mov %0, lr \n\t" : "=r" (res));
+    return res;
+}
+
+__attribute__((always_inline)) static inline u32 cpu_get_pc(void) {
+    register u32 res;
+    asm volatile ("mov %0, pc \n\t" : "=r" (res));
+    return res;
 }
 
 #endif

@@ -79,6 +79,7 @@ void mmc_dma_disable(void) {
 }
 
 u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
+    // The transfer is initiated right after the CMD register is written
     MMC->ARG = arg;
     MMC->CMD = cmd;
 
@@ -121,6 +122,9 @@ u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
 
 u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc) {
 
+    // Turn on read and write proof
+    MMC->MR |= (1 << 11) | (1 << 12);
+
     // Check if force byte transfer has to be used
     if (block_size & 0b11) {
         MMC->MR |= (1 << 13);
@@ -132,19 +136,16 @@ u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc
     if (((cmd >> 19) & 0b111) == 4) {
         MMC->BLKR = (block_size % 512) & 0xFFFF;
     } else {
-        MMC->BLKR = (block_size << 16) & (block_count & 0xFFFF);
+        MMC->BLKR = (block_size << 16) | (block_count & 0xFFFF);
     }
     
     // Initiate transfer
     MMC->ARG = arg;
     MMC->CMD = cmd;
-    u32 time_out = 1000;
+
     u32 status;
     do {
         status = MMC->SR;
-        if (time_out-- > 1){
-            panic("Timeout");
-        }
     } while (!(status & 0b1));
 
     // Check error flags
@@ -210,13 +211,11 @@ void mmc_read_data_reverse(u8* buffer, u32 word_count) {
 
         u32 reg = MMC->RDR;
 
-        // Grab a pointer to the last byte
-        buffer += word_count * 4;
-
-        *buffer-- = (reg >> 24) & 0xFF;
-        *buffer-- = (reg >> 16) & 0xFF;
-        *buffer-- = (reg >> 8) & 0xFF;
-        *buffer-- = reg & 0xFF;
+		// Remap the bytes
+		buffer[((4 * word_count) - 1) - 4*i]       = (reg >> 0) & 0xFF;
+		buffer[((4 * word_count) - 1) - (4*i + 1)] = (reg >> 8) & 0xFF;
+		buffer[((4 * word_count) - 1) - (4*i + 2)] = (reg >> 16) & 0xFF;
+		buffer[((4 * word_count) - 1) - (4*i + 3)] = (reg >> 24) & 0xFF;
     }
 }
 
@@ -224,4 +223,8 @@ void mmc_write_data(u32 data) {
     // Wait for the TX ready flag
     while (!(MMC->SR & (1 << 2)));
     MMC->TDR = data;
+}
+
+u32 mmc_read_status(void) {
+    return MMC->SR;
 }

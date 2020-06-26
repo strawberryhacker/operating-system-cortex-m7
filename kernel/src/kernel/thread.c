@@ -121,6 +121,7 @@ struct thread* new_thread(struct thread_info* thread_info) {
 
     dmb();
     dsb();
+    isb();
 
     resume_scheduler();
 

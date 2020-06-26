@@ -74,6 +74,7 @@ mm-y += /src/mm/cache.c
 asm-y += /src/entry/entry.s
 asm-y += /src/kernel/context.s
 asm-y += /src/kernel/svc.s
+asm-y += /src/kernel/fault_asm.s
 
 ASM_OBJ := $(patsubst %.s, %.o, $(asm-y))
 KERNEL_OBJ := $(patsubst %.c, %.o, $(kernel-y))
