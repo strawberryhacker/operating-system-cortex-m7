@@ -235,7 +235,7 @@ static u8 sd_exec_acmd_41(void) {
 
 /// Wait for the card to be ready
 static u8 sd_exec_cmd_13(void) {
-    u32 timeout = 100000;
+    u32 timeout = 200000;
     u32 status;
 
     do {
@@ -512,11 +512,11 @@ u8 sd_read(u32 sector, u32 count, u8* buffer) {
     return 1;
 }
 
-u8 sd_write(u32 sector, u32 count, u8* buffer) {
+u8 sd_write(u32 sector, u32 count, const u8* buffer) {
     u32 cmd = 0;
     u32 arg = 0;
 
-    u32* buffer_word = (u32 *)buffer;
+    const u32* buffer_word = (const u32 *)buffer;
 
     for (u32 i = 0; i < count; i++) {
         cmd = MMC_CMD_SINGLE | MMC_CMD_START_DATA | MMC_CMD_WRITE | SD_RESP_1 | 24;
@@ -546,7 +546,7 @@ u8 sd_write(u32 sector, u32 count, u8* buffer) {
     return 1;
 }
 
-u8 sd_dma_write(u32 sector, u32 count, u8* buffer) {
+u8 sd_dma_write(u32 sector, u32 count, const u8* buffer) {
     return 1;
 }
 

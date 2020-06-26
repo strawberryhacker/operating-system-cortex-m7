@@ -1,7 +1,4 @@
-//------------------------------------------------------------------------------
-// MIT license
-// Copyright (c) 2020 StrawberryHacker
-//------------------------------------------------------------------------------
+/// Copyright (C) StrawberryHacker
 
 #ifndef FAT32_H
 #define FAT32_H
@@ -18,8 +15,8 @@ typedef enum {
 	FSTATUS_EOF
 } fstatus;
 
-struct volume_s {
-	struct volume_s* next;
+struct volume {
+	struct volume* next;
 	
 	// The first label is 11-bytes and located in the BPB, while the sectondary
 	// label is introduced in the root directory. The BPB label contains 13 
@@ -40,7 +37,7 @@ struct volume_s {
 	// current sector.
 	u8 buffer[512];
 	u32 buffer_lba;
-	disk_e disk;
+	enum disk disk;
 	u32 buffer_dirty;
 	
 	char lfn[256];
@@ -48,29 +45,29 @@ struct volume_s {
 	
 };
 
-struct dir_s {
+struct dir {
 	u32 sector;
 	u32 cluster;
 	u32 rw_offset;
 	
 	u32 start_sect;
 	u32 size;
-	struct volume_s* vol;
+	struct volume* vol;
 };
 
-struct file_s {
+struct file {
 	u32 sector;
 	u32 cluster;
 	u32 rw_offset;
 	u32 size;
 	u32 start_sect;
 	u32 glob_offset;
-	struct volume_s* vol;
+	struct volume* vol;
 };
 
 /// This structure will contain all information needed for a file or a folder. 
 /// It is mainly used to read directory entries from a path
-struct info_s {
+struct info {
 	
 	// By default this code supports long file name entries (LFN) up to 
 	// 256 characters. The same buffer will be used for LFN and SFN entries.
@@ -99,11 +96,11 @@ struct info_s {
 	// Contains the total size of a file or a folder
 	// A folder has 
 	u32 size;
-}
+};
 
 /// The classical generic MBR located at sector zero at a MSD contains four 
 /// partition fields. This structure describe one partition. 
-struct partition_s {
+struct partition {
 	u32 lba;
 	u32 size;
 	u8 status;
@@ -111,7 +108,7 @@ struct partition_s {
 };
 
 /// Format structure
-struct fat_fmt_s {
+struct fat_fmt {
 	u32 allocation_size;
 	u32 allignment;
 	u32 quick_format;
@@ -215,33 +212,33 @@ struct fat_fmt_s {
 void fat32_thread(void* arg);
 
 /// Disk functions
-u8 disk_mount(disk_e disk);
-u8 disk_eject(disk_e disk);
+u8 disk_mount(enum disk disk);
+u8 disk_eject(enum disk disk);
 
 /// Volume functions
-struct volume_s* volume_get_first(void);
-struct volume_s* volume_get(char letter);
-fstatus volume_set_label(struct volume_s* vol, const char* name, u8 length);
-fstatus volume_get_label(struct volume_s* vol, char* name);
-fstatus volume_format(struct volume_s* vol, struct fat_fmt_s* fmt);
+struct volume* volume_get_first(void);
+struct volume* volume_get(char letter);
+fstatus volume_set_label(struct volume* vol, const char* name, u8 length);
+fstatus volume_get_label(struct volume* vol, char* name);
+fstatus volume_format(struct volume* vol, struct fat_fmt* fmt);
 
 /// Directory actions
-fstatus fat_dir_open(struct dir_s* dir, const char* path, u16 length);
-fstatus fat_dir_close(struct dir_s* dir);
-fstatus fat_dir_read(struct dir_s* dir, struct info_s* info);
+fstatus fat_dir_open(struct dir* dir, const char* path, u16 length);
+fstatus fat_dir_close(struct dir* dir);
+fstatus fat_dir_read(struct dir* dir, struct info* info);
 fstatus fat_dir_make(const char* path);
 
 /// File actions
-fstatus fat_file_open(struct file_s* file, const char* path, u16 length);
-fstatus fat_file_close(struct file_s* file);
-fstatus fat_file_read(struct file_s* file, u8* buffer, u32 count, u32* status);
-fstatus fat_file_write(struct file_s* file, const u8* buffer, u32 count);
-fstatus fat_file_jump(struct file_s* file, u32 offset);
-fstatus fat_file_flush(struct file_s* file);
+fstatus fat_file_open(struct file* file, const char* path, u16 length);
+fstatus fat_file_close(struct file* file);
+fstatus fat_file_read(struct file* file, u8* buffer, u32 count, u32* status);
+fstatus fat_file_write(struct file* file, const u8* buffer, u32 count);
+fstatus fat_file_jump(struct file* file, u32 offset);
+fstatus fat_file_flush(struct file* file);
 
 /// Directory and file actions
-fstatus fat_dir_rename(struct dir_s* dir, const char* name, u8 length);
-fstatus fat_dir_delete(struct dir_s* dir);
-fstatus fat_dir_chmod(struct dir_s* dir, const char* mod);
+fstatus fat_dir_rename(struct dir* dir, const char* name, u8 length);
+fstatus fat_dir_delete(struct dir* dir);
+fstatus fat_dir_chmod(struct dir* dir, const char* mod);
 
 #endif

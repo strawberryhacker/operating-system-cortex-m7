@@ -114,3 +114,10 @@ void print_memory(const u32* memory, u32 size) {
 void print_flush(void) {
 	usart_flush(USART0);
 }
+
+/// Print `count` number of characters from the specified string
+void print_count(const char* data, u32 count) {
+    while (count--) {
+        usart_write(USART0, *data++);
+    }
+}

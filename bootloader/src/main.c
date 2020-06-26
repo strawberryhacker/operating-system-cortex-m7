@@ -302,6 +302,12 @@ void jump_to_image(u32 base_addr) {
 	
 	// Set vector table offset
 	*((volatile u32 *)VECTOR_TABLE_BASE) = base_addr;
+
+	// Erase entire RAM
+	volatile u32* ram_dest = (volatile u32 *)0x20400000;
+	for (u32 i = 0; i < 0x60000; i += 4) {
+		*ram_dest++ = 0x00000000;
+	}
 	
 	// Insert a data memory barrier and a data synchronization barrier to ensure
 	// that all instructions and data accesses are complete before proceeding

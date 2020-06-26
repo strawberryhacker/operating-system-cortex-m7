@@ -9,6 +9,7 @@
 #include "mm.h"
 #include "sd_protocol.h"
 #include "panic.h"
+#include "fat32.h"
 
 #include <stddef.h>
 
@@ -21,7 +22,7 @@ static void test_thread(void* arg) {
 }
 
 volatile u8 buf[512];
-volatile u8 buff[512];
+
 int main(void) {
 	kernel_entry();
 
@@ -35,11 +36,11 @@ int main(void) {
 
 	new_thread(&test_info);
 
-	sd_read(0, 1, (u8 *)buff);
+	//fat32_thread(NULL);
+	sd_read(0, 1, buf);
 
-	for (u32 i = 0; i < 512; ) {
-		print("%1h  ", buff[i]);
-
+	for (u32 i = 0; i < 512;) {
+		print("%1h  ", buf[i]);
 		if ((i++ % 10) == 0) {
 			print("\n");
 		}
