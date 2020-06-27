@@ -35,6 +35,17 @@ enum master_divider {
     MASTER_DIV_3
 };
 
+enum pck {
+    PCK0,
+    PCK1,
+    PCK2,
+    PCK3,
+    PCK4,
+    PCK5,
+    PCK6,
+    PCK7
+};
+
 enum rc_frecuency {
 	RC_4_MHz,
 	RC_8_MHz,
@@ -64,6 +75,12 @@ u8 master_clock_verify(void);
 void peripheral_clock_enable(u8 per_id);
 
 void peripheral_clock_disable(u8 per_id);
+
+void pck_init(enum pck pck, enum clock_net net, u8 presc);
+
+void pck_enable(enum pck pck);
+
+void pck_disable(enum pck pck);
 
 void clock_tree_reset(void);
 

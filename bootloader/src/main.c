@@ -63,8 +63,9 @@ enum error_s {
 };
 
 /// Static functions
-void host_ack(enum error_s code);
-void jump_to_image(u32 base_addr);
+static void host_ack(enum error_s code);
+static void jump_to_image(u32 base_addr);
+static void timer_init(void);
 
 /// Variables related to the host communication interface
 volatile struct packet_s packet = {0};
@@ -96,6 +97,7 @@ __bootsig__ u8 boot_signature[32];
 u8 flash_buffer[512];
 
 static volatile u32 tick = 0;
+static volatile u32 ttick = 0;
 
 int main(void) {
 	// The first stage of the bootloader disables watchdog and configures a 
@@ -123,7 +125,6 @@ int main(void) {
 	gpio_set_function(GPIOA, 10, GPIO_FUNC_OFF);
 	gpio_set_direction(GPIOA, 10, GPIO_INPUT);
 	gpio_set_pull(GPIOA, 10, GPIO_PULL_UP);
-
 	
 	// Check the boot signature and the boot pin to determine is the chip should
 	// be forces to enter the bootloader
@@ -184,6 +185,9 @@ int main(void) {
 	// Configure the systick
 	systick_set_rvr(300000);
 	systick_enable(1);
+
+	// Initilalize the communication timeout timer
+	timer_init();
 
 	// Enable all interrupt with a configurable priority
 	cpsie_i();
@@ -278,7 +282,7 @@ int main(void) {
 	}
 }
 
-void jump_to_image(u32 base_addr) {
+static void jump_to_image(u32 base_addr) {
 	
 	// The vector table offset register should be aligned with 32 words
 	if (base_addr & 0b1111111) {
@@ -339,7 +343,7 @@ void jump_to_image(u32 base_addr) {
 	);
 }
 
-void host_ack(enum error_s code) {
+static void host_ack(enum error_s code) {
     serial_print("%c", (char)code);
 }
 
@@ -354,15 +358,23 @@ void host_ack(enum error_s code) {
 void usart1_handler() {
 	u8 rec_byte = serial_read();
 
+	// Reset the timeout counter by issuing a software trigger
+	if (state != STATE_IDLE) {
+		TIMER0->channel[0].CCR = 0b101;
+	}
+
 	switch (state) {
 		case STATE_IDLE : {
-			// If the bootloader
 			if (rec_byte == 0) {
-				serial_print("%c", (char)NO_ERROR);
+				host_ack(NO_ERROR);
 			}
 			if (rec_byte == PACKET_START) {
 				if (packet_flag == 0) {
                     state = STATE_CMD;
+
+					// When the state is changed the timer has to be reset to
+					// avoid deadlock in rare occurences
+					TIMER0->channel[0].CCR = 0b101;
                 } else {
                     while (1);
                 }
@@ -397,6 +409,9 @@ void usart1_handler() {
 			packet.crc = rec_byte;
 			state = STATE_IDLE;
 			packet_flag = 1;
+
+			// Check CRC and stop the timeout counter
+			TIMER0->channel[0].CCR = 0b10;
 			break;
 		}
 	}
@@ -404,4 +419,25 @@ void usart1_handler() {
 
 void systick_handler() {
 	tick++;
+}
+
+static void timer_init(void) {
+
+	// Configure PCK6 in order to slow down the timer
+	pck_init(PCK6, SLOW_CLOCK, 32);
+	pck_enable(PCK6);
+
+	peripheral_clock_enable(23);
+
+	TIMER0->channel[0].CMR = (1 << 14) | 0;
+	TIMER0->channel[0].RC = 10;
+	TIMER0->channel[0].IER = (1 << 4);
+	nvic_enable(23);
+}
+
+void timer0_ch0_handler(void) {
+	(void)TIMER0->channel[0].SR;
+	TIMER0->channel[0].CCR = 0b10;
+	state = STATE_IDLE;
+	debug_print("Timeout\n");
 }

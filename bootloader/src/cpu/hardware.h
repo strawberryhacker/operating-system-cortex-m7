@@ -206,12 +206,47 @@ typedef struct {
 	_w  u32 UIHVAL[8];
 } icm_reg;
 
+typedef struct {
+	_w  u32 CCR;
+	_rw u32 CMR;
+	_rw u32 SMMR;
+	_r  u32 RAB;
+	_r  u32 CV;
+	_rw u32 RA;
+	_rw u32 RB;
+	_rw u32 RC;
+	_r  u32 SR;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_r  u32 IMR;
+	_rw u32 EMR;
+	_r  u32 RESERVED[3];
+} timer_channel;
+
+typedef struct {
+	timer_channel channel[3];
+	_w  u32 BCR;
+	_rw u32 BMR;
+	_w  u32 QIER;
+	_w  u32 QIDR;
+	_r  u32 QIMR;
+	_r  u32 QISR;
+	_rw u32 FMR;
+	_r  u32 RESERVED[2];
+	_rw u32 WPMR;
+} timer_reg;
+
 #define CLOCK ((clock_reg *)0x400E0600)
 #define FLASH ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
 #define SYSTICK ((systick_reg *)0xE000E010)
 #define NVIC ((nvic_reg *)0xE000E100)
 #define ICM ((icm_reg *)0x40048000)
+
+#define TIMER0 ((timer_reg *)0x4000C000)
+#define TIMER1 ((timer_reg *)0x40010000)
+#define TIMER2 ((timer_reg *)0x40014000)
+#define TIMER3 ((timer_reg *)0x40054000)
 
 #define GPIOA ((gpio_reg *)0x400E0E00)
 #define GPIOB ((gpio_reg *)0x400E1000)

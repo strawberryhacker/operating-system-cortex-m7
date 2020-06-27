@@ -49,27 +49,8 @@ int main(void) {
 		.arg        = NULL
 	};
 
-	//new_thread(&test_info);
+	new_thread(&test_info);
 	//new_thread(&exit_info);
 	//fat32_thread(NULL);
-	//scheduler_start();
-
-	systick_disable();
-	cpsie_f();
-
-	// GMAC test
-	eth_init();
-	gmac_init();
-	gmac_enable();
-	//gmac_out_phy(0, 0, (1 << 9));
-
-	u16 link_up;
-	do {
-		link_up = gmac_in_phy(0, 1);
-	} while (!(link_up & (1 << 2)));
-
-	printl("Link is up");
-
-
-	while (1);
+	scheduler_start();
 }

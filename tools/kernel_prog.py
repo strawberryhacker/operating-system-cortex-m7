@@ -101,7 +101,7 @@ class flasher:
 
             # Packet CRC
             packet_crc = bytearray([0])
-            
+
             # Construct the packet
             packet = packet_start + packet_cmd + packet_size + packet_payload \
                 + packet_crc

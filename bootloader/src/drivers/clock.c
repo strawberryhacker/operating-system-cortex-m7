@@ -184,6 +184,19 @@ void peripheral_clock_disable(u8 per_id) {
     }
 }
 
+/// Configures one of the 8 programmable clocks
+void pck_init(enum pck pck, enum clock_net net, u8 presc) {
+    CLOCK->PCK[pck] = (presc << 4) | net;
+}
+
+void pck_enable(enum pck pck) {
+    CLOCK->SCER = (1 << (8 + pck));
+}
+
+void pck_disable(enum pck pck) {
+    CLOCK->SCDR = (1 << (8 + pck));
+}
+
 /// Resets the clock tree. Only the internal RC oscillator is allowed to run.
 /// Both CPU and bus clocks are running at 12 MHz 
 void clock_tree_reset(void) {
