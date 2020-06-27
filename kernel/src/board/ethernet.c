@@ -1,6 +1,7 @@
 #include "ethernet.h"
 #include "gpio.h"
 #include "clock.h"
+#include "nvic.h"
 
 void eth_init(void) {
 
@@ -27,6 +28,9 @@ void eth_init(void) {
 
     // Enable the GMAC clock
     peripheral_clock_enable(39);
+
+    // Configure the NVIC
+    nvic_enable(39);
 }
 
 /// Assert the PHY reset line

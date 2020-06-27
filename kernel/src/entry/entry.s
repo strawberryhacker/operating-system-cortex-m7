@@ -141,7 +141,7 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	default_handler
+	.word	gmac_handler
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -208,3 +208,6 @@ Vector_table:
 
 	.weak pendsv_handler
 	.thumb_set pendsv_handler, default_handler
+
+	.weak gmac_handler
+	.thumb_set gmac_handler, default_handler

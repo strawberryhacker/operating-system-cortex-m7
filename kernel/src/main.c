@@ -13,6 +13,7 @@
 #include "hardware.h"
 #include "gmac.h"
 #include "ethernet.h"
+#include "systick.h"
 
 #include <stddef.h>
 
@@ -44,6 +45,7 @@ int main(void) {
 		.stack_size = 100,
 		.thread     = exit_thread,
 		.class      = REAL_TIME,
+	
 		.arg        = NULL
 	};
 
@@ -52,13 +54,22 @@ int main(void) {
 	//fat32_thread(NULL);
 	//scheduler_start();
 
+	systick_disable();
+	cpsie_f();
+
 	// GMAC test
 	eth_init();
-	gmac_init(NULL);
+	gmac_init();
+	gmac_enable();
+	//gmac_out_phy(0, 0, (1 << 9));
 
-	for (u8 i = 0; i < 0x1F; i++) {
-		printl("Reg: %2h", gmac_in_phy(0, i));
-	}
+	u16 link_up;
+	do {
+		link_up = gmac_in_phy(0, 1);
+	} while (!(link_up & (1 << 2)));
+
+	printl("Link is up");
+
 
 	while (1);
 }

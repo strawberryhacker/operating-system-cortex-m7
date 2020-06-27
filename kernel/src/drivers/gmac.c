@@ -1,10 +1,12 @@
 #include "gmac.h"
 #include "hardware.h"
 #include "cpu.h"
+#include "print.h"
 
 #define GMAC_TX_BUFFER_SIZE 1500
 #define GMAC_RX_BUFFER_SIZE 128
-#define GMAC_BUFFER_COUNT 2
+#define GMAC_TX_DESCRIPTORS 2
+#define GMAC_RX_DESCRIPTORS 16
 
 /// Receive buffer descriptor located in system memory
 struct gmac_rx_desc {
@@ -64,16 +66,16 @@ struct gmac_tx_desc {
 };
 
 /// Allocate the TX and RX descriptor structure in memory
-ALIGN(8) static struct gmac_tx_desc tx_descriptors[GMAC_BUFFER_COUNT];
-ALIGN(8) static struct gmac_rx_desc rx_descriptors[GMAC_BUFFER_COUNT];
+ALIGN(8) static struct gmac_tx_desc tx_descriptors[GMAC_TX_DESCRIPTORS];
+ALIGN(8) static struct gmac_rx_desc rx_descriptors[GMAC_RX_DESCRIPTORS];
 
 ALIGN(8) static struct gmac_tx_desc tx_descriptor_dummy;
 ALIGN(8) static struct gmac_rx_desc rx_descriptor_dummy;
 
 /// Allocate the TX and RX buffers. NOTE that the RX buffer must be in a 
 /// multiple of 64 bytes. 
-ALIGN(32) static u8 tx_buffers[GMAC_BUFFER_COUNT][GMAC_TX_BUFFER_SIZE];
-ALIGN(32) static u8 rx_buffers[GMAC_BUFFER_COUNT][GMAC_RX_BUFFER_SIZE];
+ALIGN(32) static u8 tx_buffers[GMAC_TX_DESCRIPTORS][GMAC_TX_BUFFER_SIZE];
+ALIGN(32) static u8 rx_buffers[GMAC_RX_DESCRIPTORS][GMAC_RX_BUFFER_SIZE];
 
 ALIGN(32) static u8 tx_buffer_dummy[4];
 ALIGN(32) static u8 rx_buffer_dummy[4];
@@ -87,13 +89,13 @@ static void gmac_init_tx_buffer_pool(void) {
     // Set the tx index to zero by default
     tx_buffer_index = 0;
     
-    for (u32 i = 0; i < GMAC_BUFFER_COUNT; i++) {
+    for (u32 i = 0; i < GMAC_TX_DESCRIPTORS; i++) {
         tx_descriptors[i].addr = (u32)tx_buffers[i];
         tx_descriptors[i].info = 0;
     }
 
     // The last descriptor must have the wrap bit set
-    tx_descriptors[GMAC_BUFFER_COUNT - 1].info |= (1 << 30);
+    tx_descriptors[GMAC_TX_DESCRIPTORS - 1].info |= (1 << 30);
 
     // Write the TX buffer queue base address
     GMAC->TBQB = (u32)&tx_descriptors[0];
@@ -104,13 +106,13 @@ static void gmac_init_rx_buffer_pool(void) {
     // Set the tx index to zero by default
     rx_buffer_index = 0;
     
-    for (u32 i = 0; i < GMAC_BUFFER_COUNT; i++) {
+    for (u32 i = 0; i < GMAC_RX_DESCRIPTORS; i++) {
         rx_descriptors[i].addr = (u32)rx_buffers[i];
         rx_descriptors[i].info = 0;
     }
 
     // The last descriptor must have the wrap bit set
-    rx_descriptors[GMAC_BUFFER_COUNT - 1].addr |= (1 << 1);
+    rx_descriptors[GMAC_RX_DESCRIPTORS - 1].addr |= (1 << 1);
 
     // Write the TX buffer queue base address
     GMAC->RBQB = (u32)&rx_descriptors[0];
@@ -132,9 +134,52 @@ static void gmac_init_dummy_buffer_pool(void) {
     }
 }
 
-void gmac_init(struct gmac_desc* gmac) {
+void gmac_init(void) {
     // Severy configuration options must be done while the TX and RX circuits
     // are disabled
+    // NCR
+    // NCFGR
+    // UR
+    // DCFGR
+    // WOL
+    // IPGS
+    gmac_enable_loop_back();
+
+    // Clear all statistics registers
+    GMAC->NCR |= (1 << 5);
+
+    // Basic configuration, enable 100 MHz operation, full-duplex mode, at MCK
+    // divided by 64
+    GMAC->NCFGR = (1 << 0) | (1 << 1) | (4 << 18);
+
+    // The ethernet PHY only supports RMII interface
+    GMAC->UR = 0;
+
+    // Configure the DMA register and set the DMA receive buffer size to 128 B
+    GMAC->DCFGR = (4 << 0) | (3 << 8) | (1 << 10) | (2 << 16);
+
+    // Clear the wake-up on LAN
+    GMAC->WOL = 0;
+    GMAC->IPGS = (1 << 8) | 1;
+
+    gmac_init_rx_buffer_pool();
+    gmac_init_tx_buffer_pool();
+    gmac_init_dummy_buffer_pool();
+
+    GMAC->IER = (1 << 7) | (1 << 1);
+}
+
+void gmac_deinit(void) {
+    GMAC->IDR = 0xFFFFFFFF;
+    GMAC->NCR = 0x00000000;
+}
+
+void gmac_enable(void) {
+    GMAC->NCR |= (1 << 2) | (1 << 3);
+}
+
+void gmac_disable(void) {
+    GMAC->NCR &= ~(1 << 2) | (1 << 3);
 }
 
 void gmac_enable_loop_back(void) {
@@ -192,4 +237,62 @@ void gmac_out_phy(u8 phy_addr, u8 reg, u16 data) {
 
     // Disable the PHY maintainance bit
     GMAC->NCR &= ~(1 << 4);
+}
+
+u32 gmac_get_raw_length(void) {
+    // This will hold the raw received data length
+    u32 length = 0;
+    u8 sof_valid = 0;
+
+    for (u32 i = 0; i < GMAC_RX_DESCRIPTORS; i++) {
+        // Index will point to the current buffer descriptor to read
+        u32 index = rx_buffer_index + i;
+        if (index >= GMAC_RX_DESCRIPTORS) {
+            index -= GMAC_RX_DESCRIPTORS;
+        }
+
+        // Bit 0 of the address marks the ownership. If this is set to zero the
+        // buffer is not owned by the GMAC
+        if ((rx_descriptors[index].addr & 0b1) == 0) {
+            break;
+        }
+
+        // The computed length will start from the SOF buffer and and on the
+        // EOF buffer. All buffer between these should be counted
+        if (rx_descriptors[index].info & (1 << 14)) {
+            sof_valid = 1;
+        }
+
+        // Check for the EOF tag
+        if (rx_descriptors[index].info & (1 << 15)) {
+            break;
+        }
+
+        // Compute the size which is the 13 lower bits in the info field
+        if (sof_valid) {
+            length += rx_descriptors[index].info & 0b1111111111111;
+        }
+    }
+
+    // This will ONLY compute the size and should therefore NOT modify the 
+    // `rx_buffer_index`
+
+    return length;
+    
+}
+
+u32 gmac_read_raw(u8* buffer, u32 size) {
+
+}
+
+u32 gmac_write_raw(const u8* buffer, u32 size) {
+
+}
+
+void gmac_handler(void) {
+    (void)GMAC->ISR;
+    (void)GMAC->TSR;
+    (void)GMAC->RSR;
+
+    printl("GMAC");
 }
