@@ -10,6 +10,7 @@
 #include "sd_protocol.h"
 #include "panic.h"
 #include "fat32.h"
+#include "hardware.h"
 
 #include <stddef.h>
 
@@ -28,7 +29,7 @@ static void exit_thread(void* arg) {
 int main(void) {
 	kernel_entry();
 
-	struct thread_info test_info = {
+	volatile struct thread_info test_info = {
 		.name       = "Test",
 		.stack_size = 100,
 		.thread     = test_thread,
@@ -36,7 +37,7 @@ int main(void) {
 		.arg        = NULL
 	};
 
-	struct thread_info exit_info = {
+	volatile struct thread_info exit_info = {
 		.name       = "exit",
 		.stack_size = 100,
 		.thread     = exit_thread,
@@ -44,10 +45,14 @@ int main(void) {
 		.arg        = NULL
 	};
 
-	new_thread(&test_info);
+	//new_thread(&test_info);
 	//new_thread(&exit_info);
-	
 	//fat32_thread(NULL);
+	//scheduler_start();
 
-	scheduler_start();
+	// GMAC test
+
+	printl("GMAC test: %4h", (u32)&GMAC->ST2CW[19].ST2CW0);
+
+	while (1);
 }

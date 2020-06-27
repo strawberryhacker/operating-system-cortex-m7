@@ -6,6 +6,7 @@
 #include "types.h"
 
 #define NOINLINE __attribute__((noinline))
+#define ALIGN(x) __attribute__((aligned((x))))
 
 /// Data synchronization barrier
 static inline void dsb(void) {

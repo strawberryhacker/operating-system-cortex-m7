@@ -63,6 +63,7 @@ disk-y += /src/disk/fat32.c
 board-y += /src/board/serial.c
 board-y += /src/board/print.c
 board-y += /src/board/sd.c
+board-y += /src/board/ethernet.c
 
 generic-y += /src/generic/sprint.c
 generic-y += /src/generic/crc.c

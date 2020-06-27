@@ -341,6 +341,153 @@ typedef struct {
 	_rw u32 FIFO[256];
 } mmc_reg;
 
+typedef struct {
+	_rw u32 SAB;
+	_rw u32 SAT;
+} gmac_sa;
+
+typedef struct {
+	_rw u32 ST2CW0;
+	_rw u32 ST2CW1;
+} gmac_st2cw;
+
+typedef struct {
+	_rw u32 NCR;
+	_rw u32 NCFGR;
+	_r  u32 NSR;
+	_rw u32 UR;
+	_rw u32 DCFGR;
+	_rw u32 TSR;
+	_rw u32 RBQB;
+	_rw u32 TBQB;
+	_rw u32 RSR;
+	_r  u32 ISR;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_rw u32 IMR;
+	_rw u32 MAN;
+	_r  u32 RPQ;
+	_rw u32 TPQ;
+	_rw u32 TPSF;
+	_rw u32 RPSF;
+	_rw u32 RJFML;
+	_r  u32 RESERVED1[13];
+	_rw u32 HBR;
+	_rw u32 HRT;
+	gmac_sa SA[4];
+	_rw u32 TIDM1;
+	_rw u32 TIDM2;
+	_rw u32 TIDM3;
+	_rw u32 TIDM4;
+	_rw u32 WOL;
+	_rw u32 IPGS;
+	_rw u32 SVLAN;
+	_rw u32 TPFCP;
+	_rw u32 SAMB1;
+	_rw u32 SAMT1;
+	_r  u32 RESERVED2[3];
+	_rw u32 NCS;
+	_rw u32 SCL;
+	_rw u32 SCH;
+	_r  u32 EFTSH;
+	_r  u32 EFRSH;
+	_r  u32 PEFTSH;
+	_r  u32 PEFRSH;
+	_r  u32 RESERVED3[2];
+	_r  u32 OTLO;
+	_r  u32 OTHI;
+	_r  u32 FT;
+	_r  u32 BCFT;
+	_r  u32 MFT;
+	_r  u32 PFT;
+	_r  u32 BFT64;
+	_r  u32 TBFT127;
+	_r  u32 TBFT255;
+	_r  u32 TBFT511;
+	_r  u32 TBFT1023;
+	_r  u32 TBFT1518;
+	_r  u32 GTBFT1518;
+	_r  u32 TUR;
+	_r  u32 SCF;
+	_r  u32 MCF;
+	_r  u32 EC;
+	_r  u32 LC;
+	_r  u32 DTF;
+	_r  u32 CSE;
+	_r  u32 ORLO;
+	_r  u32 ORHI;
+	_r  u32 FR;
+	_r  u32 BCFR;
+	_r  u32 MFR;
+	_r  u32 PFR;
+	_r  u32 BFR64;
+	_r  u32 TBFR127;
+	_r  u32 TBFR255;
+	_r  u32 TBFR511;
+	_r  u32 TBFR1023;
+	_r  u32 TBFR1518;
+	_r  u32 TMXBFR;
+	_r  u32 UFR;
+	_r  u32 OFR;
+	_r  u32 JR;
+	_r  u32 FCSE;
+	_r  u32 LFFE;
+	_r  u32 RSE;
+	_r  u32 AE;
+	_r  u32 RRE;
+	_r  u32 ROE;
+	_r  u32 IHCE;
+	_r  u32 TCE;
+	_r  u32 UCE;
+	_r  u32 RESERVED4[2];
+	_rw u32 TISUBN;
+	_rw u32 TSH;
+	_r  u32 RESERVED5[3];
+	_rw u32 TSL;
+	_rw u32 TN;
+	_w  u32 TA;
+	_rw u32 TI;
+	_r  u32 EFTSL;
+	_r  u32 EFTN;
+	_r  u32 EFRSL;
+	_r  u32 EFRN;
+	_r  u32 PEFTSL;
+	_r  u32 PEFTN;
+	_r  u32 PEFRSL;
+	_r  u32 PEFRN;
+	_r  u32 RESERVED6[28];
+	_r  u32 RXLPI;
+	_r  u32 RXLPITIME;
+	_r  u32 TXLPI;
+	_r  u32 TXLPITIME;
+	_r  u32 RESERVED7[96];
+	_r  u32 ISRPQ[5];
+	_r  u32 RESERVED8[11];
+	_rw u32 TBQBAPQ[5];
+	_r  u32 RESERVED9[11];
+	_rw u32 RBQBAPQ[5];
+	_r  u32 RESERVED10[3];
+	_rw u32 RBSRPQ[5];
+	_r  u32 RESERVED11[2];
+	_rw u32 CBSCR;
+	_rw u32 CBSISQA;
+	_rw u32 CBSISQB;
+	_r  u32 RESERVED12[14];
+	_rw u32 ST1RPQ[4];
+	_r  u32 RESERVED13[12];
+	_rw u32 ST2RPQ[8];
+	_r  u32 RESERVED14[40];
+	_w  u32 IERPQ[5];
+	_r  u32 RESERVED15[3];
+	_w  u32 IDRPQ[5];
+	_r  u32 RESERVED16[3];
+	_rw u32 IMRPQ[5];
+	_r  u32 RESERVED17[35];
+	_rw u32 ST2ER[4];
+	_r  u32 RESERVED18[4];
+	gmac_st2cw ST2CW[24];
+} gmac_reg;
+
 #define CLOCK    ((clock_reg *)0x400E0600)
 #define FLASH    ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
@@ -352,6 +499,7 @@ typedef struct {
 #define SCB      ((scb_reg *)0xE000ED00)
 #define CACHE    ((scb_reg *)0xE000EF50)
 #define MMC      ((mmc_reg *)0x40000000)
+#define GMAC     ((gmac_reg *)0x40050000)
 
 #define CPACR 0xE000ED88
 
