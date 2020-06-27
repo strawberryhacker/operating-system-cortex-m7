@@ -11,6 +11,8 @@
 #include "panic.h"
 #include "fat32.h"
 #include "hardware.h"
+#include "gmac.h"
+#include "ethernet.h"
 
 #include <stddef.h>
 
@@ -51,8 +53,12 @@ int main(void) {
 	//scheduler_start();
 
 	// GMAC test
+	eth_init();
+	gmac_init(NULL);
 
-	printl("GMAC test: %4h", (u32)&GMAC->ST2CW[19].ST2CW0);
+	for (u8 i = 0; i < 0x1F; i++) {
+		printl("Reg: %2h", gmac_in_phy(0, i));
+	}
 
 	while (1);
 }

@@ -55,6 +55,7 @@ driver-y += /src/drivers/hash.c
 driver-y += /src/drivers/dram.c
 driver-y += /src/drivers/matrix.c
 driver-y += /src/drivers/mmc.c
+driver-y += /src/drivers/gmac.c
 
 disk-y += /src/disk/sd_protocol.c
 disk-y += /src/disk/disk_io.c
