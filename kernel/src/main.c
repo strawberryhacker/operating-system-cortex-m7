@@ -30,6 +30,7 @@ static void exit_thread(void* arg) {
 }
 
 int main(void) {
+	// Start the kernel
 	kernel_entry();
 
 	volatile struct thread_info test_info = {

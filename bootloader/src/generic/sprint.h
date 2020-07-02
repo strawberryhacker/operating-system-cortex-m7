@@ -1,7 +1,7 @@
 /// Copyright (C) StrawberryHacker
 
-#ifndef PRINT_H
-#define PRINT_H
+#ifndef SPRINT_H
+#define SPRINT_H
 
 #include "types.h"
 #include <stdarg.h>

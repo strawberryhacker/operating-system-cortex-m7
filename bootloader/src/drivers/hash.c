@@ -2,7 +2,7 @@
 
 #include "hash.h"
 #include "hardware.h"
-#include "debug.h"
+#include "print.h"
 #include "panic.h"
 
 enum icm_algorithm {
@@ -65,7 +65,7 @@ void hash256_generate(const void* data, u32 size, u8* hash) {
 	} while (!(status & 1));
 	
 	if (status & ((1 << 24) | (0b1111 << 8))) {
-		debug_print("Error: %32b\n", status);
+		print("Error: %32b\n", status);
 		panic("Hash error");
 	}	
 	ICM->CTRL = (1 << 2) | (1 << 1);

@@ -1,7 +1,6 @@
 /// Copyright (C) StrawberryHacker
 
 #include "gpio.h"
-#include "debug.h"
 
 void gpio_set_function(gpio_reg* port, u8 pin, enum gpio_func func) {
     // Check if the pin is a system pin. In this case the system function must

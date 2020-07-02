@@ -11,6 +11,8 @@ void serial_deinit(void);
 
 void serial_print(const char* data, ...);
 
+void serial_printl(const char* data, ...);
+
 u8 serial_read(void);
 
 #endif

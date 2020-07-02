@@ -6,6 +6,12 @@ import time
    
 
 class flasher:
+
+    START_BYTE = 0xAA
+    END_BYTE   = 0x55
+
+    POLYNOMIAL = 0x07
+
     def __init__(self):
         pass
     
@@ -27,8 +33,8 @@ class flasher:
     def serial_open(self):
         try:
             self.com = serial.Serial(port=self.com_port, 
-                                     baudrate=115200,
-                                     rtscts=True);
+                                     baudrate=19200,
+                                     timeout=1);
 
         except serial.SerialException as e:
             print(e)
@@ -37,7 +43,7 @@ class flasher:
     def serial_close(self):
         self.com.close()
     
-    def serial_print(self, data):
+    def serial_write(self, data):
         self.com.write(bytes(data))
 
     def file_read(self):
@@ -45,74 +51,74 @@ class flasher:
         return f.read()
 
     def wait_ack(self):
-        # Wait for some ACK
-        status = self.com.read(1)
-        if status != b'\x00':
-            print("Error")
-            print(status)
-            exit()
+        pass
 
-    def load_image(self):
-        # Read the binary image into data and calculate sizes
-        data = self.file_read()
-        length = len(data)
-        number_of_block = math.ceil(length / 512)
+    def calculate_fcs(self, data):
+        crc = 0
+        for i in range(len(data)):
+            crc = crc ^ data[i]
 
+            for j in range(8):
+                if crc & 0x01:
+                    crc = crc ^ self.POLYNOMIAL
+                crc = crc >> 1
+        
+        return crc
+
+    def send_frame(self, cmd, payload):
+
+        payload_size = len(payload)
+
+        # Start fragment consists of start byte, cmd and little-endian 16 bit
+        # size
+        start_byte = bytearray([self.START_BYTE])
+        cmd_byte   = bytearray([cmd])
+
+        size = bytearray([payload_size & 0xFF, (payload_size >> 8) & 0xFF])
+
+        # Payload 
+        data = bytearray(payload)
+
+        # End fragment consist of payload crc
+        fcs = bytearray([self.calculate_fcs(cmd_byte + size + payload)])
+        end_byte = bytearray([self.END_BYTE])
+
+        print(fcs[0])
+
+        self.com.write(start_byte + cmd_byte + size + data + fcs + end_byte)
+        #tmp_list = start_byte + cmd_byte + size + data + fcs + end_byte
+
+        self.com.write(start_byte)
+        time.sleep(1)
+        self.com.write(cmd_byte)
+        time.sleep(2)
+        self.com.write(size)
+        time.sleep(1)
+        self.com.write(data)
+        time.sleep(1)
+        self.com.write(fcs)
+        time.sleep(1)
+        self.com.write(end_byte)
+        time.sleep(1)
+            
+
+        # Listen for the response
+        resp = self.com.read(size = 1)
+
+        if (len(resp) == 0):
+            print("Timeout occured")
+            sys.exit()
+        
+        # We have a response
+        return resp
+
+
+    def test(self):
         self.serial_open()
-
-        # Go to the bootloader
-        print("Vanilla bootloader starting...")
-        self.serial_print(bytearray([23, 234, 2, 0]))
-
-        self.wait_ack()
-
-        # Erase the flash
-        flash_erase = bytearray([0b10101010, 2, 4, 0])
-        flash_erase += bytearray([len(data) & 0xFF])
-        flash_erase += bytearray([(len(data) >> 8) & 0xFF])
-        flash_erase += bytearray([(len(data) >> 16) & 0xFF])
-        flash_erase += bytearray([(len(data) >> 24) & 0xFF])
-        flash_erase += bytearray([0])
-        self.serial_print(flash_erase)
-
-        self.wait_ack()
-
-        # Chips is in the bootloader and is ready to receive image
-        print("Downloading kernel...")
-
-        for i in range(number_of_block):
-            # Current fragment of the binary file
-            frag = data[i*512:(i+1)*512]
-
-            # Packet start byte
-            packet_start = bytearray([0b10101010])
-
-            # Packet command
-            if i == (number_of_block - 1):
-                packet_cmd = bytearray([1])
-            else:
-                packet_cmd = bytearray([0])
-
-            # Packet payload size
-            packet_size = bytearray([len(frag) & 0xFF, (len(frag) >> 8) & 0xFF])
-
-            # Packet payload
-            packet_payload = bytearray(frag)
-
-            # Packet CRC
-            packet_crc = bytearray([0])
-
-            # Construct the packet
-            packet = packet_start + packet_cmd + packet_size + packet_payload \
-                + packet_crc
-
-            self.serial_print(packet)
-
-            self.wait_ack()
-
-        print("Kernel download complete!")
+        self.send_frame(0xAA, "Hello dude".encode())
+        self.serial_close()
 
 # Run the functions
 test = flasher()
 test.parser()
-test.load_image()
+test.test()

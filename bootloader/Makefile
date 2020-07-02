@@ -30,6 +30,7 @@ ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 SRC +=
 
 bootloader-y += /src/main.c
+bootloader-y += /src/frame.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c
@@ -40,7 +41,7 @@ driver-y += /src/drivers/gpio.c
 driver-y += /src/drivers/hash.c
 
 board-y += /src/board/serial.c
-board-y += /src/board/debug.c
+board-y += /src/board/print.c
 
 generic-y += /src/generic/sprint.c
 generic-y += /src/generic/crc.c

@@ -15,7 +15,7 @@ uint32_t power(uint8_t base, uint8_t exp);
 /// %u     - prtin a unsigned integer
 /// %u     - print a signed integer
 /// %[n]b  - print `x` bits in a binary number
-/// %[n]h  - print `x` bytes in hexadecimal
+/// %[n]h  - print `x` bytes in hexadecimal number
 uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 
 	// Make some pointer to the data
@@ -102,10 +102,7 @@ uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 				}
 				// Binary formatting
 				case 'b' : {
-					*dest_ptr++ = '0';
-					*dest_ptr++ = 'b';
-					size += 2;
-					
+
 					uint32_t fmt_bin = (uint32_t)va_arg(obj, int);
 					for (uint8_t i = opt_fmt; i --> 0;) {
 						// Check if the bit is set
@@ -122,10 +119,7 @@ uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 				}
 				// Hexadecimal formating
 				case 'h' : {
-					*dest_ptr++ = '0';
-					*dest_ptr++ = 'x';
-					size += 2;
-					
+
 					uint32_t fmt_hex = (uint32_t)va_arg(obj, int);
 					
 					for (uint8_t i = 0; i < opt_fmt; i++) {
