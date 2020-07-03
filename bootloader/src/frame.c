@@ -62,6 +62,16 @@ void frame_init(void) {
     bus_state = STATE_IDLE;
 }
 
+void frame_deinit(void) {
+    serial_deinit();
+    peripheral_clock_disable(23);
+    pck_disable(PCK6);
+    timeout_stop();
+    TIMER0->channel[0].IDR = 0xFFFFFFFF;
+    nvic_disable(23);
+    nvic_clear_pending(23);
+}
+
 void send_response(u8 error_code) {
     frame_received = 0;
     serial_print("%c", (char)error_code);
@@ -131,9 +141,12 @@ void usart0_handler(void) {
 
                 if (fcs == frame.fcs) {
                     frame_received = 1;
+                } else {
+                    send_response(RESP_ERROR | RESP_FCS_ERROR);
                 }
             } else {
                 printl("Frame error");
+                send_response(RESP_ERROR | RESP_FRAME_ERROR);
             }
             bus_state = STATE_IDLE;
             timeout_stop();

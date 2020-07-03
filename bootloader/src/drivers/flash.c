@@ -96,12 +96,11 @@ __ramfunc__ u8 flash_erase_image(u32 size) {
         }
         sect_8k_base += 16;
     }
-
     return 1;
 }
 
 /// Writes a sector to the flash at relativ offset `page` from the kernel image
-/// base address
+/// base address 0x00404000
 __ramfunc__ u8 flash_write_image_page(u32 page, const u8* buffer) {
 	
     while (!(FLASH->FSR & 0b1));
@@ -115,7 +114,6 @@ __ramfunc__ u8 flash_write_image_page(u32 page, const u8* buffer) {
 
     asm volatile ("dmb sy" : : : "memory");
     asm volatile ("dsb sy" : : : "memory");
-    asm volatile ("isb sy" : : : "memory");
 
     FLASH->FCR = 0x5A000000 | (((page + 32) & 0xFF) << 8) | 0x01;
 

@@ -21,7 +21,7 @@
 static void test_thread(void* arg) {
 	while (1) {
 		printl("Thread A says hello");
-		syscall_thread_sleep(500);
+		thread_sleep(500);
 	}
 }
 

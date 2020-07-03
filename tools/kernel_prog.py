@@ -12,13 +12,17 @@ class flasher:
 
     POLYNOMIAL = 0x07
 
+    CMD_ERASE_FLASH     = 0x03
+    CMD_WRITE_PAGE      = 0x04
+    CMD_WRITE_PAGE_LAST = 0x05
+
     def __init__(self):
         pass
     
     def parser(self):
         parser = argparse.ArgumentParser(description="Chip flasher");
 
-        parser.add_argument("-com", "--com_port",
+        parser.add_argument("-c", "--com_port",
                             help="Specify the com port COMx or /dev/ttySx")
 
         parser.add_argument("-f", "--file",
@@ -86,22 +90,7 @@ class flasher:
         print(fcs[0])
 
         self.com.write(start_byte + cmd_byte + size + data + fcs + end_byte)
-        #tmp_list = start_byte + cmd_byte + size + data + fcs + end_byte
-
-        self.com.write(start_byte)
-        time.sleep(1)
-        self.com.write(cmd_byte)
-        time.sleep(2)
-        self.com.write(size)
-        time.sleep(1)
-        self.com.write(data)
-        time.sleep(1)
-        self.com.write(fcs)
-        time.sleep(1)
-        self.com.write(end_byte)
-        time.sleep(1)
             
-
         # Listen for the response
         resp = self.com.read(size = 1)
 
@@ -112,13 +101,69 @@ class flasher:
         # We have a response
         return resp
 
-
     def test(self):
         self.serial_open()
-        self.send_frame(0xAA, "Hello dude".encode())
+        resp = self.send_frame(0xAA, "Hello dude".encode())
+        print(resp)
         self.serial_close()
+
+    def load_kernel(self):
+
+        # Open the com port
+        self.serial_open()
+
+        # Load the kernel binary
+        kernel_binary = self.file_read()
+
+        # Get the board to enter the bootloader
+
+        # Instruct the board to erase some of the flash
+        new_kernel_size = len(kernel_binary)
+
+        print("Length of kernel: ", new_kernel_size)
+
+        erase_payload    = bytearray(4)
+        erase_payload[0] = new_kernel_size & 0xFF
+        erase_payload[1] = (new_kernel_size >> 8) & 0xFF
+        erase_payload[2] = (new_kernel_size >> 16) & 0xFF
+        erase_payload[3] = (new_kernel_size >> 24) & 0xFF
+
+        for i in erase_payload:
+            print(hex(i), end=" ")
+        print()
+    
+        response = self.send_frame(self.CMD_ERASE_FLASH, erase_payload)
+
+        if response != b'\x00':
+            print("Response includes errors: ", response)
+            sys.exit()
+
+        # Write the kernel binary to the board in blocks of 512 bytes
+        
+        # Calculate the number of pages to write
+        length = len(kernel_binary)
+        number_of_block = math.ceil(length / 512)
+
+        print("Downloading kernel...")
+        for i in range(number_of_block):
+            binary_fragment = kernel_binary[i*512:(i+1)*512]
+
+            cmd = 0 
+            if i == (number_of_block - 1):
+                # This is the last block
+                cmd = self.CMD_WRITE_PAGE_LAST
+            else:
+                cmd = self.CMD_WRITE_PAGE
+
+            status = self.send_frame(cmd, binary_fragment)
+
+            if response != b'\x00':
+                print("Response includes errors: ", response)
+                sys.exit()
+
+        print("Kernel download complete!")
 
 # Run the functions
 test = flasher()
 test.parser()
-test.test()
+test.load_kernel()

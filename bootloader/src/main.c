@@ -10,8 +10,29 @@
 #include "watchdog.h"
 #include "print.h"
 #include "frame.h"
+#include "bootloader.h"
+#include "memory.h"
+#include "flash.h"
+
+#define CMD_ERASE_FLASH     0x03
+#define CMD_WRITE_PAGE      0x04
+#define CMD_WRITE_PAGE_LAST 0x05
 
 extern volatile struct frame frame;
+volatile u32 kernel_page = 0;
+
+
+volatile u8 test_flash[512];
+
+void print_frame(void) {
+    printl("XXX: 0x%1h", frame.cmd);
+    printl("Size: %d", frame.size);
+
+    for (u32 i = 0; i < frame.size; i++) {
+        print("%c", frame.payload[i]);
+    }
+    print("\n\n");
+}
 
 int main(void) {
 
@@ -30,26 +51,58 @@ int main(void) {
     print_init();
     frame_init();
 
-    print("Starting\n");
+    // Check if it is required to stay in the bootloader
+
+    print("Starting bootloader\n");
 
     cpsie_f();
 
+    kernel_page = 0;
 
     while (1) {
         if (check_new_frame()) {
-            // Do something
+            
+            if (frame.cmd == CMD_ERASE_FLASH) {
+                print_frame();
+                //u8 status = erase_kernel_image((u8 *)frame.payload);
+                u8 status = flash_erase_image(20000);
+                print("Erased kernel image\n");
+                // Send the status of the operation back to the host
+                if (!status) {
+                    send_response(RESP_ERROR | RESP_FLASH_ERROR);
+                } else {
+                    send_response(RESP_OK);
+                }
 
-            printl("CMD: 0x%1h", frame.cmd);
-            printl("Size: %d", frame.size);
-           
-            for (u32 i = 0; i < frame.size; i++) {
-                print("%c", frame.payload[i]);
+            } else if (frame.cmd == CMD_WRITE_PAGE) {
+                printl("Writing page... %d", frame.size);
+                // Write a page from offset 0x00404000
+                u8 status = write_kernel_page((u8 *)frame.payload, frame.size, 
+                    kernel_page++);
+
+                if (status == 0) {
+                    send_response(RESP_ERROR | RESP_FLASH_ERROR);
+                } else {
+                    send_response(RESP_OK);
+                }
+
+            } else if (frame.cmd == CMD_WRITE_PAGE_LAST) {
+                print("Last page received\n");
+                // Write a page from offset 0x00404000
+                u8 status = write_kernel_page((u8 *)frame.payload, frame.size, 
+                    kernel_page);
+
+                if (status == 0) {
+                    send_response(RESP_ERROR | RESP_FLASH_ERROR);
+                }
+
+                send_response(RESP_OK);
+
+                print("Starting kernel\n");
+
+                // Firmware download complete
+                start_kernel();
             }
-            print("\n");
-            printl("FCS: %d", frame.fcs);
-            print("\n");
-
-            send_response(RESP_OK);
         }
     }
 }

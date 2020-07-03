@@ -15,4 +15,6 @@ void serial_printl(const char* data, ...);
 
 u8 serial_read(void);
 
+void serial_flush(void);
+
 #endif

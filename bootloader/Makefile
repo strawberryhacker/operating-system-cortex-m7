@@ -31,6 +31,7 @@ SRC +=
 
 bootloader-y += /src/main.c
 bootloader-y += /src/frame.c
+bootloader-y += /src/bootloader.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c

@@ -13,6 +13,7 @@
 #define RESP_FLASH_ERROR (u8)(1 << 3)
 #define RESP_FCS_ERROR   (u8)(1 << 4)
 #define RESP_TIMEOUT     (u8)(1 << 5)
+#define RESP_FRAME_ERROR (u8)(1 << 6)
 
 /// This struct will contain ass useful information from the frame. The struct
 /// has to be packed because the FCS is calulated from multiple fields
@@ -25,6 +26,8 @@ struct __attribute__((packed)) frame {
 
 
 void frame_init(void);
+
+void frame_deinit(void);
 
 void send_response(u8 error_code);
 
