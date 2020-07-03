@@ -8,7 +8,7 @@ Some kind of communication interface is needed in order to download the kernel f
 
 | Start byte | Command | Size | Payload | FCS | End byte |
 |-|-|-|-|-|-|
-| 8 bits | 8 bits | 32 bits | up to 512 bytes | 8 bits | 8 bits |
+| 8 bits | 8 bits | 16 bits | up to 512 bytes | 8 bits | 8 bits |
 
 The **start byte** marks the start of the frame. It is normally set to 0xAA. If the start byte is received while the bus is idle, the timeout logic is enabled and the frame FSM is started. 
 
@@ -36,7 +36,7 @@ Some of these bits are used for required action and some are used to report stat
 - **bit 3** - indicates a flash error
 - **bit 4** - indicates a FCS error
 - **bit 5** - indicates that a timeout has occured
-- **bit 6** - no meaning
+- **bit 6** - indicates a frame error
 - **bit 7** - no meaning
 
 ## Security
