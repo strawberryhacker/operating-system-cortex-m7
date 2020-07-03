@@ -24,20 +24,14 @@ volatile u32 kernel_page = 0;
 
 volatile u8 test_flash[512];
 
-void print_frame(void) {
-    printl("XXX: 0x%1h", frame.cmd);
-    printl("Size: %d", frame.size);
-
-    for (u32 i = 0; i < frame.size; i++) {
-        print("%c", frame.payload[i]);
-    }
-    print("\n\n");
-}
-
 int main(void) {
 
     // Initialize the system
     watchdog_disable();
+
+    gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
+    gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
+    gpio_clear(GPIOC, 8);
 
     // Configure the flash wait states
     flash_set_access_cycles(7);
@@ -52,6 +46,9 @@ int main(void) {
     frame_init();
 
     // Check if it is required to stay in the bootloader
+    gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
+    gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
+    gpio_set(GPIOC, 8);
 
     print("Starting bootloader\n");
 
@@ -63,7 +60,6 @@ int main(void) {
         if (check_new_frame()) {
             
             if (frame.cmd == CMD_ERASE_FLASH) {
-                print_frame();
                 //u8 status = erase_kernel_image((u8 *)frame.payload);
                 u8 status = flash_erase_image(20000);
                 print("Erased kernel image\n");
@@ -87,6 +83,7 @@ int main(void) {
                 }
 
             } else if (frame.cmd == CMD_WRITE_PAGE_LAST) {
+                printl("Writing page... %d", frame.size);
                 print("Last page received\n");
                 // Write a page from offset 0x00404000
                 u8 status = write_kernel_page((u8 *)frame.payload, frame.size, 
@@ -99,6 +96,14 @@ int main(void) {
                 send_response(RESP_OK);
 
                 print("Starting kernel\n");
+
+                const u8* s = (const u8 *)0x00404000;
+                for (u32 i = 0; i < 512 * 10; ) {
+                    print("%1h ", *s++);
+                    if ((++i % 20) == 0) {
+                        print("\n");
+                    }
+                }
 
                 // Firmware download complete
                 start_kernel();

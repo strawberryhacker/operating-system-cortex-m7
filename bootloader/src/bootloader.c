@@ -110,12 +110,16 @@ u8 write_kernel_page(const u8* data, u32 size, u32 page) {
 void start_kernel(void) {
 
     // Free the resources used in the bootloader
+
+    print("SP: %4h\n", *(volatile u32 *)0x00404200);
+    print("PC: %4h\n", *(volatile u32 *)0x00404204);
     serial_flush();
     print_flush();
 
     frame_deinit();
     print_deinit();
 
+    peripheral_clock_disable(12);
     clock_tree_reset();
 
     // Flash operations does still have wait states

@@ -9,7 +9,7 @@
 #define START_BYTE 0xAA
 #define END_BYTE   0x55
 
-#define POLYNOMIAL 0x07
+#define POLYNOMIAL 0xB2
 
 /// List over the different states in the receive handler
 enum bus_states {

@@ -10,7 +10,7 @@ class flasher:
     START_BYTE = 0xAA
     END_BYTE   = 0x55
 
-    POLYNOMIAL = 0x07
+    POLYNOMIAL = 0xB2
 
     CMD_ERASE_FLASH     = 0x03
     CMD_WRITE_PAGE      = 0x04
@@ -37,7 +37,7 @@ class flasher:
     def serial_open(self):
         try:
             self.com = serial.Serial(port=self.com_port, 
-                                     baudrate=19200,
+                                     baudrate=230400,
                                      timeout=1);
 
         except serial.SerialException as e:
@@ -101,12 +101,6 @@ class flasher:
         # We have a response
         return resp
 
-    def test(self):
-        self.serial_open()
-        resp = self.send_frame(0xAA, "Hello dude".encode())
-        print(resp)
-        self.serial_close()
-
     def load_kernel(self):
 
         # Open the com port
@@ -147,6 +141,8 @@ class flasher:
         print("Downloading kernel...")
         for i in range(number_of_block):
             binary_fragment = kernel_binary[i*512:(i+1)*512]
+
+            print("Size: ", len(binary_fragment))
 
             cmd = 0 
             if i == (number_of_block - 1):

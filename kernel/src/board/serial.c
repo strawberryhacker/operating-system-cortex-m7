@@ -17,14 +17,14 @@ static char serial_buffer[256];
 /// and enables receive complete interrupt
 void serial_init(void) {
     // Enable the peripheral clock
-    peripheral_clock_enable(14);
+    peripheral_clock_enable(13);
 
     // Trigger en interrupt on data received
-    usart_interrupt_enable(USART1, USART_IRQ_RXRDY);
+    usart_interrupt_enable(USART0, USART_IRQ_RXRDY);
 
     // Enable GPIOs
-    gpio_set_function(GPIOA, 21, GPIO_FUNC_A);
-    gpio_set_function(GPIOB, 4, GPIO_FUNC_D);
+    gpio_set_function(GPIOB, 0, GPIO_FUNC_C);
+    gpio_set_function(GPIOB, 1, GPIO_FUNC_C);
 
     // Configure the peripheral
     struct usart_desc serial;
@@ -33,17 +33,17 @@ void serial_init(void) {
     serial.parity = USART_PARITY_NO;
     serial.stop_bits = USART_SB_ONE;
 
-    usart_init(USART1, &serial);
+    usart_init(USART0, &serial);
 
-    nvic_enable(14);
+    nvic_enable(13);
 }
 
 /// Releases the serial resources used
 void serial_deinit(void) {
-	peripheral_clock_disable(14);
-	usart_deinit(USART1);
-	nvic_disable(14);
-	nvic_clear_pending(14);
+	peripheral_clock_disable(13);
+	usart_deinit(USART0);
+	nvic_disable(13);
+	nvic_clear_pending(13);
 }
 
 void serial_print(const char* data, ...) {
@@ -56,12 +56,12 @@ void serial_print(const char* data, ...) {
     // Transmit the formated buffer on serial port 0
     const char* buffer_ptr = serial_buffer;
     while (size--) {
-        usart_write(USART1, *buffer_ptr++);
+        usart_write(USART0, *buffer_ptr++);
     }
 
     va_end(obj);
 }
 
 u8 serial_read(void) {
-    return usart_read(USART1);
+    return usart_read(USART0);
 }

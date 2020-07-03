@@ -48,12 +48,18 @@ void kernel_entry(void) {
 	print_init();
 	print("\n\n- - - - Vanilla kernel started - - - -\n");
 
+	// Configure the on-board LED
+	gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
+	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
+	gpio_clear(GPIOC, 8);
+	while (1);
+
 	cpsie_i();
 	
 	// Configure the on-board LED
 	gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
 	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
-	gpio_set(GPIOC, 8);
+	gpio_clear(GPIOC, 8);
 
 	// Configure the on board button
 	peripheral_clock_enable(10);	
@@ -62,4 +68,6 @@ void kernel_entry(void) {
 	gpio_set_pull(GPIOA, 11, GPIO_PULL_UP);
 
 	mm_init();
+
+	while (1);
 }

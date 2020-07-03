@@ -18,10 +18,10 @@ static char debug_buffer[64];
 void print_init(void) {
 
     // Map the right function to the pins
-    gpio_set_function(GPIOB, 0, GPIO_FUNC_C);
-    gpio_set_function(GPIOB, 1, GPIO_FUNC_C);
+    gpio_set_function(GPIOA, 21, GPIO_FUNC_A);
+    gpio_set_function(GPIOB, 4, GPIO_FUNC_D);
 
-    peripheral_clock_enable(13);
+    peripheral_clock_enable(14);
 
     struct usart_desc debug_usart;
     debug_usart.data_bits = USART_DATA_8_BIT;
@@ -30,19 +30,19 @@ void print_init(void) {
     debug_usart.buad_rate = 115200;
 
     // This will enable the serial interface
-    usart_init(USART0, &debug_usart);
+    usart_init(USART1, &debug_usart);
 
     // Enable interrupt in both peripheral registers and in the NVIC
-    usart_interrupt_enable(USART0, USART_IRQ_RXRDY);
-    nvic_enable(13);
+    usart_interrupt_enable(USART1, USART_IRQ_RXRDY);
+    nvic_enable(14);
 }
 
 /// Releases the serial resources used
 void print_deinit(void) {
-	peripheral_clock_disable(13);
-	usart_deinit(USART0);
-	nvic_disable(13);
-	nvic_clear_pending(13);
+	peripheral_clock_disable(14);
+	usart_deinit(USART1);
+	nvic_disable(14);
+	nvic_clear_pending(14);
 }
 
 void print(const char* data, ...) {
@@ -51,11 +51,12 @@ void print(const char* data, ...) {
 
     // Pass forward the VA object containing the optional arguments
     u32 size = print_to_buffer_va(debug_buffer, data, obj);
+    va_end(obj);
 
     // Transmit the formated buffer on serial port 0
     char* src = debug_buffer;
     while (size--) {
-        usart_write(USART0, *src++);
+        usart_write(USART1, *src++);
     }
 }
 
@@ -65,20 +66,21 @@ void printl(const char* data, ...) {
 
     // Pass forward the VA object containing the optional arguments
     u32 size = print_to_buffer_va(debug_buffer, data, obj);
+    va_end(obj);
 
     // Transmit the formated buffer on serial port 0
     char* src = debug_buffer;
     while (size--) {
-        usart_write(USART0, *src++);
+        usart_write(USART1, *src++);
     }
     
     // Print a new line
-    usart_write(USART0, '\n');
+    usart_write(USART1, '\n');
 }
 
 void print_raw(const char* data) {
     while (*data) {
-        usart_write(USART0, *data++);
+        usart_write(USART1, *data++);
     }
 }
 
@@ -112,12 +114,12 @@ void print_memory(const u32* memory, u32 size) {
 /// ready, and does not block to the character is transmitted. If all characters
 /// needs to be transmitted before proceeding, this function can be called
 void print_flush(void) {
-	usart_flush(USART0);
+	usart_flush(USART1);
 }
 
 /// Print `count` number of characters from the specified string
 void print_count(const char* data, u32 count) {
     while (count--) {
-        usart_write(USART0, *data++);
+        usart_write(USART1, *data++);
     }
 }

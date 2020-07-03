@@ -28,7 +28,7 @@ void serial_init(void) {
 
     // Configure the peripheral
     struct usart_desc serial;
-    serial.buad_rate = 19200;
+    serial.buad_rate = 230400;
     serial.data_bits = USART_DATA_8_BIT;
     serial.parity = USART_PARITY_NO;
     serial.stop_bits = USART_SB_ONE;

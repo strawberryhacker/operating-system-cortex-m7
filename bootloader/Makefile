@@ -68,6 +68,7 @@ CPFLAGS += -I$(TOP)/src/drivers
 CPFLAGS += -I$(TOP)/src/board
 CPFLAGS += -I$(TOP)/src/generic
 CPFLAGS += -I$(TOP)/src/cpu
+CPFLAGS += -I$(TOP)/src
 
 #-------------------------------------------------------------------------------
 # Rules
