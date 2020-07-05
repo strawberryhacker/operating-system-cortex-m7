@@ -25,7 +25,7 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - Safe bootloader w/hash check &check;
 - Python kernel programmer &check;
 - Basic driver support &check;
-- SD card support
+- SD card support &check;
 - General purpose DMA core itegrated with the scheduler
 - Multiclass scheduler w/FPU support and lazy stacking
 - Runtime statistics &check;
