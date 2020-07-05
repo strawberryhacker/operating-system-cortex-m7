@@ -34,16 +34,8 @@ volatile u8 test_flash[512];
 
 int main(void) {
 
-    cpsid_i();
-
-    SYSTICK->CSR = 0x00;
-
     // Initialize the system
     watchdog_disable();
-
-    gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
-    gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
-    gpio_clear(GPIOC, 8);
 
     // Configure the flash wait states
     flash_set_access_cycles(10);
@@ -54,14 +46,14 @@ int main(void) {
     plla_init(1, 25, 0b111111);
     master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
 
-    //print_init();
-    //frame_init();
+    print_init();
+    frame_init();
 
     // Check if it is required to stay in the bootloader
     gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
     gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
     gpio_set(GPIOC, 8);
-    while (1);
+
     print("Starting bootloader\n");
 
     cpsie_f();
@@ -86,7 +78,7 @@ int main(void) {
                 }
 
             } else if (frame.cmd == CMD_WRITE_PAGE) {
-                printl("Writing page... %d", frame.size);
+                //printl("Writing page... %d", frame.size);
                 // Write a page from offset 0x00404000
                 u8 status = write_kernel_page((u8 *)frame.payload, frame.size, 
                     kernel_page++);
@@ -98,8 +90,8 @@ int main(void) {
                 }
 
             } else if (frame.cmd == CMD_WRITE_PAGE_LAST) {
-                printl("Writing page... %d", frame.size);
-                print("Last page received\n");
+                //printl("Writing page... %d", frame.size);
+                //print("Last page received\n");
                 // Write a page from offset 0x00404000
                 u8 status = write_kernel_page((u8 *)frame.payload, frame.size, 
                     kernel_page);

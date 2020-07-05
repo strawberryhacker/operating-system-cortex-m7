@@ -33,9 +33,8 @@ void kernel_entry(void) {
 	flash_set_access_cycles(7);
 
 	// Set CPU frequency to 300 MHz and bus frequency to 150 MHz
-	clock_source_enable(RC_OSCILLCATOR);
-	rc_frequency_select(RC_12_MHz);
-	main_clock_select(RC_OSCILLCATOR);
+	clock_source_enable(CRYSTAL_OSCILLATOR, 0xFF);
+	main_clock_select(CRYSTAL_OSCILLATOR);
 	plla_init(1, 25, 0xFF);
 	master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
 	
@@ -62,6 +61,4 @@ void kernel_entry(void) {
 	gpio_set_pull(GPIOA, 11, GPIO_PULL_UP);
 
 	mm_init();
-
-	while (1);
 }

@@ -44,7 +44,7 @@ enum rc_frecuency {
 /// The full clock network of the chip can be found in the SAMe70 datasheet
 /// at page 251
 
-void clock_source_enable(enum clock_source source);
+void clock_source_enable(enum clock_source source, u8 startup_time);
 
 u8 clock_source_disable(enum clock_source source);
 

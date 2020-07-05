@@ -96,6 +96,8 @@ u8 check_new_frame(void) {
 void usart0_handler(void) {
     char data = serial_read();
 
+    //print("%1h\n", data);
+
     // If the bus state is not IDLE the timeout interface will be reloaded
     if (bus_state != STATE_IDLE) {
         timeout_reload();

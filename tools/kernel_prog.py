@@ -37,7 +37,7 @@ class flasher:
     def serial_open(self):
         try:
             self.com = serial.Serial(port=self.com_port, 
-                                     baudrate=115200,
+                                     baudrate=230400,
                                      timeout=1);
 
         except serial.SerialException as e:
