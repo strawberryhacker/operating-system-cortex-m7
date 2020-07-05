@@ -14,14 +14,20 @@
 #include "memory.h"
 #include "flash.h"
 
+/// Defines the different commands that might occur in a frame from the host
 #define CMD_ERASE_FLASH     0x03
 #define CMD_WRITE_PAGE      0x04
 #define CMD_WRITE_PAGE_LAST 0x05
 
+/// Defined in `frame.h` and holds the frame information. The user must check 
+/// `check_new_frame` before using this
 extern volatile struct frame frame;
+
+/// Defines where the next page will programmed into flash; that is the relative
+/// offset from the kernel base address at 0x00404000
 volatile u32 kernel_page = 0;
 
-
+/// Temporarily buffer of flash reads and writes
 volatile u8 test_flash[512];
 
 int main(void) {
@@ -56,6 +62,9 @@ int main(void) {
 
     kernel_page = 0;
 
+    // If the bootloader was started from the kernel by the `0x00` packet from 
+    // the host, this will notify the host that the CPU has successfully entered
+    // the bootloader
     send_response(RESP_OK);
 
     while (1) {

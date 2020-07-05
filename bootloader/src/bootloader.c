@@ -10,7 +10,7 @@
 
 static u8 flash_buffer[512];
 
-/// Erase `size` bytes from the address 0x00404000
+/// Erase `size` bytes from flash starting at address 0x00404000
 u8 erase_kernel_image(const u8* data) {
     
     /// The erase flash command sends the size to erase in the first four bytes
@@ -29,7 +29,9 @@ u8 erase_kernel_image(const u8* data) {
     return flash_status;
 }
 
-/// Writes a page into the lower 8KiB of flash and verifies it
+/// Writes a page into the lower 8 KiB of flash and verify it after programming.
+/// This function only support programming of pages with size lower or equal to 
+/// 512 bytes
 u8 write_bootloader_page(const u8* data, u32 size, u32 page) {
 
     // Check the size and add eventual 0xFF padding
@@ -58,7 +60,6 @@ u8 write_bootloader_page(const u8* data, u32 size, u32 page) {
             break;
         }
     }
-
     // Check if the flash is ok
     if (flash_status == 0) {
         panic("Flash verification failed");
@@ -67,7 +68,7 @@ u8 write_bootloader_page(const u8* data, u32 size, u32 page) {
 }
 
 /// Writes `size` bytes from `data` into flash at relative offset `page` from 
-/// the kernel base address
+/// the kernel base address aka. 0x00404000
 u8 write_kernel_page(const u8* data, u32 size, u32 page) {
     
     if (size != 512) {
@@ -82,7 +83,6 @@ u8 write_kernel_page(const u8* data, u32 size, u32 page) {
             flash_buffer[i] = 0xFF;
         }
     }
-
     // Write a page in the kernel space
     u8 flash_status = flash_write_image_page(page, flash_buffer);
 
@@ -107,6 +107,9 @@ u8 write_kernel_page(const u8* data, u32 size, u32 page) {
     return 1;
 }
 
+/// Releases the bootloader resources, relocated the vector table and jumps to 
+/// the kernel defined by the two first entries in the vector table at address
+/// 0x00404200
 void start_kernel(void) {
 
     // Free the resources used in the bootloader
@@ -125,6 +128,7 @@ void start_kernel(void) {
     // Flash operations does still have wait states
     flash_set_access_cycles(1);
 
+    // Disable all interrupt except fault interrupts and system interrupts
     cpsid_i();
 
     // Disable all used peripheral clocks
@@ -133,12 +137,16 @@ void start_kernel(void) {
     // Set the vector table base address
     *((volatile u32 *)VECTOR_TABLE_BASE) = 0x00404200;
 
+    // These barriers is mandatory after updating the vector table
     dmb();
     dsb();
     isb();
 
     volatile u32* image_base = (volatile u32 *)0x00404200;
 
+    // Perform the jump to the kernel. Note that the instruction pipeline flush
+    // must be done right after modifying the stack pointer. This forces the 
+    // CPU to use the right stack pointer in the following instructions
     asm volatile (
         "mov r0, %0     \n\t"
         "ldr r1, [r0]   \n\t"
@@ -146,7 +154,7 @@ void start_kernel(void) {
         "ldr r0, [r0]   \n\t"
         "orr r0, r0, #1 \n\t" // Set the Thumb bit
         "mov sp, r1     \n\t"
-        "isb sy         \n\t"
+        "isb sy         \n\t" // Flushes the instruction pipeline
         "mov pc, r0     \n\t"
         : : "l" (image_base) : "r0", "r1", "memory"
 	);

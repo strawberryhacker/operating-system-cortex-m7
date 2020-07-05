@@ -8,7 +8,6 @@
 
 #define START_BYTE 0xAA
 #define END_BYTE   0x55
-
 #define POLYNOMIAL 0xB2
 
 /// List over the different states in the receive handler
@@ -27,7 +26,7 @@ volatile struct frame frame = {0};
 volatile u32 frame_index = 0;
 volatile u8 frame_received;
 
-/// Stop the clock and the timer
+/// Stops the clock and stops the timer
 static inline void timeout_stop(void) {
     TIMER0->channel[0].CCR = 0b010;
 }
@@ -37,11 +36,14 @@ static inline void timeout_reload(void) {
     TIMER0->channel[0].CCR = 0b101;
 }
 
+/// Initializes all peripheral needed to start receiving frames. This includes
+/// a serial port, a general purpose hardware timer and a programmable clock
+/// PCK6 which will provide a slow enough clock for the timeout
 void frame_init(void) {
+
     // This configures the onboard CDC communication with the host
     serial_init();
 
-    // Configure the timer 0 channel 0
     // Enable the peripheral clock
     peripheral_clock_enable(23);
 
@@ -53,7 +55,7 @@ void frame_init(void) {
     TIMER0->channel[0].CMR = (1 << 15) | (1 << 7) | (1 << 6);
     TIMER0->channel[0].RC  = 1000;
 
-    // Enable the interrupt
+    // Enable RC compare interrupt
     TIMER0->channel[0].IER = (1 << 4);
     
     // Enable timer 0 channel 0 interrupt
@@ -62,6 +64,7 @@ void frame_init(void) {
     bus_state = STATE_IDLE;
 }
 
+/// Releases all resources used in the frame process interface
 void frame_deinit(void) {
     serial_deinit();
     peripheral_clock_disable(23);
@@ -72,11 +75,14 @@ void frame_deinit(void) {
     nvic_clear_pending(23);
 }
 
+/// Sends a response code back to the host and enable the next frame to be
+/// processed
 void send_response(u8 error_code) {
     frame_received = 0;
     serial_print("%c", (char)error_code);
 }
 
+/// Returns `1` if a new frame has been successfully received and `0` if not
 u8 check_new_frame(void) {
     
     if (frame_received) {
@@ -86,20 +92,27 @@ u8 check_new_frame(void) {
     }
 }
 
-/// Frame receive handler
+/// Frame receive handler that process all incoming frames
 void usart0_handler(void) {
     char data = serial_read();
 
+    // If the bus state is not IDLE the timeout interface will be reloaded
     if (bus_state != STATE_IDLE) {
         timeout_reload();
     }
 
+    // The host sends a `0x00` to the target to instruct it to go to the
+    // bootloader. When the target enters bootloader is will send a `RESP_OK`
+    // back to the host. If the bootloader is already running when the firmware
+    // upgrade starts the target should respons to all `0x00` requestes with 
+    // `RESP_OK` if the bus is IDLE
     if (bus_state == STATE_IDLE) {
         if (data == 0) {
             send_response(RESP_OK);
         }
     }
 
+    // Frame state machine FSM
     switch (bus_state) {
         case STATE_IDLE : {
             if (data == START_BYTE) {
@@ -161,7 +174,9 @@ void usart0_handler(void) {
     }
 }
 
-/// Timer 0 channel 0 handler
+/// Timeout interface handler will occur excactly 1 second after the timer has 
+/// been reloaded. To avoid this the software must either reload the timer or
+/// stop it
 void timer0_ch0_handler(void) {
     // Clear timer flags
     (void)TIMER0->channel[0].SR;
@@ -170,5 +185,4 @@ void timer0_ch0_handler(void) {
 
     timeout_stop();
     bus_state = STATE_IDLE;
-
 }
