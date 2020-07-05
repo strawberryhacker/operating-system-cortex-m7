@@ -20,11 +20,11 @@ struct image_info {
 __bootsig__ u8 boot_signature[32];
 
 __image_info__ struct image_info header = {
-	.major_version = 0,
-	.minor_version = 1,
-	.boot_start = 0x00400000,
-	.boot_size = 0x4000,
-	.kernel_start = 0x00404000,
+	.major_version   = 0,
+	.minor_version   = 1,
+	.boot_start      = 0x00400000,
+	.boot_size       = 0x4000,
+	.kernel_start    = 0x00404000,
 	.kernel_max_size = 0x001FBE00
 };
 
