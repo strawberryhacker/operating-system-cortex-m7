@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "ethernet.h"
 #include "gpio.h"
 #include "clock.h"
@@ -31,6 +33,8 @@ void eth_init(void) {
 
     // Configure the NVIC
     nvic_enable(39);
+
+    // Enable the GMAC controller
 }
 
 /// Assert the PHY reset line

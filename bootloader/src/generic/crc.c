@@ -2,8 +2,7 @@
 
 #include "crc.h"
 
-
-
+/// Calculates the CRC-8 of a data region using `polynomial`
 u8 crc_calculate(const void* src, u32 size, u8 polynomial) {
     // Return value
     u8 crc = 0;

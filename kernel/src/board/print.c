@@ -9,81 +9,79 @@
 
 #include <stdarg.h>
 
-/// The debug buffer is used by the sprint function to format the output. 
-/// Therefore the maximum print length is `64` bytes.
+/// The `sprint` formatter functions will output the result to this buffer. This
+/// buffer sets the maximum print limit supported by the system
 static char debug_buffer[64];
 
-/// Initializes the serial port 0 of the SBC to 115200, one stop bit, no parity
-/// and enables receive complete interrupt
+/// Initializes the system serial port USART1 with the following configuration
+///
+/// Baud rate - 115200
+/// Stop bit  - one
+/// Parity    - disabled
+/// Interrupt - disabled
 void print_init(void) {
 
-    // Map the right function to the pins
+    // Enable the serial module to control the pins
     gpio_set_function(GPIOA, 21, GPIO_FUNC_A);
     gpio_set_function(GPIOB, 4, GPIO_FUNC_D);
 
+    // Enable the peripheral clock of the serial module
     peripheral_clock_enable(14);
 
-    struct usart_desc debug_usart;
-    debug_usart.data_bits = USART_DATA_8_BIT;
-    debug_usart.parity = USART_PARITY_NO;
-    debug_usart.stop_bits = USART_SB_ONE;
-    debug_usart.buad_rate = 115200;
-
-    // This will enable the serial interface
+    // Configure the serial module
+    struct usart_desc debug_usart = {
+        .data_bits = USART_DATA_8_BIT,
+        .parity    = USART_PARITY_NO,
+        .stop_bits = USART_SB_ONE,
+        .buad_rate = 115200
+    };
     usart_init(USART1, &debug_usart);
-
-    // Enable interrupt in both peripheral registers and in the NVIC
-    usart_interrupt_enable(USART1, USART_IRQ_RXRDY);
-    nvic_enable(14);
 }
 
-/// Releases the serial resources used
+/// Deinitializes the serial port USART1 for soft reset support
 void print_deinit(void) {
-	peripheral_clock_disable(14);
 	usart_deinit(USART1);
+    peripheral_clock_disable(14);
 	nvic_disable(14);
 	nvic_clear_pending(14);
 }
 
+/// Serial port USART1 formatted printing
 void print(const char* data, ...) {
     va_list obj;
-    va_start(obj, data);
 
-    // Pass forward the VA object containing the optional arguments
+    // Pass forward the VA object containing the optional arguments. The second
+    // parameter in `va_start` must be the argument that precedes the (...)
+    va_start(obj, data);
     u32 size = print_to_buffer_va(debug_buffer, data, obj);
     va_end(obj);
 
-    // Transmit the formated buffer on serial port 0
-    char* src = debug_buffer;
+    // Transmit the formated buffer
+    const char* src = debug_buffer;
     while (size--) {
         usart_write(USART1, *src++);
     }
 }
 
+/// Serial port USART1 formatted printing with an automatic new line
 void printl(const char* data, ...) {
     va_list obj;
-    va_start(obj, data);
 
-    // Pass forward the VA object containing the optional arguments
+    // Pass forward the VA object containing the optional arguments. The second
+    // parameter in `va_start` must be the argument that precedes the (...)
+    va_start(obj, data);
     u32 size = print_to_buffer_va(debug_buffer, data, obj);
     va_end(obj);
 
-    // Transmit the formated buffer on serial port 0
-    char* src = debug_buffer;
+    // Transmit the formated buffer
+    const char* src = debug_buffer;
     while (size--) {
         usart_write(USART1, *src++);
     }
-    
-    // Print a new line
     usart_write(USART1, '\n');
 }
 
-void print_raw(const char* data) {
-    while (*data) {
-        usart_write(USART1, *data++);
-    }
-}
-
+/// Prints `size` number of bytes from memory in a nice format
 void print_memory(const u32* memory, u32 size) {
     const u8* src = (const u8 *)memory;
     u8 line = 0;
@@ -110,9 +108,10 @@ void print_memory(const u32* memory, u32 size) {
     print("\n\n");
 }
 
-/// The `serial_print` function only checks is the USART transmit buffer is 
-/// ready, and does not block to the character is transmitted. If all characters
-/// needs to be transmitted before proceeding, this function can be called
+/// Flushes the USART1 transmit buffer. The `serial_print` only checks the 
+/// transmitter status before the THR write, not after. If the user depends on 
+/// the characters beeing transmitted before proceeding this function can be
+/// called
 void print_flush(void) {
 	usart_flush(USART1);
 }

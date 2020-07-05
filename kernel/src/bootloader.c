@@ -3,9 +3,9 @@
 #include "bootloader.h"
 #include "sections.h"
 #include "types.h"
-#include "usart.h"
 #include "cpu.h"
 #include "serial.h"
+#include "print.h"
 #include "memory.h"
 
 struct image_info {
@@ -33,7 +33,7 @@ void bootloader_init(void) {
 }
 
 void usart0_handler(void) {
-	u8 rec_byte = usart_read(USART0);
+	u8 rec_byte = serial_read();
 	if (rec_byte == 0) {
 		printl("Go to bootloader request");
 		print_flush();

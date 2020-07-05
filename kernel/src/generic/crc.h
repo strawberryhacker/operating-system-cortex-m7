@@ -5,6 +5,6 @@
 
 #include "types.h"
 
-u8 crc_calculate(const void* src, u32 size);
+u8 crc_calculate(const void* src, u32 size, u8 polynomial);
 
 #endif

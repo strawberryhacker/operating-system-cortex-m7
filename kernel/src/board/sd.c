@@ -4,7 +4,9 @@
 #include "gpio.h"
 #include "clock.h"
 
+/// Initializes the physical interface to the SD card
 void sd_init(void) {
+
     // Initialize all the data and command pins used for the SD card
     gpio_set_function(GPIOA, 25, GPIO_FUNC_D);
     gpio_set_function(GPIOA, 28, GPIO_FUNC_C);
@@ -19,6 +21,7 @@ void sd_init(void) {
     gpio_set_direction(GPIOC, 16, GPIO_INPUT); 
 }
 
+/// Return `1` is a SD card is connected and `0` if not
 u8 sd_is_connected(void) {
     if (gpio_get_pin_status(GPIOC, 16)) {
         return 0;

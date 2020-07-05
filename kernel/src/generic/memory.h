@@ -1,7 +1,7 @@
 /// Copyright (C) StrawberryHacker
 
-#ifndef STD_H
-#define STD_H
+#ifndef MEMORY_H
+#define MEMORY_H
 
 #include "types.h"
 
