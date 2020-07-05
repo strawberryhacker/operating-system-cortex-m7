@@ -13,6 +13,8 @@
 #include "bootloader.h"
 #include "memory.h"
 #include "flash.h"
+#include "cpu.h"
+#include "hardware.h"
 
 /// Defines the different commands that might occur in a frame from the host
 #define CMD_ERASE_FLASH     0x03
@@ -32,6 +34,10 @@ volatile u8 test_flash[512];
 
 int main(void) {
 
+    cpsid_i();
+
+    SYSTICK->CSR = 0x00;
+
     // Initialize the system
     watchdog_disable();
 
@@ -43,19 +49,19 @@ int main(void) {
     flash_set_access_cycles(10);
 
     // Increase the core frequency to 300 MHz and the bus frequency to 150 MHz
-    clock_source_enable(CRYSTAL_OSCILLATOR);
+    clock_source_enable(CRYSTAL_OSCILLATOR, 0xFF);
     main_clock_select(CRYSTAL_OSCILLATOR);
     plla_init(1, 25, 0b111111);
     master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
 
-    print_init();
-    frame_init();
+    //print_init();
+    //frame_init();
 
     // Check if it is required to stay in the bootloader
     gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
     gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
     gpio_set(GPIOC, 8);
-
+    while (1);
     print("Starting bootloader\n");
 
     cpsie_f();

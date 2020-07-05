@@ -4,7 +4,7 @@
 #include "hardware.h"
 
 /// Enables one of the present clock sources 
-void clock_source_enable(enum clock_source source) {
+void clock_source_enable(enum clock_source source, u8 startup_time) {
     if (source == RC_OSCILLCATOR) {
         // Enable the internal RC oscillator
         CLOCK->MOR |= (1 << 3) | 0x00370000;
@@ -12,8 +12,11 @@ void clock_source_enable(enum clock_source source) {
         // Wait for the RC oscillator to stabilize
         while (!(CLOCK->SR & (1 << 17)));
     } else {
-        // Enable the crystal
-        CLOCK->MOR |= (1 << 0) | 0x00370000;
+        // Enable the crystal and set the startup time
+        u32 reg = CLOCK->MOR;
+        reg &= ~((0xFF << 8) | (1 << 1));
+        reg |= (1 << 0) | (startup_time << 8) | 0x00370000;
+        CLOCK->MOR = reg;
 
         // Wait for the crystal to stabilize
         while (!(CLOCK->SR & (1 << 0)));
