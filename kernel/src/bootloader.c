@@ -32,9 +32,11 @@ void bootloader_init(void) {
     serial_init();
 }
 
-void usart1_handler(void) {
-	u8 rec_byte = usart_read(USART1);
+void usart0_handler(void) {
+	u8 rec_byte = usart_read(USART0);
 	if (rec_byte == 0) {
+		printl("Go to bootloader request");
+		print_flush();
 		memory_copy("StayInBootloader", boot_signature, 16);
 		dmb();
 		

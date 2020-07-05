@@ -34,7 +34,7 @@ int main(void) {
     gpio_clear(GPIOC, 8);
 
     // Configure the flash wait states
-    flash_set_access_cycles(7);
+    flash_set_access_cycles(10);
 
     // Increase the core frequency to 300 MHz and the bus frequency to 150 MHz
     clock_source_enable(CRYSTAL_OSCILLATOR);
@@ -56,13 +56,13 @@ int main(void) {
 
     kernel_page = 0;
 
+    send_response(RESP_OK);
+
     while (1) {
         if (check_new_frame()) {
             
             if (frame.cmd == CMD_ERASE_FLASH) {
-                //u8 status = erase_kernel_image((u8 *)frame.payload);
-                u8 status = flash_erase_image(20000);
-                print("Erased kernel image\n");
+                u8 status = erase_kernel_image((u8 *)frame.payload);
                 // Send the status of the operation back to the host
                 if (!status) {
                     send_response(RESP_ERROR | RESP_FLASH_ERROR);
@@ -96,14 +96,6 @@ int main(void) {
                 send_response(RESP_OK);
 
                 print("Starting kernel\n");
-
-                const u8* s = (const u8 *)0x00404000;
-                for (u32 i = 0; i < 512 * 10; ) {
-                    print("%1h ", *s++);
-                    if ((++i % 20) == 0) {
-                        print("\n");
-                    }
-                }
 
                 // Firmware download complete
                 start_kernel();

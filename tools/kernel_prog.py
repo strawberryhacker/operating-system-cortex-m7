@@ -37,7 +37,7 @@ class flasher:
     def serial_open(self):
         try:
             self.com = serial.Serial(port=self.com_port, 
-                                     baudrate=230400,
+                                     baudrate=115200,
                                      timeout=1);
 
         except serial.SerialException as e:
@@ -87,18 +87,18 @@ class flasher:
         fcs = bytearray([self.calculate_fcs(cmd_byte + size + payload)])
         end_byte = bytearray([self.END_BYTE])
 
-        print(fcs[0])
-
         self.com.write(start_byte + cmd_byte + size + data + fcs + end_byte)
-            
+
+        # We have a response
+        return self.get_response()
+
+    def get_response(self):
         # Listen for the response
         resp = self.com.read(size = 1)
 
         if (len(resp) == 0):
             print("Timeout occured")
             sys.exit()
-        
-        # We have a response
         return resp
 
     def load_kernel(self):
@@ -110,21 +110,22 @@ class flasher:
         kernel_binary = self.file_read()
 
         # Get the board to enter the bootloader
+        self.com.write(b'\x00')
+        response = self.get_response()
+        if response != b'\x00':
+            print("Response includes errors: ", response)
+            sys.exit()
+
+        print("Vanilla bootloader started...")
 
         # Instruct the board to erase some of the flash
         new_kernel_size = len(kernel_binary)
-
-        print("Length of kernel: ", new_kernel_size)
 
         erase_payload    = bytearray(4)
         erase_payload[0] = new_kernel_size & 0xFF
         erase_payload[1] = (new_kernel_size >> 8) & 0xFF
         erase_payload[2] = (new_kernel_size >> 16) & 0xFF
         erase_payload[3] = (new_kernel_size >> 24) & 0xFF
-
-        for i in erase_payload:
-            print(hex(i), end=" ")
-        print()
     
         response = self.send_frame(self.CMD_ERASE_FLASH, erase_payload)
 
@@ -141,8 +142,6 @@ class flasher:
         print("Downloading kernel...")
         for i in range(number_of_block):
             binary_fragment = kernel_binary[i*512:(i+1)*512]
-
-            print("Size: ", len(binary_fragment))
 
             cmd = 0 
             if i == (number_of_block - 1):

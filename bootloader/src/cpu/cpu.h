@@ -20,12 +20,12 @@ static inline void isb(void) {
 	asm volatile ("dsb sy" : : : "memory");
 }
 
-/// Enable interrupts with configurable priority
+/// Enable execution of interrupts with configurable priority
 static inline void cpsie_i(void) {
 	asm volatile ("cpsie i" : : : "memory");
 }
 
-/// Disable interrupts with configurable priority
+/// Disable execution of interrupts with configurable priority
 static inline void cpsid_i(void) {
 	asm volatile ("cpsid i" : : : "memory");
 }

@@ -190,6 +190,7 @@ typedef struct {
 	_r  u32 STIR;
 } nvic_reg;
 
+/// Integrity check monitor registers
 typedef struct {
 	_rw u32 CFG;
 	_w  u32 CTRL;
@@ -206,11 +207,13 @@ typedef struct {
 	_w  u32 UIHVAL[8];
 } icm_reg;
 
+/// Bus matrix priority registers
 typedef struct {
 	_rw u32 PRAS;
 	_rw u32 PRBS;
 } matrix_pri_reg;
 
+/// Bus matrix registers
 typedef struct {
 	_rw u32 MCFG[13];
 	_r  u32 RESERVED1[3];
@@ -231,6 +234,7 @@ typedef struct {
 	_r  u32 WPSR;
 } matrix_reg;
 
+/// DRAM controller registers
 typedef struct {
 	_rw u32 MR;
 	_rw u32 TR;
@@ -248,6 +252,7 @@ typedef struct {
 	_w  u32 OCMS_KEY2;
 } dram_reg;
 
+/// Cortex-M7 system control block registers
 typedef struct {
 	_r  u32 CPUID;
 	_rw u32 ICSR;
@@ -301,6 +306,7 @@ typedef struct {
 	_rw u32 ABFSR;
 } scb_reg;
 
+/// Cache registers
 typedef struct {
 	_w  u32 ICIALLU;
 	_r  u32 RESERVED;
@@ -315,6 +321,7 @@ typedef struct {
 	_r  u32 DONT_USE;
 } cache_reg;
 
+/// Multimedia card interface registers
 typedef struct {
 	_w  u32 CR;
 	_rw u32 MR;
@@ -341,16 +348,19 @@ typedef struct {
 	_rw u32 FIFO[256];
 } mmc_reg;
 
+/// Gigabit MAC SA registers
 typedef struct {
 	_rw u32 SAB;
 	_rw u32 SAT;
 } gmac_sa;
 
+/// Gigabit MAC ST2CW registers
 typedef struct {
 	_rw u32 ST2CW0;
 	_rw u32 ST2CW1;
 } gmac_st2cw;
 
+/// Gigabit MAC registers
 typedef struct {
 	_rw u32 NCR;
 	_rw u32 NCFGR;
@@ -488,6 +498,39 @@ typedef struct {
 	gmac_st2cw ST2CW[24];
 } gmac_reg;
 
+/// Timer channel registers
+typedef struct {
+	_w  u32 CCR;
+	_rw u32 CMR;
+	_rw u32 SMMR;
+	_r  u32 RAB;
+	_r  u32 CV;
+	_rw u32 RA;
+	_rw u32 RB;
+	_rw u32 RC;
+	_r  u32 SR;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_r  u32 IMR;
+	_rw u32 EMR;
+	_r  u32 RESERVED[3];
+} timer_channel;
+
+/// Timer module registers
+typedef struct {
+	timer_channel channel[3];
+	_w  u32 BCR;
+	_rw u32 BMR;
+	_w  u32 QIER;
+	_w  u32 QIDR;
+	_r  u32 QIMR;
+	_r  u32 QISR;
+	_rw u32 FMR;
+	_r  u32 RESERVED[2];
+	_rw u32 WPMR;
+} timer_reg;
+
+/// Defines the base address of the SOC peripherals
 #define CLOCK    ((clock_reg *)0x400E0600)
 #define FLASH    ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
@@ -500,22 +543,27 @@ typedef struct {
 #define CACHE    ((scb_reg *)0xE000EF50)
 #define MMC      ((mmc_reg *)0x40000000)
 #define GMAC     ((gmac_reg *)0x40050000)
+#define GPIOA    ((gpio_reg *)0x400E0E00)
+#define GPIOB    ((gpio_reg *)0x400E1000)
+#define GPIOC    ((gpio_reg *)0x400E1200)
+#define GPIOD    ((gpio_reg *)0x400E1400)
+#define GPIOE    ((gpio_reg *)0x400E1600)
+#define USART0   ((usart_reg *)0x40024000)
+#define USART1   ((usart_reg *)0x40028000)
+#define USART2   ((usart_reg *)0x4002C000)
+#define TIMER0   ((timer_reg *)0x4000C000)
+#define TIMER1   ((timer_reg *)0x40010000)
+#define TIMER2   ((timer_reg *)0x40014000)
+#define TIMER3   ((timer_reg *)0x40054000)
 
-#define CPACR 0xE000ED88
+/// Defines the address of the coprocessor access control register
+#define CPACR (u32)0xE000ED88
 
-#define GPIOA ((gpio_reg *)0x400E0E00)
-#define GPIOB ((gpio_reg *)0x400E1000)
-#define GPIOC ((gpio_reg *)0x400E1200)
-#define GPIOD ((gpio_reg *)0x400E1400)
-#define GPIOE ((gpio_reg *)0x400E1600)
+/// Defines the address of the Cortex-M7 vecotr table offset register
+#define VECTOR_TABLE_BASE (u32)0xE000ED08
 
-#define USART0 ((usart_reg *)0x40024000)
-#define USART1 ((usart_reg *)0x40028000)
-#define USART2 ((usart_reg *)0x4002C000)
-
-#define VECTOR_TABLE_BASE 0xE000ED08
-
-#define KERNEL_IMAGE_ADDR 0x00404200
-
+/// Defines the address of which the kernel will be loaded. This does not equal 
+/// the vector table base address of the kernel.
+#define KERNEL_IMAGE_ADDR (u32)0x00404000
 
 #endif

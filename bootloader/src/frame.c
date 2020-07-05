@@ -94,6 +94,12 @@ void usart0_handler(void) {
         timeout_reload();
     }
 
+    if (bus_state == STATE_IDLE) {
+        if (data == 0) {
+            send_response(RESP_OK);
+        }
+    }
+
     switch (bus_state) {
         case STATE_IDLE : {
             if (data == START_BYTE) {
