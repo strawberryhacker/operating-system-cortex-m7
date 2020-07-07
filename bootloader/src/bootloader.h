@@ -41,8 +41,12 @@ u8 write_bootloader_page(const u8* data, u32 size, u32 page);
 
 u8 write_kernel_page(const u8* data, u32 size, u32 page);
 
-void start_kernel(void);
+u8 store_kernel_hash(void);
 
-void compute_hash(u32 start_addr, u32 size);
+u8 verify_kernel_hash(void);
+
+void set_flash_write_offset(const u8* data);
+
+void start_kernel(void);
 
 #endif

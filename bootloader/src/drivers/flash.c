@@ -60,8 +60,9 @@ __ramfunc__ u8 flash_erase_write(u32 page, const u8* buffer) {
 }
 
 /// Erase `size` bytes of the flash from the start location of the kernel 
-/// image. This is set to be 0x00404000. The minimum erase size is 8k
-__ramfunc__ u8 flash_erase_image(u32 size) {
+/// image. This is set to be 0x00404000. The minimum erase size is 8k. The 
+/// function return the number of bytes erased from flash
+__ramfunc__ u32 flash_erase_image(u32 size) {
     u32 pages = size / 512;
     if (size % 512) {
         pages++;
@@ -71,6 +72,9 @@ __ramfunc__ u8 flash_erase_image(u32 size) {
     if (pages % 16) {
         sect_8k++;
     }
+
+    // The functions should return the number of bytes erased
+    u32 erase_bytes = sect_8k * 8192;
 
     // `sect_8k` now holds the number of 8k blocks to be erased from the the 
     // kernel image base address
@@ -96,7 +100,7 @@ __ramfunc__ u8 flash_erase_image(u32 size) {
         }
         sect_8k_base += 16;
     }
-    return 1;
+    return erase_bytes;
 }
 
 /// Writes a sector to the flash at relativ offset `page` from the kernel image

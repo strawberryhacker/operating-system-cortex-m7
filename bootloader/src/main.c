@@ -16,26 +16,22 @@
 #include "cpu.h"
 #include "hardware.h"
 #include "hash.h"
+#include "panic.h"
 
 /// Defines the different commands that might occur in a frame from the host
-#define CMD_ERASE_FLASH     0x03
-#define CMD_WRITE_PAGE      0x04
-#define CMD_WRITE_PAGE_LAST 0x05
-
-struct hash {
-	u8 digest[32];
-	u32 size;
-};
-
-__attribute__((aligned(128))) struct hash kernel_hash;
+#define CMD_ERASE_FLASH      0x03
+#define CMD_WRITE_PAGE       0x04
+#define CMD_WRITE_PAGE_LAST  0x05
+#define CMD_SET_FLASH_OFFSET 0x06  // Offset from 0x00404000
 
 /// Defined in `frame.h` and holds the frame information. The user must check 
 /// `check_new_frame` before using this
 extern volatile struct frame frame;
 
 /// Defines where the next page will programmed into flash; that is the relative
-/// offset from the kernel base address at 0x00404000
-volatile u32 kernel_page = 0;
+/// offset from the kernel base address at 0x00404000. This can be modified by
+/// using CMD 0x06
+extern volatile u32 kernel_page;
 
 int main(void) {
 
@@ -43,7 +39,7 @@ int main(void) {
     watchdog_disable();
 
     // Configure the flash wait states
-    flash_set_access_cycles(10);
+    flash_set_access_cycles(7);
 
     // Increase the core frequency to 300 MHz and the bus frequency to 150 MHz
     clock_source_enable(CRYSTAL_OSCILLATOR, 0xFF);
@@ -52,7 +48,6 @@ int main(void) {
     master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
 
     print_init();
-    frame_init();
 
     // Initialize the on-board LED
     gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
@@ -68,21 +63,26 @@ int main(void) {
     // Enable the hash engine peripheral clock
     peripheral_clock_enable(32);
 
-    // Check the boot triggers. These will prevent the kernel loading and jump
-    // directly to the bootloader
+    // The normal case is a gereral reboot or POR and the kernel should be 
+    // loaded. However, in case of a firmware upgrade or a kernel crash the 
+    // cpu might skip the loading stage and go straight to the bootloader. 
+    // Assume normal kernel loading
     u8 execute_kernel = 1;
 
+    // Checks for the "StayInBootloader" signature in RAM boot signature area
     if (check_boot_signature() == 1) {
         execute_kernel = 0;
         clear_boot_signature();
         printl("RAM boot signature present");
     }
+
+    // Check if the boot pin is being pressed
     if (gpio_get_pin_status(GPIOA, 11) == 0) {
         execute_kernel = 0;
         printl("Boot pin triggered");
     }
 
-    // If allowed, try to load the kernel image
+    // If no triggers present try to load the kernel
     if (execute_kernel) {
         printl("Trying to execute the kernel");
         // Check the kernel info against the bootlader info
@@ -94,6 +94,10 @@ int main(void) {
         }
 
         // Check the hash value
+        if (verify_kernel_hash() == 0) {
+            kernel_ok = 0;
+            printl("Hash digest is not right");
+        }
         
         // If the kernel is ok we can try to load it
         if (kernel_ok) {
@@ -103,6 +107,9 @@ int main(void) {
     }
 
     print("Starting bootloader\n");
+
+    // Initialize the frame interfaces so that incoming frames can be processed
+    frame_init();
 
     cpsie_f();
 
@@ -150,6 +157,12 @@ int main(void) {
 
                 send_response(RESP_OK);
 
+                printl("Performing hash check");
+
+                if (store_kernel_hash() == 0) {
+                    panic("Cannot store the hash digest");
+                }
+
                 print("Starting kernel\n");
 
                 // Firmware download complete. A chip reset will never stay in
@@ -159,6 +172,11 @@ int main(void) {
                 print_flush();
                 cpsid_i();
 		        *((u32 *)0x400E1800) = 0xA5000000 | 0b1;
+
+            } else if (frame.cmd == CMD_SET_FLASH_OFFSET) {
+                printl("Setting write offset");
+                set_flash_write_offset((u8 *)frame.payload);
+                send_response(RESP_OK);
             }
         }
     }

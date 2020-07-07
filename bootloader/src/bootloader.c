@@ -8,7 +8,25 @@
 #include "cpu.h"
 #include "hardware.h"
 #include "sections.h"
+#include "memory.h"
 #include "hash.h"
+
+/// This structure will be stored in the hash flash region inside the 
+/// bootloader. It must contain the size so that the any recumputation of the 
+/// hash know what the initial size was
+struct hash {
+	u8 digest[32];
+	u32 size;
+};
+
+/// Total size of the kernel, or more accurate the size of the erase block 
+/// allocated to the kernel
+volatile u32 kernel_total_size = 0;
+
+/// Defines where the next page will programmed into flash; that is the relative
+/// offset from the kernel base address at 0x00404000. This can be modified by
+/// using CMD 0x06
+volatile u32 kernel_page = 0;
 
 /// Temporarily buffer for flash write operations
 static u8 flash_buffer[512];
@@ -30,11 +48,11 @@ __image_info__ struct image_info image_info = {
     .kernel_info      = 0x00404000
 };
 
+/// Temporarily hash table location in RAM
+__attribute__((aligned(128))) struct hash kernel_hash;
+
 /// Hash table flash location
 __hash_table__ const u8 hash_table_flash[32];
-
-/// Temporarily RAM location for the kernel hash 
-__attribute__((aligned(128))) u8 hash_table_ram[32];
 
 /// Clear the boot signature 
 void clear_boot_signature(void) {
@@ -86,8 +104,8 @@ u8 check_info_match(void) {
 /// Erase `size` bytes from flash starting at address 0x00404000
 u8 erase_kernel_image(const u8* data) {
     
-    /// The erase flash command sends the size to erase in the first four bytes
-    /// in the payload
+    // The erase flash command sends the size to erase in the first four bytes
+    // in the payload
     u32 erase_size = 0;
     erase_size |= data[0];
     erase_size |= data[1] << 8;
@@ -96,10 +114,18 @@ u8 erase_kernel_image(const u8* data) {
 
     printl("Erasing %d bytes from address 0x00404000", erase_size);
 
-    /// Erase the flash starting from address 0x00404000
-    u8 flash_status = flash_erase_image(erase_size);
+    // Erase the flash starting from address 0x00404000
+    u32 flash_status = flash_erase_image(erase_size);
 
-    return flash_status;
+    // Update the kernel size field. This is needed in the hash computation
+    // stage
+    if (flash_status) {
+        kernel_total_size = flash_status;
+    } else {
+        return 0;
+    }
+
+    return 1;
 }
 
 /// Writes a page into the lower 8 KiB of flash and verify it after programming.
@@ -180,15 +206,82 @@ u8 write_kernel_page(const u8* data, u32 size, u32 page) {
     return 1;
 }
 
+/// Computes the kernel hash and stores it in the bootloader hash sector. It
+/// returns `1` if the computation and flash write operation was successful. The
+/// hash computation allways starts at address 0x00404000 and last `size` bytes
+u8 store_kernel_hash(void) {
+    // Compute the hash digest into the temporarily RAM location
+    hash256_generate((void *)0x00404000, kernel_total_size, kernel_hash.digest);
+    kernel_hash.size = kernel_total_size;
+
+    // Load the flash buffer with the hash structure
+    const u8* src = (const u8 *)&kernel_hash;
+    u8* dest = (u8 *)flash_buffer;
+
+    for (u32 i = 0; i < 512; i++) {
+        if (i < sizeof(struct hash)) {
+            *dest = *src;
+        } else {
+            *dest = 0xFF;
+        }
+        src++;
+        dest++;
+    }
+
+    // Write the flash buffer to the hash sector (s30)
+    if (flash_erase_write(30, flash_buffer) == 0) {
+        return 0;
+    }
+
+    // Verify the flash
+    if (!memory_compare(flash_buffer, (u8 *)(0x00400000 + 512 * 30), 512)) {
+        return 0;
+    }
+    return 1;
+}
+
+/// Computes the hash of the kernel used the size field at sector 30 in flash
+/// and compares the result with the digest at sector 30. If they match it 
+/// returns `1`
+u8 verify_kernel_hash(void) {
+    // The `struct hash` must be fetched from the flash sector
+    const struct hash* flash_hash = (const struct hash*)(0x00400000 + 512 * 30);
+
+    // The size field in the hash sector must be a nonzero value larger than
+    // 32 bytes
+    if ((flash_hash->size == 0) || (flash_hash->size == 0xFFFFFFFF)) {
+        printl("Hash size error");
+        return 0;
+    }
+
+    // Recompute the hash
+    hash256_generate((void *)0x00404000, flash_hash->size, kernel_hash.digest);
+
+    // Check the the digests match
+    for (u8 i = 0; i < 32; i++) {
+        if (kernel_hash.digest[i] != flash_hash->digest[i]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/// Sets the current write position of the kernel
+void set_flash_write_offset(const u8* data) {
+    kernel_page  = 0;
+    kernel_page |= data[0];
+    kernel_page |= data[1] << 8;
+    kernel_page |= data[2] << 16;
+    kernel_page |= data[3] << 24;
+}
+
 /// Releases the bootloader resources, relocated the vector table and jumps to 
 /// the kernel defined by the two first entries in the vector table at address
 /// 0x00404200
 void start_kernel(void) {
 
     // Free the resources used in the bootloader
-    serial_flush();
     print_flush();
-    frame_deinit();
     print_deinit();
 
     clock_tree_reset();
@@ -227,10 +320,4 @@ void start_kernel(void) {
         "mov pc, r0     \n\t"
         : : "l" (image_base) : "r0", "r1", "memory"
 	);
-}
-
-/// Calculates the SHA-256 hash value of the memory region specified and writes
-/// the result infor the `hash_table_ram` 
-void compute_hash(u32 start_addr, u32 size) {
-    hash256_generate((u8 *)start_addr, size, hash_table_ram);
 }

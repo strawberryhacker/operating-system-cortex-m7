@@ -12,9 +12,10 @@ class flasher:
 
     POLYNOMIAL = 0xB2
 
-    CMD_ERASE_FLASH     = 0x03
-    CMD_WRITE_PAGE      = 0x04
-    CMD_WRITE_PAGE_LAST = 0x05
+    CMD_ERASE_FLASH      = 0x03
+    CMD_WRITE_PAGE       = 0x04
+    CMD_WRITE_PAGE_LAST  = 0x05
+    CMD_SET_FLASH_OFFSET = 0x06
 
     def __init__(self):
         pass
@@ -117,6 +118,10 @@ class flasher:
             sys.exit()
 
         print("Vanilla bootloader started...")
+
+        # If an error has occured the write offset might be wrong
+        write_pos_set = bytearray([0, 0, 0, 0])
+        self.send_frame(self.CMD_SET_FLASH_OFFSET, write_pos_set)
 
         # Instruct the board to erase some of the flash
         new_kernel_size = len(kernel_binary)

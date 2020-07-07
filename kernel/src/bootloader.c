@@ -40,11 +40,11 @@ __image_info__ struct image_info image_info = {
     .minor_version    = 0,
 
     .bootloader_start = 0x00400000,
-    .bootloader_size  = 0x4000,
+    .bootloader_size  = 0x00004000,
     .bootloader_info  = 0x00403E00,
 
     .kernel_start     = 0x00404000,
-    .kernel_size      = 0x1FC000,
+    .kernel_size      = 0x001FC000,
     .kernel_info      = 0x00404000
 };
 

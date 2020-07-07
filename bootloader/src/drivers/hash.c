@@ -5,72 +5,100 @@
 #include "print.h"
 #include "panic.h"
 
-enum icm_algorithm {
-	SHA1,
-	SHA256,
-	SHA224
-};
-
-struct icm_s {
-	// Sets the SHA algorithm
-	enum icm_algorithm algorithm;
-	
-	// 4-bit setting the delay cylces between bursts
-	u8 bus_utilization : 4;
-	
-	u8 custom_initial_hash : 1;
-	u8 dual_input_buffer : 1;
-	u8 auto_monitor_mode : 1;
-	u8 end_monitor_disable : 1;
-	u8 write_back_disable : 1;
-	u8 list_branch_disable : 1;
-};
-
+/// List descriptor is fetched from memory by the hash engine. The first
+/// descriptor address must be aligned by 64 bytes according to the datasheet 
+/// spesification page 1755
 struct icm_desc {
 	// Start address of the current block
 	u32 start_addr;
+
+	// Configures the operation applying to one region
 	u32 cfg;
+
+	// The size field must be set to the number of 512-bit blocks minus one
 	u32 size;
+
+	// This point to the next descriptor in the secondary list. Must be zero
+	// if secondary list branching is disabled
 	struct icm_desc* next;
 };
 
-/// This descriptor describes ICM block number `1`. It must be aligned by 
-/// 512-bit
-__attribute__((aligned(128))) struct icm_desc hash_descriptor = {0};
+/// Currently the hash engine only supports single region hash calculation
+__attribute__((aligned(64))) struct icm_desc region_one;
 
-/// Computes the SHA256 over the `data` region with `size`, and returns the 
-/// computed hash in the `hash` pointer. This address must be 128-byte aligned
+/// Computes the SHA-256 over the `data` region with `size` number of bytes, and
+/// writes the computed hash to the memory pointed to by `hash`. This address must be
+/// 128-byte aligned
 void hash256_generate(const void* data, u32 size, u8* hash) {
 
-	ICM->CTRL = (1 << 2) | (1 << 1) | (0b1111 << 8);
+	ICM->CTRL = (1 << 2) | (1 << 1) | (0b111 << 9);
 	
 	// Write configuration register. SHA256, secondary list branch disable
 	// and custom initial hash
 	ICM->CFG = (1 << 2) | (1 << 13);
 	
-	hash_descriptor.start_addr = (u32)data;
-	// Bit number 6 suppresses bus errors and should not be used
-	hash_descriptor.cfg = (1 << 12) | (1 << 2) | (1 << 4) | (1 << 8);
-	hash_descriptor.size = (size / 32) - 1;
-	hash_descriptor.next = 0;
+	region_one.start_addr = (u32)data;
+	region_one.cfg        = (1 << 12) | (1 << 2);
+	region_one.size       = (size / 32) - 1;
+	region_one.next       = 0;
 	
-	ICM->DSCR = (u32)&hash_descriptor;
+	ICM->DSCR = (u32)&region_one;
 	ICM->HASH = (u32)hash;
 
+	// Initialize the hash memory destination to zero
+	for (u8 i = 0; i < 32; i++) {
+		hash[i] = 0x00;
+	}
+
 	ICM->CTRL = (1 << 0);
-	
+
 	u32 status;
 	do {
 		status = ICM->ISR;
 	} while (!(status & 1));
-
-	// Check the reason for the URAD bit
-	print("Undef reg: %d\n", 0b111 & ICM->UASR);
 	
 	if (status & ((1 << 24) | (0b1111 << 8))) {
 		print("Error: %32b\n", status);
 		panic("Hash error");
 	}
 
-	ICM->CTRL = (1 << 2) | (1 << 1);
+	ICM->CTRL = (1 << 2);
+}
+
+/// Computes the SHA-256 over the `data` region with `size` number of bytes, and
+/// compares the computed value agains the hash present at `hash`. It returns
+/// `1` if these match, `0` if not
+u8 hash256_verify(const void* data, u32 size, const u8* hash) {
+
+	ICM->CTRL = (1 << 2) | (1 << 1) | (0b111 << 9);
+	
+	// Write configuration register. SHA256, secondary list branch disable
+	// and custom initial hash
+	ICM->CFG = (1 << 2) | (1 << 13);
+	
+	region_one.start_addr = (u32)data;
+	region_one.cfg        = (1 << 12) | (1 << 2) | (1 << 0);
+	region_one.size       = (size / 32) - 1;
+	region_one.next       = 0;
+	
+	ICM->DSCR = (u32)&region_one;
+	ICM->HASH = (u32)hash;
+
+	ICM->CTRL = (1 << 0);
+
+	u32 status;
+	do {
+		status = ICM->ISR;
+	} while (!(status & 1));
+	
+	if (status & ((1 << 24) | (0b1111 << 8))) {
+		print("Error: %32b\n", status);
+		panic("Hash error");
+	}
+
+	print("Status reg: %32b\n", status);
+
+	ICM->CTRL = (1 << 2);
+
+	return 0;
 }
