@@ -40,12 +40,11 @@ void kernel_entry(void) {
 	
 	dram_init();
 
-	// Make the kernel listen for firmware upgrade
-	bootloader_init();
-
 	// Initialize serial communication
 	print_init();
-	print("\n\n- - - - Vanilla kernel started - - - -\n");
+
+	// Make the kernel listen for firmware upgrade
+	bootloader_init();
 
 	cpsie_i();
 	

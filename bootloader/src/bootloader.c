@@ -36,8 +36,8 @@ __bootsig__ u8 boot_signature[32];
 
 /// This data will be stored inside the bootloader info sector
 __image_info__ struct image_info image_info = {
-    .major_version    = 0,
-    .minor_version    = 1,
+    .major_version    = 2,
+    .minor_version    = 0,
 
     .bootloader_start = 0x00400000,
     .bootloader_size  = 0x4000,

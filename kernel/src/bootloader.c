@@ -37,7 +37,7 @@ __bootsig__ u8 boot_signature[32];
 
 __image_info__ struct image_info image_info = {
     .major_version    = 1,
-    .minor_version    = 0,
+    .minor_version    = 1,
 
     .bootloader_start = 0x00400000,
     .bootloader_size  = 0x00004000,
@@ -50,12 +50,22 @@ __image_info__ struct image_info image_info = {
 
 void bootloader_init(void) {
     serial_init();
+
+    // Grab the bootlaoder info section
+    const struct image_info* info = 
+        (const struct image_info *)image_info.bootloader_info;
+
+    printl("\nUsing Vanilla bootloader version %d.%d",
+        info->major_version, info->minor_version);
+
+    printl("Using Vanilla kernel version %d.%d\n",
+        image_info.major_version, image_info.minor_version);
 }
 
 void usart0_handler(void) {
 	u8 rec_byte = serial_read();
 	if (rec_byte == 0x00) {
-		printl("Go to bootloader request");
+
 		print_flush();
 		memory_copy("StayInBootloader", boot_signature, 16);
 		dmb();
