@@ -50,11 +50,11 @@ void hash256_generate(const void* data, u32 size, u8* hash) {
 	
 	hash_descriptor.start_addr = (u32)data;
 	// Bit number 6 suppresses bus errors and should not be used
-	hash_descriptor.cfg = (1 << 12) | (1 << 2) | (1 << 6);
+	hash_descriptor.cfg = (1 << 12) | (1 << 2) | (1 << 4) | (1 << 8);
 	hash_descriptor.size = (size / 32) - 1;
 	hash_descriptor.next = 0;
 	
-	ICM->DSCR = (u32)(&hash_descriptor);
+	ICM->DSCR = (u32)&hash_descriptor;
 	ICM->HASH = (u32)hash;
 
 	ICM->CTRL = (1 << 0);
@@ -63,10 +63,14 @@ void hash256_generate(const void* data, u32 size, u8* hash) {
 	do {
 		status = ICM->ISR;
 	} while (!(status & 1));
+
+	// Check the reason for the URAD bit
+	print("Undef reg: %d\n", 0b111 & ICM->UASR);
 	
 	if (status & ((1 << 24) | (0b1111 << 8))) {
 		print("Error: %32b\n", status);
 		panic("Hash error");
-	}	
+	}
+
 	ICM->CTRL = (1 << 2) | (1 << 1);
 }

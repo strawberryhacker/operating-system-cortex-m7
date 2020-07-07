@@ -15,11 +15,19 @@
 #include "flash.h"
 #include "cpu.h"
 #include "hardware.h"
+#include "hash.h"
 
 /// Defines the different commands that might occur in a frame from the host
 #define CMD_ERASE_FLASH     0x03
 #define CMD_WRITE_PAGE      0x04
 #define CMD_WRITE_PAGE_LAST 0x05
+
+struct hash {
+	u8 digest[32];
+	u32 size;
+};
+
+__attribute__((aligned(128))) struct hash kernel_hash;
 
 /// Defined in `frame.h` and holds the frame information. The user must check 
 /// `check_new_frame` before using this
@@ -28,9 +36,6 @@ extern volatile struct frame frame;
 /// Defines where the next page will programmed into flash; that is the relative
 /// offset from the kernel base address at 0x00404000
 volatile u32 kernel_page = 0;
-
-/// Temporarily buffer of flash reads and writes
-volatile u8 test_flash[512];
 
 int main(void) {
 
@@ -49,10 +54,53 @@ int main(void) {
     print_init();
     frame_init();
 
-    // Check if it is required to stay in the bootloader
+    // Initialize the on-board LED
     gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
     gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
     gpio_set(GPIOC, 8);
+
+    // Initializing the on-board button which will be used as a boot trigger
+    peripheral_clock_enable(10);
+	gpio_set_function(GPIOA, 11, GPIO_FUNC_OFF);
+	gpio_set_direction(GPIOA, 11, GPIO_INPUT);
+	gpio_set_pull(GPIOA, 11, GPIO_PULL_UP);
+
+    // Enable the hash engine peripheral clock
+    peripheral_clock_enable(32);
+
+    // Check the boot triggers. These will prevent the kernel loading and jump
+    // directly to the bootloader
+    u8 execute_kernel = 1;
+
+    if (check_boot_signature() == 1) {
+        execute_kernel = 0;
+        clear_boot_signature();
+        printl("RAM boot signature present");
+    }
+    if (gpio_get_pin_status(GPIOA, 11) == 0) {
+        execute_kernel = 0;
+        printl("Boot pin triggered");
+    }
+
+    // If allowed, try to load the kernel image
+    if (execute_kernel) {
+        printl("Trying to execute the kernel");
+        // Check the kernel info against the bootlader info
+        u8 kernel_ok = 1;
+
+        if (check_info_match() == 0) {
+            kernel_ok = 0;
+            printl("Info not right");
+        }
+
+        // Check the hash value
+        
+        // If the kernel is ok we can try to load it
+        if (kernel_ok) {
+            printl("Starting kernel");
+            start_kernel();
+        }
+    }
 
     print("Starting bootloader\n");
 
@@ -96,7 +144,7 @@ int main(void) {
                 u8 status = write_kernel_page((u8 *)frame.payload, frame.size, 
                     kernel_page);
 
-                if (status == 0) {
+                if (status == 0) { 
                     send_response(RESP_ERROR | RESP_FLASH_ERROR);
                 }
 
@@ -104,8 +152,13 @@ int main(void) {
 
                 print("Starting kernel\n");
 
-                // Firmware download complete
-                start_kernel();
+                // Firmware download complete. A chip reset will never stay in
+                // the bootloader unless either the hash value is wrong (should
+                // never happend) or is the infor structures don't match
+                printl("Reset pending");
+                print_flush();
+                cpsid_i();
+		        *((u32 *)0x400E1800) = 0xA5000000 | 0b1;
             }
         }
     }

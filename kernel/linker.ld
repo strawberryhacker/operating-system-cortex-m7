@@ -8,7 +8,7 @@ MEMORY {
     image_info      (r) : ORIGIN = 0x00404000, LENGTH = 0x000200  /* 512 B  */
     flash          (rx) : ORIGIN = 0x00404200, LENGTH = 0x1FBE00  /* 2 MiB  */
     boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x000020  /* 32 B   */
-    sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x05DBE0  /* 384 kB */
+    sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x05FFE0  /* 384 kB */
 }
 
 STACK_SIZE = 8192;

@@ -126,7 +126,7 @@ lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
 program:
-	@python3 ../tools/kernel_prog.py -com /dev/ttyS3 -f build/kernel.bin
+	@python3 ../tools/kernel_prog.py -c /dev/ttyS3 -f build/kernel.bin
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O binary $< $@

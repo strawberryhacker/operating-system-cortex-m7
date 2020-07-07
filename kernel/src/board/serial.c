@@ -33,7 +33,7 @@ void serial_init(void) {
         .data_bits = USART_DATA_8_BIT,
         .parity    = USART_PARITY_NO,
         .stop_bits = USART_SB_ONE,
-        .buad_rate = 115200
+        .buad_rate = 230400
     };
     usart_init(USART0, &serial);
 

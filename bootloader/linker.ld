@@ -9,7 +9,7 @@ MEMORY {
     hash_table      (r) : ORIGIN = 0x00403C00, LENGTH = 0x00200  /* 512 B   */
     image_info      (r) : ORIGIN = 0x00403E00, LENGTH = 0x00200  /* 512 B   */
     boot_signature (rw) : ORIGIN = 0x20400000, LENGTH = 0x00020  /* 32 B    */
-    sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x5DBE0  /* 384 kB  */
+    sram          (rwx) : ORIGIN = 0x20400020, LENGTH = 0x5FFE0  /* 384 kB  */
 }
 
 STACK_SIZE = 0x500;
