@@ -23,6 +23,7 @@
 #define CMD_WRITE_PAGE       0x04
 #define CMD_WRITE_PAGE_LAST  0x05
 #define CMD_SET_FLASH_OFFSET 0x06  // Offset from 0x00404000
+#define CMD_CTRL_LED         0x07
 
 /// Defined in `frame.h` and holds the frame information. The user must check 
 /// `check_new_frame` before using this
@@ -73,47 +74,35 @@ int main(void) {
     if (check_boot_signature() == 1) {
         execute_kernel = 0;
         clear_boot_signature();
-        printl("RAM boot signature present");
     }
-
     // Check if the boot pin is being pressed
     if (gpio_get_pin_status(GPIOA, 11) == 0) {
         execute_kernel = 0;
-        printl("Boot pin triggered");
     }
 
     // If no triggers present try to load the kernel
     if (execute_kernel) {
-        printl("Trying to execute the kernel");
-        // Check the kernel info against the bootlader info
         u8 kernel_ok = 1;
 
+        // Check if the info matches
         if (check_info_match() == 0) {
             kernel_ok = 0;
-            printl("Info not right");
         }
-
         // Check the hash value
         if (verify_kernel_hash() == 0) {
             kernel_ok = 0;
-            printl("Hash digest is not right");
         }
         
         // If the kernel is ok we can try to load it
         if (kernel_ok) {
-            printl("Starting kernel");
             start_kernel();
         }
     }
-
-    print("Starting bootloader\n");
 
     // Initialize the frame interfaces so that incoming frames can be processed
     frame_init();
 
     cpsie_f();
-
-    kernel_page = 0;
 
     // If the bootloader was started from the kernel by the `0x00` packet from 
     // the host, this will notify the host that the CPU has successfully entered
@@ -154,28 +143,29 @@ int main(void) {
                 if (status == 0) { 
                     send_response(RESP_ERROR | RESP_FLASH_ERROR);
                 }
-
                 send_response(RESP_OK);
-
-                printl("Performing hash check");
 
                 if (store_kernel_hash() == 0) {
                     panic("Cannot store the hash digest");
                 }
 
-                print("Starting kernel\n");
-
                 // Firmware download complete. A chip reset will never stay in
                 // the bootloader unless either the hash value is wrong (should
                 // never happend) or is the infor structures don't match
-                printl("Reset pending");
                 print_flush();
                 cpsid_i();
 		        *((u32 *)0x400E1800) = 0xA5000000 | 0b1;
 
             } else if (frame.cmd == CMD_SET_FLASH_OFFSET) {
-                printl("Setting write offset");
                 set_flash_write_offset((u8 *)frame.payload);
+                send_response(RESP_OK);
+
+            } else if (frame.cmd == CMD_CTRL_LED) {
+                if (frame.payload[0] == 0) {
+                    gpio_set(GPIOC, 8);
+                } else {
+                    gpio_clear(GPIOC, 8);
+                }
                 send_response(RESP_OK);
             }
         }

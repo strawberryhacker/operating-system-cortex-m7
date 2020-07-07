@@ -16,6 +16,7 @@ class flasher:
     CMD_WRITE_PAGE       = 0x04
     CMD_WRITE_PAGE_LAST  = 0x05
     CMD_SET_FLASH_OFFSET = 0x06
+    CMD_CTRL_LED         = 0x07
 
     def __init__(self):
         pass
@@ -102,6 +103,16 @@ class flasher:
             sys.exit()
         return resp
 
+    # Sets (1) or clears (0) the on-board LED
+    def set_led(self, state):
+        led_payload = bytearray(1)
+        if (state):
+            led_payload[0] = 1
+        else:
+            led_payload[0] = 0
+        
+        self.send_frame(self.CMD_CTRL_LED, led_payload)
+
     def load_kernel(self):
 
         # Open the com port
@@ -154,7 +165,7 @@ class flasher:
                 cmd = self.CMD_WRITE_PAGE_LAST
             else:
                 cmd = self.CMD_WRITE_PAGE
-
+                
             status = self.send_frame(cmd, binary_fragment)
 
             if response != b'\x00':

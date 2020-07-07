@@ -112,8 +112,6 @@ u8 erase_kernel_image(const u8* data) {
     erase_size |= data[2] << 16;
     erase_size |= data[3] << 24;
 
-    printl("Erasing %d bytes from address 0x00404000", erase_size);
-
     // Erase the flash starting from address 0x00404000
     u32 flash_status = flash_erase_image(erase_size);
 
@@ -169,11 +167,6 @@ u8 write_bootloader_page(const u8* data, u32 size, u32 page) {
 /// Writes `size` bytes from `data` into flash at relative offset `page` from 
 /// the kernel base address aka. 0x00404000
 u8 write_kernel_page(const u8* data, u32 size, u32 page) {
-    
-    if (size != 512) {
-        printl("Warning: non-complete page write");
-    }
-
     // Copy to the flash buffer
     for (u32 i = 0; i < 512; i++) {
         if (i < size) {
@@ -250,7 +243,6 @@ u8 verify_kernel_hash(void) {
     // The size field in the hash sector must be a nonzero value larger than
     // 32 bytes
     if ((flash_hash->size == 0) || (flash_hash->size == 0xFFFFFFFF)) {
-        printl("Hash size error");
         return 0;
     }
 
