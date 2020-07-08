@@ -46,12 +46,19 @@ int main(void) {
 		.stack_size = 100,
 		.thread     = exit_thread,
 		.class      = REAL_TIME,
-	
 		.arg        = NULL
 	};
 
-	new_thread(&test_info);
-	//new_thread(&exit_info);
-	//fat32_thread(NULL);
+	volatile struct thread_info fat_info = {
+		.name       = "FAT32 thread",
+		.stack_size = 1024,
+		.thread     = fat32_thread,
+		.class      = REAL_TIME,
+		.arg        = NULL
+	};
+
+	//new_thread(&test_info);
+	new_thread(&fat_info);
+	
 	scheduler_start();
 }

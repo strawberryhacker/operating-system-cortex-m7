@@ -847,7 +847,7 @@ u8 disk_mount(enum disk disk) {
 	if (!disk_initialize(disk)) {
 		panic("SD protocol error");
 	}
-	
+
 	// Read MBR sector at LBA address zero
 	if (!disk_read(disk, mount_buffer, 0, 1)) {
 		panic("Read failed");

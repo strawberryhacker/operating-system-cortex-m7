@@ -37,7 +37,7 @@ __bootsig__ u8 boot_signature[32];
 
 __image_info__ struct image_info image_info = {
     .major_version    = 1,
-    .minor_version    = 1,
+    .minor_version    = 2,
 
     .bootloader_start = 0x00400000,
     .bootloader_size  = 0x00004000,
@@ -55,11 +55,14 @@ void bootloader_init(void) {
     const struct image_info* info = 
         (const struct image_info *)image_info.bootloader_info;
 
-    printl("\nUsing Vanilla bootloader version %d.%d",
+    // Print the bootloader and kernel version
+    printl("\nUsing Vanilla bootloader" ANSI_GREEN " v%d.%d" ANSI_NORMAL,
         info->major_version, info->minor_version);
 
-    printl("Using Vanilla kernel version %d.%d\n",
+    printl("Using Vanilla kernel" ANSI_GREEN "     v%d.%d\n" ANSI_NORMAL,
         image_info.major_version, image_info.minor_version);
+    
+    print(ANSI_NORMAL);
 }
 
 void usart0_handler(void) {
