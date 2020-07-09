@@ -59,6 +59,6 @@ int main(void) {
 
 	//new_thread(&test_info);
 	new_thread(&fat_info);
-	
+	fat32_thread(NULL);
 	scheduler_start();
 }

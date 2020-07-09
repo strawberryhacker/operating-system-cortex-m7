@@ -59,7 +59,7 @@
 /// The card identification stage should happend with clock rate f_od = 400 KHz
 
 /// This CPU only supports one MMC slot. Therefore it is declared globally and 
-/// automatically updated be the SD stack
+/// automatically updated by the SD stack
 static struct sd_card slot_1 = { 0 };
 
 /// Initialize the SD card by sending the 74-cylce init sequence
@@ -68,7 +68,6 @@ static u8 sd_boot(void) {
     u32 arg = 0;
 
     u8 status = mmc_send_cmd(cmd, arg, 1);
-
     if (status) {
         return 1;
     } else {
@@ -76,16 +75,12 @@ static u8 sd_boot(void) {
     }
 }
 
-/// Sets the SD card in IDLE state
-/// arg  - don't care
-/// resp - none
-// PAGE 27
+/// Resets all connected cards to IDLE state
 static u8 sd_exec_cmd_0(void) {
     u32 cmd = MMC_CMD_OPEN_DRAIN | 0;
     u32 arg = 0;
 
     u8 status = mmc_send_cmd(cmd, arg, 1);
-
     if (status) {
         return 1;
     } else {
@@ -94,7 +89,8 @@ static u8 sd_exec_cmd_0(void) {
 }
 
 /// Asks the card to send its CID number. This is manatory. After a successful
-/// CMD2 the card will enter identification state. It returns the 16-byte CIDR
+/// CMD2 the card will enter identification state. The functions returns the 
+/// 16-byte CID register
 static u8 sd_exec_cmd_2(u8* cid) {
     u32 cmd = SD_RESP_2 | MMC_CMD_OPEN_DRAIN | 2;
     u32 arg = 0;
@@ -111,14 +107,14 @@ static u8 sd_exec_cmd_2(u8* cid) {
     return 1;
 }
 
-/// Get the relative card address (RCA)
-/// arg  - don't care
-/// resp - R6
+/// Asks the card to publish a new relcative card address (RCA). This will 
+/// automatically update the slot 1 structure because only one card is 
+/// supported. Therefore the first published address will allways be valid.
 static u8 sd_exec_cmd_3(void) {
     u32 cmd = SD_RESP_6 | MMC_CMD_OPEN_DRAIN | 3;
     u32 arg = 0;
 
-    if (!mmc_send_cmd(cmd, arg, 1)) {
+    if (mmc_send_cmd(cmd, arg, 1) == 0) {
         return 0;
     }
     u32 resp = mmc_read_resp48();
@@ -157,33 +153,37 @@ static u8 sd_exec_cmd_8(u8 vhs) {
     return 0;
 }
 
-/// Switches the card function
+/// Switch to high speed SDR-25. NOTE the user must check the SD version before 
+/// using this command. This command is NOT supported by version 1.0 and 1.01
 u8 sd_exec_cmd_6(void) {
     slot_1.high_speed = 0;
 
     u8 buffer[64];
     memory_fill(buffer, 0, 64);
 
-    u32 cmd = SD_RESP_1 | MMC_CMD_SINGLE | MMC_CMD_START_DATA | MMC_CMD_READ | 6;
-    u32 arg = (1 << 31) | (0xF << 12) | (0xF << 8) | (0xF << 4);
 
-    if (!mmc_send_adtc(cmd, arg, 64, 1, 1)) {
+    u32 cmd = SD_RESP_1 | MMC_CMD_SINGLE | MMC_CMD_START_DATA | MMC_CMD_READ | 6;
+    u32 arg = (1 << 31) | (0xF << 12) | (0xF << 8) | (0xF << 4) | (1 << 0);
+
+    if (mmc_send_adtc(cmd, arg, 64, 1, 1) == 0) {
         return 0;
     }
 
     mmc_read_data_reverse(buffer, 16);
     u32 resp = mmc_read_resp48();
 
+    // Check the response
+    if (resp & (1 << 7)) {
+        return 0;
+    }
     if ((buffer[35] << 8) | buffer[34]) {
         print("Card is busy\n");
         return 0;
     }
     if ((buffer[47] & 0xF) == 0xF) {
         print("High speed error\n");
+        slot_1.high_speed = 0;
         return 1;
-    }
-    if (resp & 0xFFF80000) {
-        return 0;
     }
 
     slot_1.high_speed = 1;
@@ -191,8 +191,6 @@ u8 sd_exec_cmd_6(void) {
 }
 
 /// Toggles the SD card between the stand-by and transfer state
-/// arg  - [31..16] RCA
-/// resp - R1b
 static u8 sd_exec_cmd_7(void) {
     u32 cmd = SD_RESP_1b | 7;
     u32 arg = slot_1.rca << 16;
@@ -207,8 +205,6 @@ static u8 sd_exec_cmd_7(void) {
 }
 
 /// Retrieve the card-specific data (CSD) from the card
-/// arg  - [31..16] RCA
-/// resp - R2
 static u8 sd_exec_cmd_9(u8* csd) {
     u32 cmd = SD_RESP_2 | 9;
     u32 arg = slot_1.rca << 16;
@@ -216,23 +212,18 @@ static u8 sd_exec_cmd_9(u8* csd) {
     if (!mmc_send_cmd(cmd, arg, 1)) {
         return 0;
     }
-
     mmc_read_resp136(csd);
     return 1;
 }
 
 /// Tells the card the next command to be sent is an application specific
-/// command (ACMDx). 
-/// arg  - don't care
-/// resp - R1
+/// command
 static u8 sd_exec_cmd_55(void) {
 
-    // WRONG! RCA is 0x0000 in IDLE state
     u32 cmd = SD_RESP_1 | 55;
     u32 arg = slot_1.rca << 16;
 
     u8 status = mmc_send_cmd(cmd, arg, 1);
-
     if (status) {
         return 1;
     } else {
@@ -356,17 +347,18 @@ static u8 sd_exec_acmd_51(void) {
     return 1;
 }
 
-/// Defines the bus width
+/// Defines the bus width to be used in following transfers. The user must 
+/// check if the bus width is supported in the SCR register
 u8 sd_exec_acmd_6(u8 bus_width) {
     // The next command is an application command
-    if (!sd_exec_cmd_55()) {
+    if (sd_exec_cmd_55() == 0) {
         return 0;
     }
 
     u32 cmd = SD_RESP_1 | 6;
     u32 arg = bus_width & 0b11;
 
-    if (!mmc_send_cmd(cmd, arg, 1)) {
+    if (mmc_send_cmd(cmd, arg, 1) == 0) {
         return 0;
     }
 
@@ -382,11 +374,11 @@ u8 sd_exec_acmd_6(u8 bus_width) {
 
 /// Extracts information from the CSD register and updates the `slot_1` object
 static void csd_decode(const u8* csd) {
-    u8 csd_structure = (csd[15] >> 6) & 0b11;
 
     // SD cards can have two different CSD structures. Which one is defined by
     // the two last bits of the CSD. Generally the CAD Version 1.0 only applies
     // to SDSC cards, while the CSD Version 2.0 apply to SDHC cards
+    u8 csd_structure = (csd[15] >> 6) & 0b11;
 
     if (csd_structure == 0) {
         // CSD Version 1.0
@@ -395,7 +387,7 @@ static void csd_decode(const u8* csd) {
         u32 c_size_mult = (((csd[6] & 0b11) << 1) | ((csd[5] >> 7) & 0b1));
         u32 read_bl_len = (csd[10] & 0b1111);
 
-        slot_1.k_size = ((c_size + 1) * (1 << (c_size_mult + 2)) *
+        slot_1.kib_size = ((c_size + 1) * (1 << (c_size_mult + 2)) *
                         (1 << read_bl_len)) / 1000;
         
         // This card should be a SDSC card
@@ -406,10 +398,10 @@ static void csd_decode(const u8* csd) {
     } else if (csd_structure == 1) {
         // CSD Version 2.0
         u32 c_size = ((csd[8] & 0x3F) << 16) | (csd[7] << 8) | csd[6];
-        slot_1.k_size = c_size * 512;
+        slot_1.kib_size = c_size * 512;
 
         // This card should be a SDHC card
-        if (!slot_1.high_capacity) {
+        if (slot_1.high_capacity == 0) {
             print("Warning\n");
         }
     } else {
@@ -436,71 +428,59 @@ void sd_protocol_init(void) {
 
     mmc_enable();
 
-    // Boot SD card
-    if (!sd_boot()) {
+    // The RCA of the CMD55 must be zero in idle state before the card has
+    // proposed a RCA. Therefore it must be initialized to zero.
+    slot_1.rca = 0;
+
+    // Start the card identification stage
+    // Send the 75 clock cylces initialization sequence
+    if (sd_boot() == 0) {
         panic("SD boot failed");
     }
-
     // Send CMD0
     if (!sd_exec_cmd_0()) {
         panic("CMD0 failed");
     }
-
-    // Card is in IDLE state
-
     // Send CMD8 to check operating conditions 2.7V - 3.6V
     u8 cmd8_status = sd_exec_cmd_8(0b0001);
 
     if (cmd8_status == 0) {
         printl("Warning - CMD8");
     }
-
-    // Card should return response, if not it is not supported (SD Ver. 1)
-
-    // SD Ver. 2.0
-
-    // Check response
-
-    // Wait for card to be ready
-
-    // Read capacity support
+    // Read capacity support and SD card protocol version 
     if (sd_exec_acmd_41(cmd8_status) == 0) {
         panic("ACMD41 failed");
     }
     print("SDHC support: %d\n", slot_1.high_capacity);
 
-    // CMD11 is not in use because the host does not require to switch to 1.8V
-
-    // CMD2
+    // Get the CID register and place the card into identification mode
     u8 cid[16];
-    if (!sd_exec_cmd_2(cid)) {
+    if (sd_exec_cmd_2(cid) == 0) {
         panic("Can't retrieve CID register");
     }
-
-    // CMD3
-    if (!sd_exec_cmd_3()) {
+    // Query the card for a new RCA. Since the CPU only supports one slot it
+    // doesn't need to ask more than once
+    if (sd_exec_cmd_3() == 0) {
         panic("Can't retrieve RCA address");
     }
 
     // The card is in date transfer mode
-
-    // CMD9
+    // Get the CSD including card size and block length
     u8 csd[16];
-    if (!sd_exec_cmd_9(csd)) {
+    if (sd_exec_cmd_9(csd) == 0) {
         panic("Retrieve CSD failed");
     }
-
+    // Decode the CSD register and update the block size and capacity
     csd_decode(csd);
+    print("Size: %d\n", slot_1.kib_size);
 
-    print("Size: %d\n", slot_1.k_size);
-
-    // CMD7
-    if (!sd_exec_cmd_7()) {
+    // Select the card in slot 1 and put it in transfer state
+    if (sd_exec_cmd_7() == 0) {
         panic("CMD7 failed");
     }
 
-    // ACMD51
-    if (!sd_exec_acmd_51()) {
+    // Check if the SD card can use 4 bit bus
+    if (sd_exec_acmd_51() == 0) {
         panic("ACMD51 failed");
     }
     print("4-bit support: %d\n", slot_1.four_bit_bus_support);
@@ -508,7 +488,7 @@ void sd_protocol_init(void) {
     // ACMD6 - if appropriate change the bus width (0b00 for 1-bit and 0b10 
     // for 4-bit)
     if (slot_1.four_bit_bus_support) {
-        if (!sd_exec_acmd_6(0b10)) {
+        if (sd_exec_acmd_6(0b10) == 0) {
             panic("Can't set 4-bit bus width");
         }
         mmc_set_bus_width(MMC_4_LANES);
@@ -517,23 +497,29 @@ void sd_protocol_init(void) {
     // Try to switch to high-speed mode if supported. This used CMD6 and 
     // requires SD card Version 1.10 or later
     if (slot_1.past_v1_10) {
-        if (!sd_exec_cmd_6()) {
+        if (sd_exec_cmd_6() == 0) {
             panic("CMD6 failed");
         }
-        print("High-speed support: %d\n", slot_1.high_speed);
+        print("High-speed enabled: %d\n", slot_1.high_speed);
 
-        // Turn on high-speed
-        mmc_enable_high_speed();
+        // Update the bus speed
+        if (slot_1.high_speed) {
+            mmc_enable_high_speed();
+            mmc_set_bus_freq(50000000);
+        } else {
+            mmc_set_bus_freq(25000000);
+        }
     }
-
     printl("SD card ready\n");
-
-    mmc_set_bus_freq(50000000);
 }
 
 u8 sd_read(u32 sector, u32 count, u8* buffer) {
     u32 cmd = 0;
     u32 arg = 0;
+
+    if ((sector * 512) > slot_1.block_count) {
+        panic("Block size wrong");
+    }
 
     u32* buffer_word = (u32 *)buffer;
 

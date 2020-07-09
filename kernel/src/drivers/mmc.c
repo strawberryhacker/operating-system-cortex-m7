@@ -5,6 +5,17 @@
 #include "panic.h"
 #include "print.h"
 
+/// The high-speed multimedia card interface uses a special message based
+/// protocol. Each message is represented as one of the following tokens;
+/// command, response and data. The command and response is transferred 
+/// serially on the CMD line while the data is transferred on the data lanes.
+///
+/// Some important concepts:
+/// The read and write proof allows for stooping the MMC clock if the internal
+/// FIFO is full. The CRC check must not be concidered in SEND_OP_COND as this
+/// CRC is allways wrong. 
+
+
 void mmc_init(void) {
 
     // Using the default configuration

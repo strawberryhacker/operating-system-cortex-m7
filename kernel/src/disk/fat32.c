@@ -810,11 +810,11 @@ void fat32_thread(void* arg) {
 	
 	// List all directories
 	struct dir dir;
-	fat_dir_open(&dir, "C:/alpha/", 0);
+	fat_dir_open(&dir, "C:", 0);
 	
 	struct info* info = (struct info *)mm_alloc(sizeof(struct info), SRAM);
 	fstatus status;
-	print("\nListing directories in: C:/alpha\n");
+	print("\nListing directories in: C:/\n");
 	do {
 		status = fat_dir_read(&dir, info);
 		

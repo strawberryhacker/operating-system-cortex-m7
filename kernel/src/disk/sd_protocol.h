@@ -15,8 +15,8 @@ struct sd_card {
     u8   past_v1_10 :1;
     u8   high_speed : 1;
 
-    // Size and max transfer speed
-    u32  k_size;
+    // Size in KiB
+    u32  kib_size; 
     u32  block_count;
 };
 
