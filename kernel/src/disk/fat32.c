@@ -780,12 +780,16 @@ void fat32_thread(void* arg) {
 	
 	// Wait for the SD card to be insterted
 	while (sd_is_connected() == 0);
+
+	print("Hello\n");
 	
 	// Try to mount the disk. If this is not working the disk initialize 
 	// functions may be ehh...
 	if (disk_mount(DISK_SD_CARD) == 0) {
 		panic("Mounting failed");
 	}
+
+	
 	
 	struct volume* tmp = volume_get('C');
 
@@ -852,7 +856,7 @@ u8 disk_mount(enum disk disk) {
 	if (!disk_read(disk, mount_buffer, 0, 1)) {
 		panic("Read failed");
 	}
-
+	
 	// Check the boot signature in the MBR
 	if (fat_load16(mount_buffer + MBR_BOOT_SIG) != MBR_BOOT_SIG_VALUE) {
 		return 0;
@@ -868,15 +872,18 @@ u8 disk_mount(enum disk disk) {
 		partitions[i].size = fat_load32(mount_buffer + offset + PAR_SIZE);
 		partitions[i].type = mount_buffer[offset + PAR_TYPE];
 		partitions[i].status = mount_buffer[offset + PAR_STATUS];
+
+		printl("Found partition with LBA: %d", partitions[i].lba);
 	}
-	
+	print("Hello\n");
 	// Search for a valid FAT32 file systems on all valid paritions
-	for (u8 i = 0; i < 4; i++) {
+	for (u8 i = 1; i < 4; i++) {
 		if (partitions[i].lba) {
+			
 			if (!disk_read(disk, mount_buffer, partitions[i].lba, 1)) {
 				return 0;
 			}
-			
+
 			// Check if the current partition contains a FAT32 file system
 			if (fat_search(mount_buffer)) {
 
