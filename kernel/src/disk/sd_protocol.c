@@ -517,7 +517,8 @@ u8 sd_read(u32 sector, u32 count, u8* buffer) {
     u32 cmd = 0;
     u32 arg = 0;
 
-    if ((sector * 512) > slot_1.block_count) {
+    if (sector > (slot_1.kib_size * 2)) {
+        print("Size: %d\n", sector);
         panic("Block size wrong");
     }
 

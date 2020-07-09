@@ -875,13 +875,21 @@ u8 disk_mount(enum disk disk) {
 
 		printl("Found partition with LBA: %d", partitions[i].lba);
 	}
-	print("Hello\n");
+	
 	// Search for a valid FAT32 file systems on all valid paritions
-	for (u8 i = 1; i < 4; i++) {
+	for (u8 i = 0; i < 4; i++) {
 		if (partitions[i].lba) {
 			
 			if (!disk_read(disk, mount_buffer, partitions[i].lba, 1)) {
+				panic("Disk error");
 				return 0;
+			}
+
+			for (u32 i = 0; i < 512;) {
+				print("%1h  ", mount_buffer[i]);
+				if ((++i % 16) == 0) {
+					print("\n");
+				}
 			}
 
 			// Check if the current partition contains a FAT32 file system
