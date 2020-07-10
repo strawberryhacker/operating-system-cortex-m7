@@ -104,6 +104,7 @@ static u8 sd_exec_cmd_2(u8* cid) {
     for (u8 i = 0; i <= 5; i++) {
         slot_1.cid_name[i] = (char)cid[12 - i];
     }
+    print("Product name: %5s", slot_1.cid_name);
     return 1;
 }
 
@@ -163,7 +164,7 @@ u8 sd_exec_cmd_6(void) {
 
 
     u32 cmd = SD_RESP_1 | MMC_CMD_SINGLE | MMC_CMD_START_DATA | MMC_CMD_READ | 6;
-    u32 arg = (1 << 31) | (0xF << 12) | (0xF << 8) | (0xF << 4) | (1 << 0);
+    u32 arg = (0 << 31) | (0xF << 12) | (0xF << 8) | (0xF << 4) | (0 << 0);
 
     if (mmc_send_adtc(cmd, arg, 64, 1, 1) == 0) {
         return 0;
@@ -209,7 +210,7 @@ static u8 sd_exec_cmd_9(u8* csd) {
     u32 cmd = SD_RESP_2 | 9;
     u32 arg = slot_1.rca << 16;
 
-    if (!mmc_send_cmd(cmd, arg, 1)) {
+    if (mmc_send_cmd(cmd, arg, 1) == 0) {
         return 0;
     }
     mmc_read_resp136(csd);
@@ -237,6 +238,7 @@ static u8 sd_exec_cmd_55(void) {
 /// the card will go into inactive state. It takes in the result from CMD8.
 /// SD spec. page 27, 29 and 161
 static u8 sd_exec_acmd_41(u8 cmd8_resp) {
+
     u32 cmd = SD_RESP_3 | MMC_CMD_OPEN_DRAIN | 41;
 
     // Bit 30 indicated that the host supports high capacity SD cards. Bit 
@@ -296,7 +298,7 @@ static u8 sd_exec_cmd_13(void) {
         u32 cmd = SD_RESP_1 | 13;
         u32 arg = slot_1.rca << 16;
 
-        if (!mmc_send_cmd(cmd, arg, 1)) {
+        if (mmc_send_cmd(cmd, arg, 1) == 0) {
             return 0;
         }
         
@@ -315,7 +317,7 @@ static u8 sd_exec_cmd_13(void) {
 /// layer version.
 static u8 sd_exec_acmd_51(void) {
     // The next command will be an application command
-    if (!sd_exec_cmd_55()) {
+    if (sd_exec_cmd_55() == 0) {
         return 0;
     }
 
@@ -437,20 +439,23 @@ void sd_protocol_init(void) {
     if (sd_boot() == 0) {
         panic("SD boot failed");
     }
+    
     // Send CMD0
-    if (!sd_exec_cmd_0()) {
+    if (sd_exec_cmd_0() == 0) {
         panic("CMD0 failed");
     }
+
     // Send CMD8 to check operating conditions 2.7V - 3.6V
     u8 cmd8_status = sd_exec_cmd_8(0b0001);
-
     if (cmd8_status == 0) {
         printl("Warning - CMD8");
     }
+
     // Read capacity support and SD card protocol version 
     if (sd_exec_acmd_41(cmd8_status) == 0) {
         panic("ACMD41 failed");
     }
+
     print("SDHC support: %d\n", slot_1.high_capacity);
 
     // Get the CID register and place the card into identification mode
@@ -458,6 +463,7 @@ void sd_protocol_init(void) {
     if (sd_exec_cmd_2(cid) == 0) {
         panic("Can't retrieve CID register");
     }
+
     // Query the card for a new RCA. Since the CPU only supports one slot it
     // doesn't need to ask more than once
     if (sd_exec_cmd_3() == 0) {
@@ -470,6 +476,7 @@ void sd_protocol_init(void) {
     if (sd_exec_cmd_9(csd) == 0) {
         panic("Retrieve CSD failed");
     }
+
     // Decode the CSD register and update the block size and capacity
     csd_decode(csd);
     print("Size: %d\n", slot_1.kib_size);
@@ -483,6 +490,7 @@ void sd_protocol_init(void) {
     if (sd_exec_acmd_51() == 0) {
         panic("ACMD51 failed");
     }
+
     print("4-bit support: %d\n", slot_1.four_bit_bus_support);
     
     // ACMD6 - if appropriate change the bus width (0b00 for 1-bit and 0b10 
@@ -517,7 +525,8 @@ u8 sd_read(u32 sector, u32 count, u8* buffer) {
     u32 cmd = 0;
     u32 arg = 0;
 
-    if (sector > (slot_1.kib_size * 2)) {
+    // The total block block size (512 byte block) is the KiB size times 2
+    if ((sector + count) > (slot_1.kib_size * 2)) {
         print("Size: %d\n", sector);
         panic("Block size wrong");
     }
@@ -527,7 +536,7 @@ u8 sd_read(u32 sector, u32 count, u8* buffer) {
     for (u32 i = 0; i < count; i++) {
 
         // Check if the card is ready
-        if (!sd_exec_cmd_13()) {
+        if (sd_exec_cmd_13() == 0) {
             panic("Card is not ready");
         }
 
@@ -558,7 +567,7 @@ u8 sd_read(u32 sector, u32 count, u8* buffer) {
 u8 sd_write(u32 sector, u32 count, const u8* buffer) {
     u32 cmd = 0;
     u32 arg = 0;
-
+    panic("Watch it");
     const u32* buffer_word = (const u32 *)buffer;
 
     for (u32 i = 0; i < count; i++) {

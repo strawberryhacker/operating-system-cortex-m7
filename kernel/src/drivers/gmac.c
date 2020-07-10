@@ -282,11 +282,11 @@ u32 gmac_get_raw_length(void) {
 }
 
 u32 gmac_read_raw(u8* buffer, u32 size) {
-
+    return 0;
 }
 
 u32 gmac_write_raw(const u8* buffer, u32 size) {
-
+    return 0;
 }
 
 void gmac_handler(void) {

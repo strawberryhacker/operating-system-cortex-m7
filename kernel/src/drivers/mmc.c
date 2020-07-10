@@ -15,7 +15,6 @@
 /// FIFO is full. The CRC check must not be concidered in SEND_OP_COND as this
 /// CRC is allways wrong. 
 
-
 void mmc_init(void) {
 
     // Using the default configuration
@@ -34,7 +33,21 @@ void mmc_init(void) {
 }
 
 void mmc_reset(void) {
+    // Store the state
+    u32 mr = MMC->MR;
+    u32 dtor = MMC->DTOR;
+    u32 sdcr = MMC->SDCR;
+    u32 cstor = MMC->CSTOR;
+    u32 cfg = MMC->CFG;
+    
     MMC->CR = (1 << 7);
+
+    // Restore the state
+    MMC->MR = mr;
+    MMC->DTOR = dtor;
+    MMC->SDCR = sdcr;
+    MMC->CSTOR = cstor;
+    MMC->CFG = cfg;
 }
 
 void mmc_enable(void) {
@@ -105,7 +118,7 @@ u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
 		// - Response time out error
 		// - Completion signal timeout
         if (status & ((1 << 16) | (1 << 17) | (1 << 19) | (1 << 20) |
-            (1 << 22))) {
+            (1 << 23))) {
             
             panic("MMC send command error");
             return 0;
@@ -143,7 +156,7 @@ u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc
         MMC->MR &= ~(1 << 13);
     }
 
-    // Check if the MMC has to force byte transfer
+    // Check if the MMC has to perform simple byte transfer
     if (((cmd >> 19) & 0b111) == 4) {
         MMC->BLKR = (block_size % 512) & 0xFFFF;
     } else {
@@ -199,7 +212,7 @@ void mmc_read_resp136(u8* buffer) {
     for (u8 i = 0; i < 4; i++) {
         u32 resp = MMC->RESP[i];
 
-        byte_reverse[4 * i]   = (resp >> 24) & 0xFF;
+        byte_reverse[4 * i]     = (resp >> 24) & 0xFF;
 		byte_reverse[4 * i + 1] = (resp >> 16) & 0xFF;
 		byte_reverse[4 * i + 2] = (resp >> 8) & 0xFF;
 		byte_reverse[4 * i + 3] = resp & 0xFF;

@@ -36,7 +36,7 @@ static const char file_size_ext[] = {'k', 'M', 'G'};
 ///		- the reserved sector count equals 32
 ///		- number of FAT's equals 2
 struct clust_size_s { u32 sector_cnt; u32 clust_size; };
-static const struct clust_size_s cluster_size_lut[] = {
+const struct clust_size_s cluster_size_lut[] = {
 	{      66600,	0  },			// Disks up to 32.5 MB	
 	{     532480,	1  },			// Disks up to 260 MB	, 0.5k clusters
 	{   16777216,	8  },			// Disks up to 8 GB		, 4k clusters
@@ -64,7 +64,7 @@ u8 fat_dir_set_index(struct dir* dir, u32 index);
 static u8 fat_dir_get_next(struct dir* dir);
 static u8 fat_dir_search(struct dir* dir, const char* name, u32 size);
 static u8 fat_table_get(struct volume* vol, u32 cluster, u32* fat);
-static u8 fat_table_set(struct volume* vol, u32 cluster, u32 fat_entry);
+u8 fat_table_set(struct volume* vol, u32 cluster, u32 fat_entry);
 static u8 fat_read(struct volume* vol, u32 lba);
 static u8 fat_flush(struct volume* vol);
 static inline u32 fat_sect_to_clust(struct volume* vol, u32 sect);
@@ -77,7 +77,7 @@ fstatus fat_make_entry_chain(struct dir* dir, u8 entry_cnt);
 
 
 /// Remove
-static void fat_print_table(struct volume* vol, u32 sector) {
+void fat_print_table(struct volume* vol, u32 sector) {
 	fat_read(vol, vol->fat_lba + sector);
 	print("\n" ANSI_YELLOW);
 	print("FAT: %d\t", sector * 128);
@@ -376,7 +376,7 @@ static u8 fat_table_get(struct volume* vol, u32 cluster, u32* fat_entry) {
 }
 
 /// Set the FAT table entry corresponding to `cluster` to a specified value
-static u8 fat_table_set(struct volume* vol, u32 cluster, u32 fat_entry) {
+u8 fat_table_set(struct volume* vol, u32 cluster, u32 fat_entry) {
 	// Calculate the sector LBA from the FAT table base address
 	u32 start_sect = vol->fat_lba + cluster / 128;
 	u32 start_offset = cluster % 128;
@@ -396,7 +396,7 @@ static u8 fat_table_set(struct volume* vol, u32 cluster, u32 fat_entry) {
 
 /// Get the next free cluster from the FAT table and update the FSinfo to
 /// point to the next free cluster
-static u8 fat_get_cluster(struct volume* vol, u32* cluster) {
+u8 fat_get_cluster(struct volume* vol, u32* cluster) {
 	// Load the FSinfo sector
 	if (!fat_read(vol, vol->fsinfo_lba)) {
 		return 0;
@@ -791,7 +791,7 @@ void fat32_thread(void* arg) {
 
 	
 	
-	struct volume* tmp = volume_get('C');
+	volume_get('C');
 
 	// Print all the volumes on the system
 	print(BLUE "Displaying system volumes:\n");
@@ -851,11 +851,22 @@ u8 disk_mount(enum disk disk) {
 	if (!disk_initialize(disk)) {
 		panic("SD protocol error");
 	}
-
+	
+	
 	// Read MBR sector at LBA address zero
 	if (!disk_read(disk, mount_buffer, 0, 1)) {
 		panic("Read failed");
 	}
+	/*
+	print(ANSI_YELLOW);
+	for (u32 i = 0; i < 512;) {
+		print("%1h  ", mount_buffer[i]);
+		if ((++i % 16) == 0) {
+			print("\n");
+		}
+	}
+	print(ANSI_NORMAL);
+	*/
 	
 	// Check the boot signature in the MBR
 	if (fat_load16(mount_buffer + MBR_BOOT_SIG) != MBR_BOOT_SIG_VALUE) {
@@ -883,13 +894,6 @@ u8 disk_mount(enum disk disk) {
 			if (!disk_read(disk, mount_buffer, partitions[i].lba, 1)) {
 				panic("Disk error");
 				return 0;
-			}
-
-			for (u32 i = 0; i < 512;) {
-				print("%1h  ", mount_buffer[i]);
-				if ((++i % 16) == 0) {
-					print("\n");
-				}
 			}
 
 			// Check if the current partition contains a FAT32 file system
@@ -928,6 +932,7 @@ u8 disk_mount(enum disk disk) {
 			}
 		}
 	}
+
 	return 1;
 }
 

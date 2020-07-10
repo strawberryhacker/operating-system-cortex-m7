@@ -25,15 +25,11 @@ static void test_thread(void* arg) {
 	}
 }
 
-static void exit_thread(void* arg) {
-	printl("Exit thread started\n");
-}
-
 int main(void) {
-	// Start the kernel
+
 	kernel_entry();
 
-	volatile struct thread_info test_info = {
+	struct thread_info test_info = {
 		.name       = "Test",
 		.stack_size = 100,
 		.thread     = test_thread,
@@ -41,15 +37,7 @@ int main(void) {
 		.arg        = NULL
 	};
 
-	volatile struct thread_info exit_info = {
-		.name       = "exit",
-		.stack_size = 100,
-		.thread     = exit_thread,
-		.class      = REAL_TIME,
-		.arg        = NULL
-	};
-
-	volatile struct thread_info fat_info = {
+	struct thread_info fat_info = {
 		.name       = "FAT32 thread",
 		.stack_size = 1024,
 		.thread     = fat32_thread,
@@ -58,7 +46,7 @@ int main(void) {
 	};
 
 	//new_thread(&test_info);
-	new_thread(&fat_info);
+	//new_thread(&fat_info);
 	fat32_thread(NULL);
 	scheduler_start();
 }
