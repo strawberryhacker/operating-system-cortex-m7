@@ -22,10 +22,7 @@
 static void test_thread(void* arg) {
 	while (1) {
 		printl("Thread A says hello");
-		u32 sp = cpu_get_psp();
-		printl("Thread PSP: %4h\n", sp);
-		print_flush();
-		syscall_thread_sleep(5000);
+		syscall_thread_sleep(500);
 	}
 }
 

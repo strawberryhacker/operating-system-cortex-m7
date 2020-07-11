@@ -10,7 +10,7 @@
 
 #define NAKED __attribute__((naked))
 
-void NOINLINE syscall_thread_sleep(u32 ms);
+void NAKED NOINLINE syscall_thread_sleep(u32 ms);
 
 void NAKED NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin);
 

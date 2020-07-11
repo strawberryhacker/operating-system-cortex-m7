@@ -10,20 +10,22 @@
 // the svc instructions can be called right away
 void NAKED NOINLINE syscall_thread_sleep(u32 ms) {
     asm volatile ("svc #1 \n\t");
-    print("Return to link: %4h\n", cpu_get_lr());
-    print_flush();
+    asm volatile ("bx lr");
 }
 
-void NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin) {
+void NAKED NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin) {
     asm volatile ("svc #2 \n\t");
+    asm volatile ("bx lr");
 }
 
 void* NAKED NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region) {
     asm volatile("svc #3 \n\t");
+    asm volatile ("bx lr");
 }
 
 void NAKED NOINLINE syscall_mm_free(void* ptr) {
     asm volatile ("svc #4 \n\t");
+    asm volatile ("bx lr");
 }
 
 /// Core SVC handler which does the unstacking of the SVC argument and function
@@ -40,17 +42,7 @@ void svc_handler_ext(u32* stack_ptr) {
     // at byte address PC - 2. Since the processor uses little endian, that
     // address is two bytes back from the value pointed to by PC. Therefore svc
     // argument is *PC - 2
-    printl("---SP: %4h---", stack_ptr);
-    print_flush();
     u8 svc = *((u8 *)stack_ptr[6] - 2);
-
-    print("SVC: %d\n", svc);
-
-    if (svc != 1) {
-        panic("SVC is not 1");
-    }
-
-    printl("Delay value: %d", stack_ptr[0]);
 
     switch (svc) {
         case 1 : {
@@ -70,6 +62,4 @@ void svc_handler_ext(u32* stack_ptr) {
             break;
         }
     }
-    print("SVC return\n");
-    print_flush();
 }
