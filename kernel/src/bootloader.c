@@ -56,7 +56,7 @@ void bootloader_init(void) {
         (const struct image_info *)image_info.bootloader_info;
 
     // Print the bootloader and kernel version
-    printl("\n\n\n\n\nUsing Vanilla bootloader" ANSI_GREEN " v%d.%d" ANSI_NORMAL,
+    printl(ANSI_NORMAL "\n\n\n\nUsing Vanilla bootloader" ANSI_GREEN " v%d.%d" ANSI_NORMAL,
         info->major_version, info->minor_version);
 
     printl("Using Vanilla kernel" ANSI_GREEN "     v%d.%d\n" ANSI_NORMAL,

@@ -74,7 +74,33 @@ static fstatus fat_get_vol_label(struct volume* vol, char* label);
 static void fat_print_info(struct info* info);
 static u8 fat_file_addr_resolve(struct file* file);
 fstatus fat_make_entry_chain(struct dir* dir, u8 entry_cnt);
+static fstatus fat_print_status(fstatus status);
 
+static fstatus fat_print_status(fstatus status) {
+	print("Status: ");
+	switch(status) {
+		case FSTATUS_OK : {
+			printl("OK");
+			break;
+		}
+		case FSTATUS_PATH_ERR : {
+			printl("path error");
+			break;
+		}
+		case FSTATUS_NO_VOLUME : {
+			printl("no volume");
+			break;
+		}
+		case FSTATUS_ERROR : {
+			printl("error");
+			break;
+		}
+		case FSTATUS_EOF : {
+			printl("eof");
+			break;
+		}
+	}
+}
 
 /// Remove
 void fat_print_table(struct volume* vol, u32 sector) {
@@ -463,10 +489,13 @@ static u8 fat_read(struct volume* vol, u32 lba) {
 	if (vol->buffer_lba != lba) {
 		// Flush any dirty buffer back to the storage device
 		if (!fat_flush(vol)) {
+			print("Flush error LBA: %d  Buffer LBA: %d   Dirty: %d\n", 
+				lba, vol->buffer_lba, vol->buffer_dirty);
 			return 0;
 		}
 		// Cache the next sector
 		if (!disk_read(vol->disk, vol->buffer, lba, 1)) {
+			print("Read error at LBA %d\n", lba);
 			return 0;
 		}
 		vol->buffer_lba = lba;
@@ -724,6 +753,7 @@ static fstatus fat_get_vol_label(struct volume* vol, char* label) {
 				return 1;
 			}
 		}
+
 		// Get the next directory
 		if (!fat_dir_get_next(&dir)) {
 			return FSTATUS_ERROR;
@@ -829,6 +859,21 @@ void fat32_thread(void* arg) {
 	} while (status != FSTATUS_EOF);
 	print(BLUE "- EOD -\n");
 
+	struct file file;
+	status = fat_file_open(&file, "C:/bigbangtheory.txt", 20);
+	fat_print_status(status);
+
+	u32 bytes_written;
+	u8 file_buffer[32];
+	status = fat_file_read(&file, file_buffer, 16, &bytes_written);
+	fat_print_status(status);
+
+	printl("bytes written: %d", bytes_written);
+	for (u8 i = 0; i < bytes_written; i++) {
+		print("%c", file_buffer[i]);
+	}
+	print("\n");
+
 	while (1) {
 		
 	}
@@ -856,17 +901,7 @@ u8 disk_mount(enum disk disk) {
 	// Read MBR sector at LBA address zero
 	if (!disk_read(disk, mount_buffer, 0, 1)) {
 		panic("Read failed");
-	}
-	/*
-	print(ANSI_YELLOW);
-	for (u32 i = 0; i < 512;) {
-		print("%1h  ", mount_buffer[i]);
-		if ((++i % 16) == 0) {
-			print("\n");
-		}
-	}
-	print(ANSI_NORMAL);
-	*/
+	}	
 	
 	// Check the boot signature in the MBR
 	if (fat_load16(mount_buffer + MBR_BOOT_SIG) != MBR_BOOT_SIG_VALUE) {
@@ -890,15 +925,15 @@ u8 disk_mount(enum disk disk) {
 	// Search for a valid FAT32 file systems on all valid paritions
 	for (u8 i = 0; i < 4; i++) {
 		if (partitions[i].lba) {
-			
+
 			if (!disk_read(disk, mount_buffer, partitions[i].lba, 1)) {
 				panic("Disk error");
 				return 0;
-			}
+			}	
 
 			// Check if the current partition contains a FAT32 file system
 			if (fat_search(mount_buffer)) {
-
+				
 				// Allocate the file system structure in internal SRAM
 				struct volume* vol = (struct volume *)
 					mm_alloc(sizeof(struct volume), SRAM);
@@ -923,16 +958,16 @@ u8 disk_mount(enum disk disk) {
 				// Sector zero will not exist in any file system. This forces 
 				// the code to read the first block from the storage device
 				vol->buffer_lba = 0;
+				vol->buffer_dirty = 0;
 				
 				// Get the volume label
 				fat_get_vol_label(vol, vol->label);
-
+				
 				// Add the newly made volume to the list of system volumes
 				fat_volume_add(vol);
 			}
 		}
 	}
-
 	return 1;
 }
 
@@ -1219,9 +1254,16 @@ fstatus fat_file_read(struct file* file, u8* buffer, u32 count, u32* status) {
 	*status = 0;
 	u16 sector_size = file->vol->sector_size;
 	u32 file_size = file->size;
-	
+	printl("Starting read");
 	if (!fat_read(file->vol, file->sector)) {
 		return FSTATUS_ERROR;
+	}
+	printl("Starting read");
+	for (u32 i = 0; i < 512;) {
+		print("%c", file->vol->buffer);
+		if ((++i % 16) == 0) {
+			print("\n");
+		}
 	}
 	while (count--) {
 		
