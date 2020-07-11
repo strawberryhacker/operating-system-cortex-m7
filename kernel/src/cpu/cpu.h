@@ -44,15 +44,29 @@ static inline void cpsid_f(void) {
 }
 
 /// Sets the interrupt base priority
-static inline void set_basepri(u32 pri) {
+static inline void cpu_set_basepri(u32 pri) {
 	asm volatile ("msr basepri, %0" : : "r"(pri) : "memory");
 }
 
 /// Gets the interrupt base priority
-static inline u32 get_basepri(void) {
+static inline u32 cpu_get_basepri(void) {
 	u32 basepri;
 	asm volatile ("mrs %0, basepri" : "=r"(basepri));
 	return basepri;
+}
+
+/// Gets the interrupt base priority
+static inline u32 cpu_get_psp(void) {
+	u32 psp;
+	asm volatile ("mrs %0, psp" : "=r"(psp));
+	return psp;
+}
+
+/// Gets the interrupt base priority
+static inline u32 cpu_get_msp(void) {
+	u32 msp;
+	asm volatile ("mrs %0, msp" : "=r"(msp));
+	return msp;
 }
 
 /// Functions for getting the processor registers

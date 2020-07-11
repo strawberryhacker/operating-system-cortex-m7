@@ -14,6 +14,7 @@
 #include "gmac.h"
 #include "ethernet.h"
 #include "systick.h"
+#include "cpu.h"
 
 #include <stddef.h>
 
@@ -21,7 +22,10 @@
 static void test_thread(void* arg) {
 	while (1) {
 		printl("Thread A says hello");
-		thread_sleep(500);
+		u32 sp = cpu_get_psp();
+		printl("Thread PSP: %4h\n", sp);
+		print_flush();
+		syscall_thread_sleep(5000);
 	}
 }
 
@@ -45,8 +49,8 @@ int main(void) {
 		.arg        = NULL
 	};
 
-	//new_thread(&test_info);
+	new_thread(&test_info);
 	//new_thread(&fat_info);
-	fat32_thread(NULL);
+	//fat32_thread(NULL);
 	scheduler_start();
 }

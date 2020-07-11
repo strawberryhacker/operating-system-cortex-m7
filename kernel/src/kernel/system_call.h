@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef SYSTEM_CALL_H
 #define SYSTEM_CALL_H
 
@@ -8,12 +10,12 @@
 
 #define NAKED __attribute__((naked))
 
-void NOINLINE syscall_thread_sleep(u32 ms) NAKED;
+void NOINLINE syscall_thread_sleep(u32 ms);
 
-void NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin) NAKED;
+void NAKED NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin);
 
-void* NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region) NAKED;
+void* NAKED NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region);
 
-void NOINLINE syscall_mm_free(void* ptr) NAKED;
+void NAKED NOINLINE syscall_mm_free(void* ptr);
 
 #endif

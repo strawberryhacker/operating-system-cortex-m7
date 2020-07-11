@@ -1,30 +1,34 @@
+/// Copyright (C) StrawberryHacker
+
 #include "system_call.h"
 #include "print.h"
 #include "thread.h"
 #include "gpio.h"
+#include "panic.h"
 
 /// Syscall arguments will automaticall be placed in the registers R0-R3 so 
 // the svc instructions can be called right away
-void NOINLINE syscall_thread_sleep(u32 ms) {
-    asm volatile ("svc #1");
+void NAKED NOINLINE syscall_thread_sleep(u32 ms) {
+    asm volatile ("svc #1 \n\t");
+    print("Return to link: %4h\n", cpu_get_lr());
+    print_flush();
 }
 
 void NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin) {
-    asm volatile ("svc #2");
+    asm volatile ("svc #2 \n\t");
 }
 
-void* NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region) {
-    asm volatile("svc #3");
+void* NAKED NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region) {
+    asm volatile("svc #3 \n\t");
 }
 
-void NOINLINE syscall_mm_free(void* ptr) {
-    asm volatile ("svc #4");
+void NAKED NOINLINE syscall_mm_free(void* ptr) {
+    asm volatile ("svc #4 \n\t");
 }
 
 /// Core SVC handler which does the unstacking of the SVC argument and function
 /// parameters
 void svc_handler_ext(u32* stack_ptr) {
-
     // This functions is called from the SVC exception handler. Therefore the 
     // `stack_ptr` points to the base of the exception stack frame:
     //
@@ -36,7 +40,17 @@ void svc_handler_ext(u32* stack_ptr) {
     // at byte address PC - 2. Since the processor uses little endian, that
     // address is two bytes back from the value pointed to by PC. Therefore svc
     // argument is *PC - 2
+    printl("---SP: %4h---", stack_ptr);
+    print_flush();
     u8 svc = *((u8 *)stack_ptr[6] - 2);
+
+    print("SVC: %d\n", svc);
+
+    if (svc != 1) {
+        panic("SVC is not 1");
+    }
+
+    printl("Delay value: %d", stack_ptr[0]);
 
     switch (svc) {
         case 1 : {
@@ -56,4 +70,6 @@ void svc_handler_ext(u32* stack_ptr) {
             break;
         }
     }
+    print("SVC return\n");
+    print_flush();
 }

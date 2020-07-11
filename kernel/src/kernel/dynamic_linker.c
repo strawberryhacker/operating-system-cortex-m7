@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #include "dynamic_linker.h"
 #include "scheduler.h"
 #include "thread.h"

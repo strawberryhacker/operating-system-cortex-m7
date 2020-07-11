@@ -6,6 +6,7 @@
 
 /// This SVC handler will extract the SVC number and call the service function
 .global svc_handler_ext
+.global test_sp
 
 .section .text
 .global svc_handler
