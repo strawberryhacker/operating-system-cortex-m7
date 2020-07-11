@@ -4,8 +4,8 @@
 #include "print.h"
 #include "sd.h"
 #include "mm.h"
-#include "system_call.h"
 #include "panic.h"
+#include "syscall.h"
 
 #include <stddef.h>
 
@@ -863,9 +863,9 @@ void fat32_thread(void* arg) {
 	status = fat_file_open(&file, "C:/bigbangtheory.txt", 20);
 	fat_print_status(status);
 
-	u32 bytes_written;
-	u8 file_buffer[32];
-	status = fat_file_read(&file, file_buffer, 16, &bytes_written);
+	u32 bytes_written = 0;
+	u8 file_buffer[256];
+	status = fat_file_read(&file, file_buffer, 256, &bytes_written);
 	fat_print_status(status);
 
 	printl("bytes written: %d", bytes_written);
@@ -873,9 +873,10 @@ void fat32_thread(void* arg) {
 		print("%c", file_buffer[i]);
 	}
 	print("\n");
+	print_flush();
 
 	while (1) {
-		
+		syscall_thread_sleep(500);
 	}
 }
 
@@ -1254,11 +1255,11 @@ fstatus fat_file_read(struct file* file, u8* buffer, u32 count, u32* status) {
 	*status = 0;
 	u16 sector_size = file->vol->sector_size;
 	u32 file_size = file->size;
-	printl("Starting read");
+
 	if (!fat_read(file->vol, file->sector)) {
 		return FSTATUS_ERROR;
 	}
-	printl("Starting read");
+
 	for (u32 i = 0; i < 512;) {
 		print("%c", file->vol->buffer);
 		if ((++i % 16) == 0) {

@@ -5,7 +5,7 @@
 #include "kernel_entry.h"
 #include "thread.h"
 #include "print.h"
-#include "system_call.h"
+#include "syscall.h"
 #include "mm.h"
 #include "sd_protocol.h"
 #include "panic.h"
@@ -18,11 +18,21 @@
 
 #include <stddef.h>
 
+extern struct rq cpu_rq;
+
 
 static void test_thread(void* arg) {
 	while (1) {
-		printl("Thread A says hello");
-		syscall_thread_sleep(500);
+		
+		print("CPU\n");
+		syscall_thread_sleep(1000);
+	}
+}
+
+static void blink_thread(void* arg) {
+	while (1) {
+		syscall_thread_sleep(1);
+		syscall_gpio_toggle(GPIOC, 8);
 	}
 }
 
@@ -46,7 +56,16 @@ int main(void) {
 		.arg        = NULL
 	};
 
+	struct thread_info blink_info = {
+		.name = "Blink",
+		.stack_size = 32,
+		.thread = blink_thread,
+		.class = REAL_TIME,
+		.arg = NULL
+	};
+
 	new_thread(&test_info);
+	new_thread(&blink_info);
 	//new_thread(&fat_info);
 	//fat32_thread(NULL);
 	scheduler_start();

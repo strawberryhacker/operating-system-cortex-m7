@@ -1,6 +1,6 @@
 /// Copyright (C) StrawberryHacker
 
-#include "system_call.h"
+#include "syscall.h"
 #include "print.h"
 #include "thread.h"
 #include "gpio.h"
@@ -54,7 +54,8 @@ void svc_handler_ext(u32* stack_ptr) {
             break;
         } 
         case 3 : {
-            stack_ptr[0] = (u32)mm_alloc(stack_ptr[0], (enum physmem_e)stack_ptr[1]);
+            stack_ptr[0] = (u32)mm_alloc(stack_ptr[0], 
+                (enum physmem_e)stack_ptr[1]);
             break;
         }
         case 4 : {

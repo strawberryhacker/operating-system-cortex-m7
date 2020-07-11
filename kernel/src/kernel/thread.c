@@ -14,7 +14,6 @@
 extern struct rq cpu_rq;
 
 /// Holdes the current kernel tick times the systick reload value register
-extern volatile u64 tick;
 extern volatile struct thread* curr_thread;
 
 /// This function will be placed in the LR to all threads. That way all exiting 
@@ -131,7 +130,7 @@ struct thread* new_thread(struct thread_info* thread_info) {
 void thread_sleep(u64 ms) {
     // Calculate the tick to wake. The timebase will be the same as the 
     // systick reload value register
-    curr_thread->tick_to_wake = tick + ms * SYSTICK_RVR;
+    curr_thread->tick_to_wake = get_kernel_tick() + ms * SYSTICK_RVR;
     
     // This will enqueue the thread in the sleep list
     scheduler_enqueue_delay((struct thread *)curr_thread);

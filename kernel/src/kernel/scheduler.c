@@ -10,14 +10,11 @@
 
 #include <stddef.h>
 
-/// MOVE THESE!!
 volatile struct thread* curr_thread;
 volatile struct thread* next_thread;
 
 /// Scheduler status
 volatile u8 scheduler_status;
-
-struct thread* idle;
 
 /// Main CPU runqueue structure
 struct rq cpu_rq = {0};
@@ -78,7 +75,7 @@ void scheduler_start(void) {
 	};
 
 	// Make the idle and test thread
-	idle = new_thread(&idle_info);
+	cpu_rq.idle = new_thread(&idle_info);
 
 	cpsid_f();
 	systick_set_rvr(SYSTICK_RVR);
@@ -137,6 +134,7 @@ void calculate_runtime(void) {
 
 void systick_handler(void) {
 	if (scheduler_status) {
+		cpsid_f();
 		// Compute the runtime of the current running thread
 		u64 curr_runtime;
 		if (reschedule_pending) {
@@ -168,7 +166,8 @@ void systick_handler(void) {
 
 		// Call the core scheduler
 		next_thread = core_scheduler();
-
+		systick_set_cvr(SYSTICK_RVR);
+		cpsie_f();
 		// Pand the context switch
 		pendsv_set_pending();
 	}
@@ -205,6 +204,10 @@ void scheduler_enqueue_delay(struct thread* thread) {
 			dlist_insert_last(&thread->rq_node, &cpu_rq.sleep_q);
 		}
 	}
+
+	// If the new thread is placed first in the sleep queue, the first tick to
+	// wake might have changed
+	
 }
 
 void suspend_scheduler(void) {
@@ -213,4 +216,12 @@ void suspend_scheduler(void) {
 
 void resume_scheduler(void) {
 	scheduler_status = 1;
+}
+
+u64 get_kernel_tick(void) {
+	return tick;
+}
+
+u64 get_idle_runtime(void) {
+	return cpu_rq.idle->runtime_curr;
 }

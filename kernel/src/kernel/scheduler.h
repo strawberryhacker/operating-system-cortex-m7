@@ -33,6 +33,7 @@ struct thread_info {
     enum sched_class class;
 };
 
+/// Main CPU runqueue structure
 struct rq {
     struct dlist app_rq;
     struct dlist background_rq;
@@ -44,6 +45,11 @@ struct rq {
     struct dlist blocked_q;
 
     struct dlist threads;
+
+    // If the sleep queue is non-empty `tick_to_wake` holds the first tick to
+    // wake on. Several sleeping threads might have the same tick to wake but 
+    // that doesn't matter
+    u64 tick_to_wake;
 };
 
 /// Main thread control block
@@ -56,18 +62,17 @@ struct thread {
     struct dlist_node rq_node;
     struct dlist_node thread_node;
 
-    // 
+    // Pointer to the threads current scheduling class
     const struct scheduling_class* class;
 
     // Name of the thread
     char name[THREAD_MAX_NAME_LEN];
     u8 name_len;
 
-    // If the thread is sleeping this value will hold the tick it should wake 
-    // on
+    // If the thread is sleeping this value will hold the tick it should wake on
     u64 tick_to_wake;
 
-    // These are for calulating runtime statistics
+    // Variables used for calulating runtime statistics
     u64 runtime_curr;
     u64 runtime_new;
 };
@@ -99,5 +104,9 @@ void reschedule(void);
 void suspend_scheduler(void);
 
 void resume_scheduler(void);
+
+u64 get_kernel_tick(void);
+
+u64 get_idle_runtime(void);
 
 #endif
