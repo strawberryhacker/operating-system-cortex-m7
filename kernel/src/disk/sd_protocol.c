@@ -104,7 +104,10 @@ static u8 sd_exec_cmd_2(u8* cid) {
     for (u8 i = 0; i <= 5; i++) {
         slot_1.cid_name[i] = (char)cid[12 - i];
     }
+#if SD_DEBUG
     print("Product name: %5s", slot_1.cid_name);
+#endif
+
     return 1;
 }
 
@@ -394,7 +397,9 @@ static void csd_decode(const u8* csd) {
         
         // This card should be a SDSC card
         if (slot_1.high_capacity) {
+#if SD_DEBUG
             print("Warning\n");
+#endif
         }
 
     } else if (csd_structure == 1) {
@@ -414,7 +419,9 @@ static void csd_decode(const u8* csd) {
 /// Performs the SD protocol initialization sequence and brings the card to the
 /// transfer state
 void sd_protocol_init(void) {
+#if SD_DEBUG
     print("Starting SD protocol init sequence...\n");
+#endif
 
     // Enable the MMC clock
     peripheral_clock_enable(18);
@@ -456,7 +463,9 @@ void sd_protocol_init(void) {
         panic("ACMD41 failed");
     }
 
+#if SD_DEBUG
     print("SDHC support: %d\n", slot_1.high_capacity);
+#endif
 
     // Get the CID register and place the card into identification mode
     u8 cid[16];
@@ -479,7 +488,9 @@ void sd_protocol_init(void) {
 
     // Decode the CSD register and update the block size and capacity
     csd_decode(csd);
+#if SD_DEBUG
     print("Size: %d\n", slot_1.kib_size);
+#endif
 
     // Select the card in slot 1 and put it in transfer state
     if (sd_exec_cmd_7() == 0) {
@@ -490,9 +501,9 @@ void sd_protocol_init(void) {
     if (sd_exec_acmd_51() == 0) {
         panic("ACMD51 failed");
     }
-
+#if SD_DEBUG
     print("4-bit support: %d\n", slot_1.four_bit_bus_support);
-    
+#endif
     // ACMD6 - if appropriate change the bus width (0b00 for 1-bit and 0b10 
     // for 4-bit)
     if (slot_1.four_bit_bus_support) {
@@ -508,7 +519,9 @@ void sd_protocol_init(void) {
         if (sd_exec_cmd_6() == 0) {
             panic("CMD6 failed");
         }
+#if SD_DEBUG
         print("High-speed enabled: %d\n", slot_1.high_speed);
+#endif
 
         // Update the bus speed
         if (slot_1.high_speed) {
@@ -518,7 +531,9 @@ void sd_protocol_init(void) {
             mmc_set_bus_freq(25000000);
         }
     }
+#if SD_DEBUG
     printl("SD card ready\n");
+#endif
 }
 
 u8 sd_read(u32 sector, u32 count, u8* buffer) {

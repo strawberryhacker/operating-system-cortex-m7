@@ -6,6 +6,8 @@
 #include "types.h"
 #include "mmc.h"
 
+#define SD_DEBUG 0
+
 struct sd_card {
     u32  rca;
     char cid_name[6];

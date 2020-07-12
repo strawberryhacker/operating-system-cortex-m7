@@ -9,7 +9,6 @@
 void dlist_insert_first(struct dlist_node* node, struct dlist* list) {
     // Check if the list contains the `node`
     if ((node->next != NULL) || (node->prev != NULL)) {
-        print("N: %4h P %4h L: %4h\n", node->next, node->prev, list);
         panic("List error");
     }
 

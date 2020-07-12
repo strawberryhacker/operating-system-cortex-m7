@@ -17,7 +17,7 @@ ARM_ASM = arm-none-eabi-as
 CPFLAGS += -I$(TOP)/src
 
 CFLAGS += -x c -mthumb -O3 -ffunction-sections -mlong-calls -g3 -Wall
-CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections
+CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-unused-variable
 
 LDFLAGS += -mthumb -Wl,-Map="$(BUILDDIR)/$(TARGET_NAME).map" -Wl,--start-group
 LDFLAGS += -Wl,--end-group -Wl,--gc-sections -mcpu=cortex-m7 -Tlinker.ld

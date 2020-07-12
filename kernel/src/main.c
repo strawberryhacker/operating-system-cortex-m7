@@ -24,19 +24,19 @@ extern struct rq cpu_rq;
 static void test_thread(void* arg) {
 	while (1) {
 		
-		print("CPU\n");
+		//print("CPU\n");
 		syscall_thread_sleep(1000);
 	}
 }
 
 static void blink_thread(void* arg) {
-	u32 count = 0;
+	volatile u32 count = 0;
 	while (1) {
 		for (u32 i = 0; i < 1000; i++) {
 			syscall_thread_sleep(1);
 			syscall_gpio_toggle(GPIOC, 8);
 		}
-		print("LED thread %d\n", count++);
+		//print("LED thread %d\n", count++);
 	}
 }
 

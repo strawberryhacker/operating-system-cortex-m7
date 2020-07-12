@@ -58,7 +58,7 @@ static u8 fat_search(const u8* bpb);
 void fat_print_sector(const u8* sector);
 static u8 fat_dir_lfn_cmp(const u8* lfn, const char* name, u32 size);
 static u8 fat_dir_sfn_cmp(const char* sfn, const char* name, u8 size);
-static u8 fat_dir_sfn_crc(const u8* sfn);
+static u8 fat_get_sfn_crc(const u8* sfn);
 u8 fat_dir_set_index(struct dir* dir, u32 index);
 static u8 fat_dir_get_next(struct dir* dir);
 static u8 fat_dir_search(struct dir* dir, const char* name, u32 size);
@@ -73,10 +73,11 @@ static fstatus fat_get_vol_label(struct volume* vol, char* label);
 static void fat_print_info(struct info* info);
 static u8 fat_file_addr_resolve(struct file* file);
 fstatus fat_make_entry_chain(struct dir* dir, u8 entry_cnt);
-static fstatus fat_print_status(fstatus status);
+static void fat_print_status(fstatus status);
 
-static fstatus fat_print_status(fstatus status) {
-	print("Status: ");
+/// Prints the error message given by the file system to the console
+static void fat_print_status(fstatus status) {
+	print("File system status: ");
 	switch(status) {
 		case FSTATUS_OK : {
 			printl("OK");
@@ -117,7 +118,6 @@ void fat_print_table(struct volume* vol, u32 sector) {
 		if ((i++ % 4) == 0) {
 			print("\n");
 			print("FAT: %d\t", sector * 128 + i);
-			
 		}
 	}
 	print("\n" BLUE);
@@ -125,6 +125,11 @@ void fat_print_table(struct volume* vol, u32 sector) {
 
 /// Copies `count` number of bytes from source to destination using byte access
 void fat_memcpy(const void* src, void* dest, u32 count) {
+	// Because of the loop optimization we have to check for zero size 
+	if (count == 0) {
+		return;
+	}
+
 	const u8* src_ptr = (const u8 *)src;
 	u8* dest_ptr = (u8 *)dest;
 	do {
@@ -132,7 +137,8 @@ void fat_memcpy(const void* src, void* dest, u32 count) {
 	} while (--count);
 }
 
-/// Compares two memory blocks with size `count`
+/// Compares two memory blocks with size `count`. Returns `1` is the memory 
+/// regions matches
 static u8 fat_memcmp(const void* src_1, const void* src_2, u32 count) {
 	if (count == 0) {
 		return 1;
@@ -151,7 +157,7 @@ static u8 fat_memcmp(const void* src_1, const void* src_2, u32 count) {
 	return 1;
 }
 
-/// Store a 32-bit value in LE format
+/// Store a 32-bit value in little endian format
 static void fat_store32(void* dest, u32 value) {
 	u8* dest_ptr = (u8 *)dest;
 	*dest_ptr++ = (u8)value;
@@ -163,7 +169,7 @@ static void fat_store32(void* dest, u32 value) {
 	*dest_ptr++ = (u8)value;
 }
 
-/// Store a 16-bit value in LE format
+/// Store a 16-bit value in little endian format
 void fat_store16(void* dest, u16 value) {
 	u8* dest_ptr = (u8 *)dest;
 	*dest_ptr++ = (u8)value;
@@ -171,7 +177,7 @@ void fat_store16(void* dest, u16 value) {
 	*dest_ptr++ = (u8)value;
 }
 
-/// Load a 32-bit value from `src` in LE format
+/// Load a 32-bit value from `src` in little endian format
 static u32 fat_load32(const void* src) {
 	u32 value = 0;
 	const u8* src_ptr = (const u8 *)src;
@@ -182,7 +188,7 @@ static u32 fat_load32(const void* src) {
 	return value;
 }
 
-/// Load a 16-bit value from `src` in LE format
+/// Load a 16-bit value from `src` in little endian format
 static u16 fat_load16(const void* src) {
 	u16 value = 0;
 	const u8* src_ptr = (const u8 *)src;
@@ -203,8 +209,18 @@ void fat_print_sector(const u8* sector) {
 	print("\n");
 }
 
-/// Add a volume to the system volumes and assign a letter to it
+/// Add a volume to the list of system volumes and assign a letter to it
 static u8 fat_volume_add(struct volume* vol) {
+	// Check that the volume does not exist in the list
+	const struct volume* tmp = volume_base;
+	while (tmp) {
+		if (tmp == vol) {
+			return 0;
+		}
+		tmp = tmp->next;
+	}
+
+	// Iterate volume list and place `vol` at the end
 	if (volume_base == NULL) {
 		volume_base = vol; 
 	} else {
@@ -231,6 +247,7 @@ static u8 fat_volume_add(struct volume* vol) {
 /// memory
 static u8 fat_volume_remove(char letter) {
 	struct volume* curr;
+
 	if (volume_base == NULL) {
 		return 0;
 	} else if (volume_base->letter == letter) {
@@ -248,7 +265,10 @@ static u8 fat_volume_remove(char letter) {
 			curr = curr->next;
 		}
 		
-		if (curr == NULL) return 0;
+		// Check for end of the list
+		if (curr == NULL) {
+			return 0;
+		}
 		prev->next = curr->next;
 	}
 	
@@ -264,7 +284,9 @@ static u8 fat_volume_remove(char letter) {
 static u8 fat_search(const u8* bpb) {
 
 	// Check the BPB boot signature
-	if (fat_load16(bpb + 510) != 0xAA55) return 0;
+	if (fat_load16(bpb + 510) != 0xAA55) {
+		return 0;
+	}
 	
 	// A valid FAT file system will have the "FAT" string in either the FAT16
 	// boot sector, or in the FAT32 boot sector. This does NOT indicate the
@@ -301,8 +323,8 @@ static u8 fat_search(const u8* bpb) {
 	return 1;
 }
 
-/// Calculates the SFN checksum based on the 8.3 short file name
-static u8 fat_dir_sfn_crc(const u8* sfn) {
+/// Calculates the SFN checksum based on the 8.3 SFN
+static u8 fat_get_sfn_crc(const u8* sfn) {
 	u8 crc = 0;
 	u8 count = 11;
 	do {
@@ -317,7 +339,8 @@ u8 fat_dir_set_index(struct dir* dir, u32 index) {
 	return 1;
 }
 
-/// Move the `dir` pointer to the next 32-byte directory entry
+/// Move the `dir` pointer to the next 32-byte directory entry. If the function
+/// returns `NULL` the directory object pointers are undefined
 static u8 fat_dir_get_next(struct dir* dir) {
 
 	// Update the rw offset to point to the next 32-byte entry
@@ -334,12 +357,12 @@ static u8 fat_dir_get_next(struct dir* dir) {
 			
 			// Get the next cluster from the FAT table	
 			u32 new_cluster;
-			if (!fat_table_get(dir->vol, dir->cluster, &new_cluster)) {
+			if (fat_table_get(dir->vol, dir->cluster, &new_cluster) == 0) {
 				return 0;
 			}
 			
 			// Check if the FAT table entry is the EOC. The FAT table entry
-			// will in these cases be either EOC or date clusters. No need 
+			// will in these cases be either EOC or data clusters. No need 
 			// to check for bad clusters. 
 			u32 eoc_value = new_cluster & 0xFFFFFFF;
 			if ((eoc_value >= 0xFFFFFF8) && (eoc_value <= 0xFFFFFFF)) {
@@ -354,8 +377,8 @@ static u8 fat_dir_get_next(struct dir* dir) {
 	return 1;
 }
 
-/// Resolves any overflow on rw_offset, sector and cluster on the given `file`
-/// descriptor
+/// Resolves any overflow on both rw_offset, sector and cluster on the given
+// `file` descriptor
 static u8 fat_file_addr_resolve(struct file* file) {	
 	// Check for sector overflow
 	if (file->rw_offset >= file->vol->sector_size) {
@@ -419,19 +442,19 @@ u8 fat_table_set(struct volume* vol, u32 cluster, u32 fat_entry) {
 	return 1;
 }
 
-/// Get the next free cluster from the FAT table and update the FSinfo to
-/// point to the next free cluster
+/// Get the next free cluster from the FAT table and update the FSinfo to point
+/// to the next free cluster
 u8 fat_get_cluster(struct volume* vol, u32* cluster) {
 	// Load the FSinfo sector
-	if (!fat_read(vol, vol->fsinfo_lba)) {
+	if (fat_read(vol, vol->fsinfo_lba) == 0) {
 		return 0;
 	}
 	u32 next_free = fat_load32(vol->buffer + INFO_NEXT_FREE);
 	u32 tot_free = fat_load32(vol->buffer + INFO_CLUST_CNT);
 	
-	// The `next_free` pointer does necessary point to a free cluster. However
-	// it specifies where to start looking for a free block. The `sector` and 
-	// `rw` combined point to this position
+	// The `next_free` pointer does not necessary point to a free cluster. 
+	// Howeverv it specifies where to start looking for a free block. The 
+	// `sector` and `rw` combined point to this position
 	u32 sector = vol->fat_lba + (next_free / 128);
 	u32 rw = (next_free % 128) * 4;
 	
@@ -487,13 +510,13 @@ static u8 fat_read(struct volume* vol, u32 lba) {
 	// Check if the sector is already cached
 	if (vol->buffer_lba != lba) {
 		// Flush any dirty buffer back to the storage device
-		if (!fat_flush(vol)) {
+		if (fat_flush(vol) == 0) {
 			print("Flush error LBA: %d  Buffer LBA: %d   Dirty: %d\n", 
 				lba, vol->buffer_lba, vol->buffer_dirty);
 			return 0;
 		}
 		// Cache the next sector
-		if (!disk_read(vol->disk, vol->buffer, lba, 1)) {
+		if (disk_read(vol->disk, vol->buffer, lba, 1) == 0) {
 			print("Read error at LBA %d\n", lba);
 			return 0;
 		}
@@ -502,10 +525,11 @@ static u8 fat_read(struct volume* vol, u32 lba) {
 	return 1;
 }
 
-/// Clean a volume buffer
+/// Flush a volume buffer. If the buffer is dirty it will be written back to 
+/// the storage device
 static u8 fat_flush(struct volume* vol) {
 	if (vol->buffer_dirty) {
-		if (!disk_write(vol->disk, vol->buffer, vol->buffer_lba, 1)) {
+		if (disk_write(vol->disk, vol->buffer, vol->buffer_lba, 1) == 0) {
 			return 0;
 		}
 		vol->buffer_dirty = 0;
@@ -541,15 +565,16 @@ static u8 fat_dir_sfn_cmp(const char* sfn, const char* name, u8 size) {
 		sfn++;
 		name++;
 	} while (--size);
+
 	return 1;
 }
 
-/// Compartes a LFN entry against a given file name. `name` is the full string 
-/// to be comared and `lfn` is only one LFN entry. The code will just compare
-/// the affected fragment of the `name` string.
+/// Compares an LFN entry against a given file name. `name` is the full string 
+/// to be compared and `lfn` one LFN entry. The code will just compare
+/// the affected fragment in the `name` string.
 static u8 fat_dir_lfn_cmp(const u8* lfn, const char* name, u32 size) {
 	
-	// Compute the `name` offset of a fragment which should match the LFN name
+	// Compute the offset of a fragment which should match the LFN name
 	u8 name_off = 13 * ((lfn[LFN_SEQ] & LFN_SEQ_MSK) - 1);
 	
 	for (u8 i = 0; i < 13; i++) {
@@ -558,6 +583,12 @@ static u8 fat_dir_lfn_cmp(const u8* lfn, const char* name, u32 size) {
 		if (lfn[lfn_lut[i]] == 0x00 || lfn[lfn_lut[i]] == 0xff) {
 			break;
 		}
+
+		// Check the name size 
+		if (name_off + i >= size) {
+			return 0;
+		}
+
 		// Compare the first charater in the UCS-2. This will typically be a
 		// ordinary ASCII character
 		if (lfn[lfn_lut[i]] != name[name_off + i]) {
@@ -615,7 +646,7 @@ static u8 fat_dir_search(struct dir* dir, const char* name, u32 size) {
 				// The current entry is a SFN
 				if (lfn_crc && lfn_match) {
 					// The current SFN entry is the last in a sequence of LFN's
-					if (lfn_crc == fat_dir_sfn_crc(buffer + rw_offset)) {
+					if (lfn_crc == fat_get_sfn_crc(buffer + rw_offset)) {
 						match = 1;
 					}
 				} else {
@@ -809,18 +840,12 @@ void fat32_thread(void* arg) {
 	
 	// Wait for the SD card to be insterted
 	while (sd_is_connected() == 0);
-
-	print("Hello\n");
 	
 	// Try to mount the disk. If this is not working the disk initialize 
 	// functions may be ehh...
 	if (disk_mount(DISK_SD_CARD) == 0) {
 		panic("Mounting failed");
 	}
-
-	
-	
-	volume_get('C');
 
 	// Print all the volumes on the system
 	print(BLUE "Displaying system volumes:\n");
@@ -841,14 +866,16 @@ void fat32_thread(void* arg) {
 	struct dir dir;
 	fat_dir_open(&dir, "C:", 0);
 	
-	struct info* info = (struct info *)mm_alloc(sizeof(struct info), SRAM);
+	struct info* info = (struct info *)mm_alloc(sizeof(struct info), 
+		SRAM);
+
 	fstatus status;
 	print("\nListing directories in: C:/\n");
 	do {
 		status = fat_dir_read(&dir, info);
 		
-		if (fat_memcmp(info->name, "uuuuuughh.txt", info->name_length)) {
-			//fat_dir_rename(&dir, "dude", 4);
+		if (fat_memcmp(info->name, "Test.bin", info->name_length)) {
+			printl(ANSI_GREEN "OK" ANSI_NORMAL);
 		}
 		
 		// Print the information
@@ -863,11 +890,11 @@ void fat32_thread(void* arg) {
 	fat_print_status(status);
 
 	u32 bytes_written = 0;
-	u8 file_buffer[256];
-	status = fat_file_read(&file, file_buffer, 256, &bytes_written);
+	u8 file_buffer[24];
+	status = fat_file_read(&file, file_buffer, 24, &bytes_written);
 	fat_print_status(status);
 
-	printl("bytes written: %d", bytes_written);
+	printl("Bytes written: %d", bytes_written);
 	for (u8 i = 0; i < bytes_written; i++) {
 		print("%c", file_buffer[i]);
 	}
@@ -918,8 +945,6 @@ u8 disk_mount(enum disk disk) {
 		partitions[i].size = fat_load32(mount_buffer + offset + PAR_SIZE);
 		partitions[i].type = mount_buffer[offset + PAR_TYPE];
 		partitions[i].status = mount_buffer[offset + PAR_STATUS];
-
-		printl("Found partition with LBA: %d", partitions[i].lba);
 	}
 	
 	// Search for a valid FAT32 file systems on all valid paritions
@@ -1118,7 +1143,7 @@ fstatus fat_dir_read(struct dir* dir, struct info* info) {
 				if (lfn_crc) {
 					// This SFN entry is the last entry in a chain of
 					// LFN entries. Return CRC error if the checksum is wrong
-					if (lfn_crc != fat_dir_sfn_crc(entry_ptr)) {
+					if (lfn_crc != fat_get_sfn_crc(entry_ptr)) {
 						return FSTATUS_ERROR;
 					}
 					
@@ -1230,11 +1255,11 @@ fstatus fat_file_open(struct file* file, const char* path, u16 length) {
 	file->sector = dir.sector;
 	file->start_sect = dir.sector;
 	file->cluster = dir.cluster;
+	file->glob_offset = 0;
 	file->rw_offset = 0;
 	file->vol = dir.vol;
 	file->size = dir.size;
-	
-	print(ANSI_RED "File size: %d\n" ANSI_NORMAL, file->size);
+
 	return FSTATUS_OK;
 }
 
@@ -1255,16 +1280,10 @@ fstatus fat_file_read(struct file* file, u8* buffer, u32 count, u32* status) {
 	u16 sector_size = file->vol->sector_size;
 	u32 file_size = file->size;
 
-	if (!fat_read(file->vol, file->sector)) {
+	if (fat_read(file->vol, file->sector) == 0) {
 		return FSTATUS_ERROR;
 	}
 
-	for (u32 i = 0; i < 512;) {
-		print("%c", file->vol->buffer);
-		if ((++i % 16) == 0) {
-			print("\n");
-		}
-	}
 	while (count--) {
 		
 		// Resolve the address
