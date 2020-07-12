@@ -113,28 +113,44 @@ void scheduler_start(void) {
 	scheduler_run();
 }
 
+/// Updates the first tick to wake basen on the sleep queue. If the sleep 
+/// queue is empty the `tick_to_wake` will be written to zero
+static void tick_to_wake_update(void) {
+	// Update the first tick to wake
+	struct dlist_node* tmp = cpu_rq.sleep_q.first;
+	if (tmp) {
+		cpu_rq.tick_to_wake = ((struct thread *)tmp->obj)->tick_to_wake;
+	} else {
+		cpu_rq.tick_to_wake = 0;
+	}
+}
+
 static void process_expired_delays(void) {
-	// Go over the delay queue and and enqueue all expired thread in their 
-	// scheduling class
-	struct dlist_node* iter = cpu_rq.sleep_q.first;
+	
+	if ((cpu_rq.tick_to_wake <= tick) && cpu_rq.tick_to_wake) {
+		// Go over the delay queue and and enqueue all expired thread in their 
+		// scheduling class
+		struct dlist_node* iter = cpu_rq.sleep_q.first;
 
-	while (iter) {
-		u64 tick_to_wake = ((struct thread *)iter->obj)->tick_to_wake;
-		if (tick_to_wake < tick) {
+		while (iter) {
+			u64 tick_to_wake = ((struct thread *)iter->obj)->tick_to_wake;
+			if (tick_to_wake < tick) {
 
-			// Remove the thread for the delay queue
-			dlist_remove(iter, &cpu_rq.sleep_q);
+				// Remove the thread for the delay queue
+				dlist_remove(iter, &cpu_rq.sleep_q);
 
-			// Place the thread back into the running list
-			struct thread* t = (struct thread *)iter->obj;
-			t->class->enqueue(t, &cpu_rq);
-			t->tick_to_wake = 0;
-		} else {
-			// The tick to wake is higher than the current kernel tick. It 
-			// should not be removed from the sleep_q
-			break;
+				// Place the thread back into the running list
+				struct thread* t = (struct thread *)iter->obj;
+				t->class->enqueue(t, &cpu_rq);
+				t->tick_to_wake = 0;
+			} else {
+				// The tick to wake is higher than the current kernel tick. It 
+				// should not be removed from the sleep_q
+				break;
+			}
+			iter = iter->next;
 		}
-		iter = iter->next;
+		tick_to_wake_update();
 	}
 }
 
@@ -224,7 +240,7 @@ void scheduler_enqueue_delay(struct thread* thread) {
 
 	// If the new thread is placed first in the sleep queue, the first tick to
 	// wake might have changed
-	
+	tick_to_wake_update();
 }
 
 void suspend_scheduler(void) {
