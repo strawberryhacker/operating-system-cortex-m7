@@ -81,6 +81,13 @@ void printl(const char* data, ...) {
     usart_write(USART1, '\n');
 }
 
+/// Prints a raw string without any formatting
+void print_raw(const char* data) {
+    while (*data) {
+        usart_write(USART1, *data++);
+    }
+}
+
 /// Prints `size` number of bytes from memory in a nice format
 void print_memory(const u32* memory, u32 size) {
     const u8* src = (const u8 *)memory;

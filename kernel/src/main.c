@@ -6,37 +6,25 @@
 #include "thread.h"
 #include "print.h"
 #include "syscall.h"
-#include "mm.h"
-#include "sd_protocol.h"
-#include "panic.h"
 #include "fat32.h"
-#include "hardware.h"
-#include "gmac.h"
-#include "ethernet.h"
-#include "systick.h"
-#include "cpu.h"
 
 #include <stddef.h>
-
-extern struct rq cpu_rq;
-
 
 static void test_thread(void* arg) {
 	while (1) {
 		
-		//print("CPU\n");
+		print("CPU usage: ");
+		print_raw("%\n");
 		syscall_thread_sleep(1000);
 	}
 }
 
 static void blink_thread(void* arg) {
-	volatile u32 count = 0;
 	while (1) {
-		for (u32 i = 0; i < 1000; i++) {
-			syscall_thread_sleep(1);
-			syscall_gpio_toggle(GPIOC, 8);
-		}
-		//print("LED thread %d\n", count++);
+		syscall_thread_sleep(98);
+		syscall_gpio_toggle(GPIOC, 8);
+		syscall_thread_sleep(2);
+		syscall_gpio_toggle(GPIOC, 8);
 	}
 }
 
@@ -72,6 +60,5 @@ int main(void) {
 	new_thread(&blink_info);
 	new_thread(&fat_info);
 
-	//fat32_thread(NULL);
 	scheduler_start();
 }
