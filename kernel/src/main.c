@@ -30,9 +30,13 @@ static void test_thread(void* arg) {
 }
 
 static void blink_thread(void* arg) {
+	u32 count = 0;
 	while (1) {
-		syscall_thread_sleep(1);
-		syscall_gpio_toggle(GPIOC, 8);
+		for (u32 i = 0; i < 1000; i++) {
+			syscall_thread_sleep(1);
+			syscall_gpio_toggle(GPIOC, 8);
+		}
+		print("LED thread %d\n", count++);
 	}
 }
 
@@ -66,7 +70,8 @@ int main(void) {
 
 	new_thread(&test_info);
 	new_thread(&blink_info);
-	//new_thread(&fat_info);
+	new_thread(&fat_info);
+
 	//fat32_thread(NULL);
 	scheduler_start();
 }

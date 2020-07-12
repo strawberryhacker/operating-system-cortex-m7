@@ -9,23 +9,21 @@
 void dlist_insert_first(struct dlist_node* node, struct dlist* list) {
     // Check if the list contains the `node`
     if ((node->next != NULL) || (node->prev != NULL)) {
+        print("N: %4h P %4h L: %4h\n", node->next, node->prev, list);
         panic("List error");
     }
 
-    // The node might still be in the first location
+    // The node might still be the only element in the list
     if (node == list->first) {
         panic("List error");
     }
 
     if (list->first) {
         node->next = list->first;
-        node->prev = NULL;
         list->first->prev = node;
         list->first = node;
     } else {
         // List is empty
-        node->next = NULL;
-        node->prev = NULL;
         list->first = node;
         list->last = node;
     }
@@ -46,13 +44,10 @@ void dlist_insert_last(struct dlist_node* node, struct dlist* list) {
 
     if (list->last) {
         node->prev = list->last;
-        node->next = NULL;
         list->last->next = node;
         list->last = node;
     } else {
         // List is empty
-        node->next = NULL;
-        node->prev = NULL;
         list->first = node;
         list->last = node;
     }
@@ -131,10 +126,9 @@ struct dlist_node* dlist_remove_first(struct dlist* list) {
         first = list->first;
 
         // Check if the list contains more than one node
-        if (list->first->next) {
+        if (first->next) {
             // Remove the backward link from the second node
             first->next->prev = NULL;
-
             list->first = first->next;
         } else {
             // Only one node present
@@ -144,11 +138,11 @@ struct dlist_node* dlist_remove_first(struct dlist* list) {
 
         // Decrement the size
         if (list->size == 0) {
-            panic("List error");
+            panic("List size is zero");
         }
         list->size--;
     } else {
-        panic("List error");
+        panic("List does not contain any elements");
     }
 
     // Disable the links
@@ -166,10 +160,9 @@ struct dlist_node* dlist_remove_last(struct dlist* list) {
         // Check if the list contains more than one node
         last = list->last;
 
-        if (list->last->prev) {
+        if (last->prev) {
             // Remove the forward link from the second last node
             last->prev->next = NULL;
-
             list->last = last->prev;
         } else {
             list->last = NULL;

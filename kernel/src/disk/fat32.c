@@ -9,7 +9,6 @@
 
 #include <stddef.h>
 
-
 /// Buffer and bitmask used for volume mounting. When a partition on the MSD 
 /// contains a valid FAT32 file system, a FAT32 volume is dynamically allocated
 /// and added to the linked list with base `volume_base`. The bitmask ensures 

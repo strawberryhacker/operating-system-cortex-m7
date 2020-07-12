@@ -7,20 +7,31 @@
 #include "panic.h"
 #include "gpio.h"
 #include "print.h"
+#include "syscall.h"
 
 #include <stddef.h>
 
+/// These are shared global variables with the `context.s` file which uses these
+/// to switch threads. Before the context switch `curr_thread` must point to 
+/// the current running thread and `next_thread` must point to the next thread
+/// to run. After the context switch `curr_thread` will point to the same thread
+/// as `next_thread`
 volatile struct thread* curr_thread;
 volatile struct thread* next_thread;
 
-/// Scheduler status
+/// Scheduler status tells if the core scheduler is allowed to run
 volatile u8 scheduler_status;
 
-/// Main CPU runqueue structure
+/// Main runqueue structure
 struct rq cpu_rq = {0};
 
-/// Knernel tick will increment each time the SysTick handler runs
+/// The tick variable holds the number of CPU cycles since program start. The
+/// reason it doesn't count milliseconds is the time-error from threads that 
+/// reschedule early in their time frame
 volatile u64 tick = 0;
+
+/// The kernel calculates statistics per second basis. The `stats_tick` are used 
+/// to keep track of when to calculate these staticstics.
 volatile u64 stats_tick = 0;
 volatile u32 reschedule_pending = 0;
 
@@ -29,18 +40,21 @@ volatile u32 reschedule_pending = 0;
 /// places the thread function in the LR. This will start executing the first
 /// thread
 void scheduler_run(void);
-
 extern struct thread* new_thread(struct thread_info* thread_info);
 
+/// The `idle_thread` is enqueued by the scheduler into the idle scheduling 
+/// class
 static void idle_thread(void* arg) {
 	while (1);
 }
 
-/// Iterates through all the scheduling classes and picks the next thread to run
+/// This is the main core scheduler that picks the next thread to run on the 
+/// system. It query all the scheduling classes in priority order and return 
+/// the first thread given. The last scheduling class `idle` must allways have
+/// a thread to offer.
 static struct thread* core_scheduler(void) {
-
-	const struct scheduling_class* class = &rt_class;
-
+	// The highest priority scheduler is the real time scheduler
+	const struct scheduling_class* class;
 	for (class = &rt_class; class != NULL; class = class->next) {
 		struct thread* thread = class->pick_thread(&cpu_rq);
 
@@ -49,7 +63,6 @@ static struct thread* core_scheduler(void) {
 		}
 	}
 	panic("Core scheduler error");
-	
 	return NULL;
 }
 
@@ -62,10 +75,11 @@ void scheduler_start(void) {
 	pendsv_set_priority(NVIC_PRI_7);
 	svc_set_priority(NVIC_PRI_5);
 
-	// Enable the scheduler to run
+	// Allow the scheduler to run
 	scheduler_status = 1;
+	cpu_rq.tick_to_wake = 0;
 	
-	// Add the IDLE to the list
+	// Add the IDLE thread to the system
 	struct thread_info idle_info = {
 		.name       = "Idle",
 		.stack_size = 100,
@@ -76,10 +90,6 @@ void scheduler_start(void) {
 
 	// Make the idle and test thread
 	cpu_rq.idle = new_thread(&idle_info);
-
-	cpsid_f();
-	systick_set_rvr(SYSTICK_RVR);
-	systick_enable(1);
 
 	// The `scheduler_run` does not care about the `curr_thread`. However it 
 	// MUST be set in order for the cotext switch to work. If the `curr_thread`
@@ -92,13 +102,20 @@ void scheduler_start(void) {
 		panic("Idle not present");
 	}
 
+	// Disable interrupt and enable the systick. When the `scheduler_run`
+	// assembly code turns on fault exceptions at the very end, systick
+	// exceptions will start to fire
+	cpsid_f();
+	systick_set_rvr(SYSTICK_RVR);
+	systick_enable(1);
+
 	// Start executing the first thread
 	scheduler_run();
 }
 
 static void process_expired_delays(void) {
-	// Go over the delay queue and move threads with expired delays back into 
-	// the running queue
+	// Go over the delay queue and and enqueue all expired thread in their 
+	// scheduling class
 	struct dlist_node* iter = cpu_rq.sleep_q.first;
 
 	while (iter) {

@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-/// Double linked generic list interface
+/// Generic double linked list interface
 
 /// A `dlist` node has a pointer in both directions. If the node is free i.e.
 /// not used in a list, both pointer MUST be set to NULL. The `obj` can be used 
