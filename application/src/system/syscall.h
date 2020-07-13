@@ -1,3 +1,5 @@
+/// Copyright (C) StrawberryHacker
+
 #ifndef SYSCALL_H
 #define SYSCALL_H
 
@@ -6,19 +8,18 @@
 
 enum physmem_e {
     SRAM,
-    DRAM_BANK_1,
-    DRAM_BANK_2_1k,
-    DRAM_BANK_2_4k
+    DRAM_BANK_1
 };
 
 #define NAKED __attribute__((naked))
+#define INLINE __attribute__((allways_inline))
 
-void syscall_thread_sleep(u32 ms) NAKED;
+void NAKED INLINE syscall_thread_sleep(u32 ms);
 
-void syscall_gpio_toggle(gpio_reg* port, u8 pin) NAKED;
+void NAKED INLINE syscall_gpio_toggle(gpio_reg* port, u8 pin);
 
-void* syscall_mm_alloc(u32 size, enum physmem_e region) NAKED;
+void* NAKED INLINE syscall_mm_alloc(u32 size, enum physmem_e region);
 
-void syscall_mm_free(void* ptr) NAKED;
+void NAKED INLINE syscall_mm_free(void* ptr);
 
 #endif
