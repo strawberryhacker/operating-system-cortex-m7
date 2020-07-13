@@ -12,5 +12,10 @@ int main(void) {
     // docmentation before implementing apps. 
     // ====================================================================
 
+    while (1) {
+        syscall_thread_sleep(500);
+        syscall_gpio_toggle(GPIOC, 8);
+    }
+
     return 1;
  }

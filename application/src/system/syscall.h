@@ -12,14 +12,14 @@ enum physmem_e {
 };
 
 #define NAKED __attribute__((naked))
-#define INLINE __attribute__((allways_inline))
+#define NOINLINE __attribute__((noinline))
 
-void NAKED INLINE syscall_thread_sleep(u32 ms);
+void NAKED NOINLINE syscall_thread_sleep(u32 ms);
 
-void NAKED INLINE syscall_gpio_toggle(gpio_reg* port, u8 pin);
+void NAKED NOINLINE syscall_gpio_toggle(gpio_reg* port, u8 pin);
 
-void* NAKED INLINE syscall_mm_alloc(u32 size, enum physmem_e region);
+void* NAKED NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region);
 
-void NAKED INLINE syscall_mm_free(void* ptr);
+void NAKED NOINLINE syscall_mm_free(void* ptr);
 
 #endif

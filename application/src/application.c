@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-#define NAME       "Print application"
+#define NAME       "Example application"
 #define SCHEDULER  REAL_TIME
 #define STACK_SIZE 200
 
