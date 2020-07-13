@@ -59,7 +59,7 @@ u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
 /// Adds a new thread to the sceduler and enqueues is using its designated
 /// scheduling class
 struct thread* new_thread(struct thread_info* thread_info) {
-
+    static u8 count = 0;
     suspend_scheduler();
 
     // Compute how many 1k pages are needed to store the stack and the thread

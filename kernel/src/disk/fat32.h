@@ -215,6 +215,9 @@ void fat32_thread(void* arg);
 u8 disk_mount(enum disk disk);
 u8 disk_eject(enum disk disk);
 
+/// Prints the info structure to the console
+void fat_print_info(struct info* info);
+
 /// Volume functions
 struct volume* volume_get_first(void);
 struct volume* volume_get(char letter);

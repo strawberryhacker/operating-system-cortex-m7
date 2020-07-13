@@ -44,6 +44,8 @@ void svc_handler_ext(u32* stack_ptr) {
     // argument is *PC - 2
     u8 svc = *((u8 *)stack_ptr[6] - 2);
 
+    print("SVC: %d\n", svc);
+
     switch (svc) {
         case 1 : {
             thread_sleep((u64)stack_ptr[0]);
@@ -54,11 +56,13 @@ void svc_handler_ext(u32* stack_ptr) {
             break;
         } 
         case 3 : {
+            panic("Warning");
             stack_ptr[0] = (u32)mm_alloc(stack_ptr[0], 
                 (enum physmem_e)stack_ptr[1]);
             break;
         }
         case 4 : {
+            panic("Warning");
             mm_free((void *)stack_ptr[0]);
             break;
         }

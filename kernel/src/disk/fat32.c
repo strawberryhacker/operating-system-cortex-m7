@@ -70,7 +70,6 @@ static inline u32 fat_sect_to_clust(struct volume* vol, u32 sect);
 static inline u32 fat_clust_to_sect(struct volume* vol, u32 clust);
 static fstatus fat_follow_path(struct dir* dir, const char* path, u32 length);
 static fstatus fat_get_vol_label(struct volume* vol, char* label);
-static void fat_print_info(struct info* info);
 static u8 fat_file_addr_resolve(struct file* file);
 fstatus fat_make_entry_chain(struct dir* dir, u8 entry_cnt);
 static void fat_print_status(fstatus status);
@@ -793,7 +792,7 @@ static fstatus fat_get_vol_label(struct volume* vol, char* label) {
 
 /// Remove
 /// Print directory information
-static void fat_print_info(struct info* info) {
+void fat_print_info(struct info* info) {
 	print(BLUE);
 	u32 size = info->size;
 	char ext = 0;	
