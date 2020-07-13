@@ -8,8 +8,6 @@ MEMORY {
     ram (rwx) : ORIGIN = 0x00000000, LENGTH = 0x00010000 /* 65 KiB */
 }
 
-STACK_SIZE = 8192;
-
 ENTRY(main)
 
 SECTIONS {
@@ -117,16 +115,6 @@ SECTIONS {
         *(.bss*)
         . = ALIGN(4);
         _bss_e = .;
-    } > ram
-
-
-    /* Stack */
-    .stack (NOLOAD) : {
-        . = ALIGN(8);
-        _stack_s = .;
-        . = . + STACK_SIZE;
-        . = ALIGN(8);
-        _stack_e = .;
     } > ram
 
     _end = .;

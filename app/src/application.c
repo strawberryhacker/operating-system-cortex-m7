@@ -1,12 +1,14 @@
 #include "types.h"
 
+#define NAME       "Print application"
+#define STACK_SIZE 200
+#define SCHEDULER  REAL_TIME
+
 extern u32 _got_s;
 extern u32 _got_e;
 extern u32 _plt_s;
 extern u32 _plt_e;
 extern u32 _end;
-
-int main(void);
 
 enum sched_class {
     REAL_TIME,
@@ -31,16 +33,27 @@ struct app_info {
     enum sched_class scheduler;
 };
 
-volatile struct app_info app_info __attribute__((section(".app_info"))) = {
-    .end = (u32 *)&(_end),
-    .stack = 0x200,
-    .name = "Application",
-    .scheduler = REAL_TIME,
-    .entry = (u32 *)main,
+int main(void);
 
-    // Dynmamic linking variables is retrieved from from the linker section
+void __libc_init_array(void);
+
+static void app_startup(void* arg);
+
+volatile struct app_info app_info __attribute__((section(".app_info"))) = {
+    .end       = (u32 *)&(_end),
+    .stack     = STACK_SIZE,
+    .name      = NAME,
+    .scheduler = SCHEDULER,
+    .entry     = (u32 *)app_startup,
+
     .got_start = (u32 *)&_got_s,
     .got_end   = (u32 *)&_got_e,
     .plt_start = (u32 *)&_plt_s,
     .plt_end   = (u32 *)&_plt_e
 };
+
+static void app_startup(void* arg) {
+    __libc_init_array();
+
+    main();
+}

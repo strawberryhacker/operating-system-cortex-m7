@@ -3,7 +3,7 @@
 TOP = $(shell pwd)
 
 BUILDDIR = $(TOP)/build
-TARGET_NAME = app
+TARGET_NAME = application
 
 # Compilers
 CC      = arm-none-eabi-gcc
@@ -33,7 +33,7 @@ ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 SRC +=
 
 obj-y += /src/main.c
-obj-y += /src/app_info.c
+obj-y += /src/application.c
 
 system-y += /src/system/syscall.c
 
