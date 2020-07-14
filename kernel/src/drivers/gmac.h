@@ -1,7 +1,9 @@
+/* Copyright (C) StrawberryHacker */
+
 #ifndef GMAC_H
 #define GMAC_H
 
-/// Gigabit ethernet chip driver
+/* Gigabit ethernet chip driver */
 
 #include "types.h"
 

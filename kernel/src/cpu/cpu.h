@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef CPU_H
 #define CPU_H
@@ -8,68 +8,92 @@
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(x) __attribute__((aligned((x))))
 
-/// Data synchronization barrier
+/*
+ * Data synchronization barrier
+ */
 static inline void dsb(void) {
 	asm volatile ("dsb sy" : : : "memory");
 }
 
-/// Data memory barrier
+/*
+ * Data memory barrier
+ */
 static inline void dmb(void) {
 	asm volatile ("dsb sy" : : : "memory");
 }
 
-/// Instructions synchronization barrier
+/*
+ * Instructions synchronization barrier
+ */
 static inline void isb(void) {
 	asm volatile ("dsb sy" : : : "memory");
 }
 
-/// Enable interrupts with configurable priority
+/*
+ * Enable interrupts with configurable priority
+ */
 static inline void cpsie_i(void) {
 	asm volatile ("cpsie i" : : : "memory");
 }
 
-/// Disable interrupts with configurable priority
+/*
+ * Disable interrupts with configurable priority
+ */
 static inline void cpsid_i(void) {
 	asm volatile ("cpsid i" : : : "memory");
 }
 
-/// Enable all interrupts except NMI
+/*
+ * Enable all interrupts except NMI
+ */
 static inline void cpsie_f(void) {
 	asm volatile ("cpsie f" : : : "memory");
 }
 
-/// Disable all interrupts except NMI
+/*
+ * Disable all interrupts except NMI
+ */
 static inline void cpsid_f(void) {
 	asm volatile ("cpsid f" : : : "memory");
 }
 
-/// Sets the interrupt base priority
+/*
+ * Sets the interrupt base priority
+ */
 static inline void cpu_set_basepri(u32 pri) {
 	asm volatile ("msr basepri, %0" : : "r"(pri) : "memory");
 }
 
-/// Gets the interrupt base priority
+/*
+ * Gets the interrupt base priority
+ */
 static inline u32 cpu_get_basepri(void) {
 	u32 basepri;
 	asm volatile ("mrs %0, basepri" : "=r"(basepri));
 	return basepri;
 }
 
-/// Gets the interrupt base priority
+/*
+ * Gets the interrupt base priority
+ */
 static inline u32 cpu_get_psp(void) {
 	u32 psp;
 	asm volatile ("mrs %0, psp" : "=r"(psp));
 	return psp;
 }
 
-/// Gets the interrupt base priority
+/*
+ * Gets the interrupt base priority
+ */
 static inline u32 cpu_get_msp(void) {
 	u32 msp;
 	asm volatile ("mrs %0, msp" : "=r"(msp));
 	return msp;
 }
 
-/// Functions for getting the processor registers
+/*
+ * Functions for getting the processor registers
+ */
 __attribute__((always_inline)) static inline u32 cpu_get_r0(void) {
     register u32 res;
     asm volatile ("mov %0, r0 \n\t" : "=r" (res));

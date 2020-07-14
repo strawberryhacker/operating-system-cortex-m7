@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "background.h"
 #include "scheduler.h"
@@ -24,7 +24,9 @@ static void background_dequeue(struct thread* thread, struct rq* rq) {
     dlist_remove(&thread->rq_node, &rq->background_rq);
 }
 
-/// Background scheduling class
+/* 
+ * Background scheduling class
+ */
 const struct scheduling_class background_class = {
     .next        = &idle_class,
     .pick_thread = background_pick_thread,

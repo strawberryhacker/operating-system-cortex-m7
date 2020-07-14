@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "panic.h"
 #include "gpio.h"
@@ -89,14 +89,16 @@ static inline __attribute__((always_inline)) void print_memory_fault(void) {
     }
 }
 
-/// Print the reason for the hard fault to the console
+/*
+ * Print the reason for the hard fault to the console
+ */
 void print_hard_fault(void) {
     u32 hard_fault_status = SCB->HFSR;
 
     if (hard_fault_status & (1 << 30)) {
         printl("Forced hard fault escalated from a none servicable fault handler");
     }
-    // This fault is allways handled by the hard fault execption
+    /* This fault is allways handled by the hard fault execption */
     if (hard_fault_status & (1 << 1)) {
         printl("Bus fault during vector table read");
     }
@@ -120,11 +122,14 @@ void usage_fault(void) {
     panic("Usage fault");
 }
 
-/// The hard fault status register can indicate the reason the the fault. Bit
-/// 30 indicates a forced hard fault, generated  by escalating a fault with 
-/// configurable priority which can not be served. When this bit is set the
-/// hard fault handler must read the status registers of the other fault 
-/// exceptions to determine what caused the fault.
+/*
+ * The hard fault status register can indicate the reason the the
+ * fault. Bit 30 indicates a forced hard fault, generated  by
+ * escalating a fault with configurable priority which can not be
+ * served. When this bit is set the hard fault handler must read
+ * the status registers of the other fault exceptions to determine
+ * what caused the fault.
+ */
 void hard_fault(u32* stack_pointer) {
     cpsid_f();
 
@@ -155,6 +160,6 @@ void hard_fault(u32* stack_pointer) {
     printl("LR:  0x%4h", cpu_get_lr());
     printl("PC:  0x%4h\n" ANSI_NORMAL, cpu_get_pc());
 
-    // We want to stop execution here
+    /* We want to stop execution here */
     panic("Hard fault");
 }

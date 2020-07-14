@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "rt.h"
 #include "scheduler.h"
@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 static struct thread* rt_pick_thread(struct rq* rq) {
-    // Returns the first item in the `rt_rq`
+    /* Returns the first item in the `rt_rq` */
     if (rq->rt_rq.first == NULL) {
         return NULL;
     }
@@ -24,7 +24,7 @@ static void rt_dequeue(struct thread* thread, struct rq* rq) {
     dlist_remove(&thread->rq_node, &rq->rt_rq);
 }
 
-/// Real-time scheduling class
+/* Real-time scheduling class */
 const struct scheduling_class rt_class = {
     .next        = &app_class,
     .pick_thread = rt_pick_thread,

@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef MMC_H
 #define MMC_H
@@ -18,7 +18,9 @@ enum mmc_dma_chunk {
     MMC_CHUNK_16
 };
 
-/// Some CMD register defines used in the SD protocol
+/*
+ * Some CMD register defines used in the SD protocol
+ */
 #define MMC_CMD_READ        (1 << 18)
 #define MMC_CMD_WRITE       (0 << 18)
 

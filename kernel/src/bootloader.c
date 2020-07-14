@@ -9,27 +9,29 @@
 #include "memory.h"
 
 struct image_info {
-    // Version numer of the kernel
+    /* Version numer of the kernel */
     u32 major_version;
     u32 minor_version;
 
-    // Start address of the bootlaoder
+    /* Start address of the bootlaoder */
     u32 bootloader_start;
 
-    // The total size allocated to the bootlaoder. This includes the two special
-    // structures 
+    /* 
+     * The total size allocated to the bootlaoder. This includes the
+     * two special structures
+     */
     u32 bootloader_size;
 
-    // Specifies where the bootloader info table is stored
+    /* Specifies where the bootloader info table is stored */
     u32 bootloader_info;
 
-    // Start address of the kernel
+    /* Start address of the kernel */
     u32 kernel_start;
 
-    // The allocated size for the kernel
+    /* The allocated size for the kernel */
     u32 kernel_size;
 
-    // Specifies where the kernel info is stored
+    /* Specifies where the kernel info is stored */
     u32 kernel_info;
 };
 
@@ -51,11 +53,11 @@ __image_info__ struct image_info image_info = {
 void bootloader_init(void) {
     serial_init();
 
-    // Grab the bootlaoder info section
+    /* Grab the bootlaoder info section */
     const struct image_info* info = 
         (const struct image_info *)image_info.bootloader_info;
 
-    // Print the bootloader and kernel version
+    /* Print the bootloader and kernel version */
     printl(ANSI_NORMAL "\n\n\n\nUsing Vanilla bootloader" ANSI_GREEN " v%d.%d" ANSI_NORMAL,
         info->major_version, info->minor_version);
 
@@ -73,7 +75,7 @@ void usart0_handler(void) {
 		memory_copy("StayInBootloader", boot_signature, 16);
 		dmb();
 		
-		// Perform a soft reset
+		/* Perform a soft reset */
 		cpsid_i();
 		*((u32 *)0x400E1800) = 0xA5000000 | 0b1;
 	}

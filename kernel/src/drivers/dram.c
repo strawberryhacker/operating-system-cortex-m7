@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "dram.h"
 #include "gpio.h"
@@ -20,10 +20,10 @@ static inline void dram_set_mode(enum dram_mode mode) {
 }
 
 void dram_init(void) {
-    // Enable SDRAM clock
+    /* Enable SDRAM clock */
     peripheral_clock_enable(62);
 
-    // Initialize all SDRAM pins
+    /* Initialize all SDRAM pins */
     gpio_set_function(GPIOC, 20, GPIO_FUNC_A);
 	gpio_set_function(GPIOC, 21, GPIO_FUNC_A);
 	gpio_set_function(GPIOC, 22, GPIO_FUNC_A);
@@ -69,40 +69,42 @@ void dram_init(void) {
     volatile u16* dram_addr = (volatile u16 *)0x70000000;
     volatile uint32_t i;
 	
-	// Start of initialization process. Refer to data sheet
-	// Set chip select 1 to SDRAM in the bus MATRIX
+	/*
+	 * Start of initialization process. Refer to data sheet. Set
+	 * chip select 1 to SDRAM in the bus MATRIX
+	 */
 	matrix_cs_init(CS1_SDRAM, 0, 0, 0);
 	
-	// Step 1
-	// Write CR and CFR1 register
+	/* Step 1 */
+	/* Write CR and CFR1 register */
 	DRAM->CR   = 0xF955D5E0;
 	DRAM->CFR1 = 0x00000102;
 	
-	// Step 2
-	// Configure low power register
+	/* Step 2 */
+	/* Configure low power register */
 	DRAM->LPR = 0x00;
 	
-	// Step 3
-	// Select SDRAM memory type
+	/* Step 3 */
+	/* Select SDRAM memory type */
 	DRAM->MDR = 0;
 	
-	// Step 4
-	// Pause of 200 us
+	/* Step 4 */
+	/* Pause of 200 us */
 	for (i = 0; i < ((150000000 / 1000000) * 200 / 6); i++);
 	
-	// Step 5
-	// Issue a NOP command and perform any write operation
+	/* Step 5 */
+	/* Issue a NOP command and perform any write operation */
 	dram_set_mode(DRAM_MODE_NOP);
 	*dram_addr = 0x00;
 	
-	// Step 6
-	// Charge all banks
+	/* Step 6 */
+	/* Charge all banks */
 	dram_set_mode(DRAM_MODE_PRECHARGE);
 	*dram_addr = 0x00;
 	for (i = 0; i < ((150000000 / 1000000) * 200 / 6); i++);
 	
-	// Step 7
-	// Perform eight auto refresh
+	/* Step 7 */
+	/* Perform eight auto refresh */
 	dram_set_mode(DRAM_MODE_REFRESH);
 	*dram_addr = 0x01;
 	dram_set_mode(DRAM_MODE_REFRESH);
@@ -120,18 +122,18 @@ void dram_init(void) {
 	dram_set_mode(DRAM_MODE_REFRESH);
 	*dram_addr = 0x08;
 	
-	// Step 8
+	/* Step 8 */
 	dram_set_mode(DRAM_MODE_LOAD_MR);
 	*((uint16_t *)(dram_addr + 0x30)) = 0xfefa;
 	for (i = 0; i < ((150000000 / 1000000) * 200 / 6); i++);
 
 	
-	//step 10
-	//go into normal mode
+	/* Step 10 */
+	/* Go into normal mode */
 	dram_set_mode(DRAM_MODE_NORMAL);
 	*dram_addr = 0x00;
 	
-	//step 11
+	/* Step 11 */
 	i = 150000000 / 1000;
 	i *= 15625;
 	i /= 1000000;

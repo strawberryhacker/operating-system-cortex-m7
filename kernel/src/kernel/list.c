@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "list.h"
 #include "panic.h"
@@ -19,7 +19,7 @@ void list_insert_last(struct list_node* node, struct list* list) {
             iter = iter->next;
         }
 
-        // The `iter` is pointing to the last list element
+        /* The `iter` is pointing to the last list element */
         node->next = iter->next;
         iter->next = node;
     } else {

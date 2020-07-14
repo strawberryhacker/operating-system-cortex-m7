@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "app.h"
 #include "scheduler.h"
@@ -24,7 +24,9 @@ static void app_dequeue(struct thread* thread, struct rq* rq) {
     dlist_remove(&thread->rq_node, &rq->app_rq);
 }
 
-/// Application scheduling class
+/*
+ * Application scheduling class
+ */
 const struct scheduling_class app_class = {
     .next        = &background_class,
     .pick_thread = app_pick_thread,

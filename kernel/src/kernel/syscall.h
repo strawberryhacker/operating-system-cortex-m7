@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef SYSTEM_CALL_H
 #define SYSTEM_CALL_H

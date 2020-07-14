@@ -1,11 +1,11 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef PRINT_H
 #define PRINT_H
 
 #include "types.h"
 
-/// ANSI escape codes allow to print in colors
+/* ANSI escape codes allow to print in colors */
 #define ANSI_RED     "\033[31m"
 #define ANSI_NORMAL  "\033[0m"
 #define ANSI_GREEN   "\033[32m"

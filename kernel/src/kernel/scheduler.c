@@ -66,6 +66,7 @@ static void idle_thread(void* arg) {
  * `idle` must allways have a thread to offer.
  */
 static struct thread* core_scheduler(void) {
+	
 	/* The highest priority scheduler is the real time scheduler */
 	const struct scheduling_class* class;
 	for (class = &rt_class; class != NULL; class = class->next) {
@@ -197,6 +198,7 @@ void systick_handler(void) {
 		u64 curr_runtime;
 		if (reschedule_pending) {
 			reschedule_pending = 0;
+
 			/* Calculate the runtime */
 			u32 cvr = systick_get_cvr();
 			curr_runtime = (u64)(SYSTICK_RVR - cvr);

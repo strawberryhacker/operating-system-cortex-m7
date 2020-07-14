@@ -1,39 +1,43 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "mmc.h"
 #include "hardware.h"
 #include "panic.h"
 #include "print.h"
 
-/// The high-speed multimedia card interface uses a special message based
-/// protocol. Each message is represented as one of the following tokens;
-/// command, response and data. The command and response is transferred 
-/// serially on the CMD line while the data is transferred on the data lanes.
-///
-/// Some important concepts:
-/// The read and write proof allows for stooping the MMC clock if the internal
-/// FIFO is full. The CRC check must not be concidered in SEND_OP_COND as this
-/// CRC is allways wrong. 
+/*
+ * The high-speed multimedia card interface uses a special message based
+ * protocol. Each message is represented as one of the following tokens;
+ * command, response and data. The command and response is transferred 
+ * serially on the CMD line while the data is transferred on the data lanes.
+ *
+ * Some important concepts:
+ * The read and write proof allows for stooping the MMC clock if the
+ * internal FIFO is full. The CRC check must not be concidered in
+ * SEND_OP_COND as this CRC is allways wrong. 
+ */
 
 void mmc_init(void) {
 
-    // Using the default configuration
+    /* Using the default configuration */
     MMC->MR &= ~0xFF00;
 
-    // Turn on read and write proof. This guaranties data integrity, not 
-    // bandwidth,  by stopping the MMC clock if the internal FIFO is full
+    /*
+     * Turn on read and write proof. This guaranties data integrity, not 
+     * bandwidth,  by stopping the MMC clock if the internal FIFO is full
+     */
     MMC->MR |= (1 << 11) | (1 << 12);
 
-    // Set the timeouts
+    /* Set the timeouts */
     MMC->DTOR  = (7 << 4) | (3 << 0);
     MMC->CSTOR = (7 << 4) | (3 << 0);
     
-    // Configuration register - enable FIFO mode and flow error reset
+    /* Configuration register - enable FIFO mode and flow error reset */
     MMC->CFG = (1 << 0) | (1 << 4);
 }
 
 void mmc_reset(void) {
-    // Store the state
+    /* Store the state */
     u32 mr = MMC->MR;
     u32 dtor = MMC->DTOR;
     u32 sdcr = MMC->SDCR;
@@ -42,7 +46,7 @@ void mmc_reset(void) {
     
     MMC->CR = (1 << 7);
 
-    // Restore the state
+    /* Restore the state */
     MMC->MR = mr;
     MMC->DTOR = dtor;
     MMC->SDCR = sdcr;
@@ -58,12 +62,12 @@ void mmc_disable(void) {
     MMC->CR = 0b10;
 }
 
-/// The peripheral clock MUST run at 150 MHz
+/* The peripheral clock MUST run at 150 MHz */
 void mmc_set_bus_freq(u32 frequency) {
     u8 div = 0;
     u8 odd = 0;
 
-    // The bus clock is 2 x DIV + ODD + 2
+    /* The bus clock is 2 x DIV + ODD + 2 */
     if (2 * frequency < 150000000) {
         u32 prescaler = 150000000 / frequency - 2;
         
@@ -78,7 +82,9 @@ void mmc_set_bus_freq(u32 frequency) {
     MMC->MR |= (odd << 16) | div;
 }
 
-/// The MMC interface only support 1 and 4 bit busses
+/*
+ * The MMC interface only support 1 and 4 bit busses
+ */
 void mmc_set_bus_width(enum mmc_bus_width width) {
     MMC->SDCR &= ~(0b11 << 6);
     MMC->SDCR |= (width << 6);
@@ -103,7 +109,7 @@ void mmc_dma_disable(void) {
 }
 
 u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
-    // The transfer is initiated right after the CMD register is written
+    /* The transfer is initiated right after the CMD register is written */
     MMC->ARG = arg;
     MMC->CMD = cmd;
 
@@ -111,12 +117,14 @@ u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
     do {
         status = MMC->SR;
 
-        // Check for the following errors
-        // - Response index error
-		// - Response direction error
-		// - Response end bit error
-		// - Response time out error
-		// - Completion signal timeout
+        /*
+         * Check for the following errors
+         * - Response index error
+		 * - Response direction error
+		 * - Response end bit error
+		 * - Response time out error
+		 * - Completion signal timeout
+         */
         if (status & ((1 << 16) | (1 << 17) | (1 << 19) | (1 << 20) |
             (1 << 23))) {
             
@@ -129,10 +137,12 @@ u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
         }
     } while (!(status & 0b1));
 
-    // If the expected response is R1b, the card is busy and should not be given
-    // any more work util ready
+    /*
+     * If the expected response is R1b, the card is busy and should
+     * not be given any more work util ready
+     */
     if (((cmd >> 6) & 0b11) == 3) {
-        // Response is R1b
+        /* Response is R1b */
         u32 timeout = 0xFFFFFFFF;
         do {
             if (timeout-- <= 1) {
@@ -146,24 +156,24 @@ u8 mmc_send_cmd(u32 cmd, u32 arg, u8 check_crc) {
 
 u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc) {
 
-    // Turn on read and write proof
+    /* Turn on read and write proof */
     MMC->MR |= (1 << 11) | (1 << 12);
 
-    // Check if force byte transfer has to be used
+    /* Check if force byte transfer has to be used */
     if (block_size & 0b11) {
         MMC->MR |= (1 << 13);
     } else {
         MMC->MR &= ~(1 << 13);
     }
 
-    // Check if the MMC has to perform simple byte transfer
+    /* Check if the MMC has to perform simple byte transfer */
     if (((cmd >> 19) & 0b111) == 4) {
         MMC->BLKR = (block_size % 512) & 0xFFFF;
     } else {
         MMC->BLKR = (block_size << 16) | (block_count & 0xFFFF);
     }
     
-    // Initiate transfer
+    /* Initiate transfer */
     MMC->ARG = arg;
     MMC->CMD = cmd;
 
@@ -172,7 +182,7 @@ u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc
         status = MMC->SR;
     } while (!(status & 0b1));
 
-    // Check error flags
+    /* Check error flags */
     if (status & 0x21FB0000) {
         print("Reg: %32b\n", status & 0x21FB0000);
         panic("CMD failed");
@@ -180,17 +190,19 @@ u8 mmc_send_adtc(u32 cmd, u32 arg, u32 block_size, u32 block_count, u8 check_crc
     }
 
     if (check_crc) {
-        // Check for CRC error
+        /* Check for CRC error */
         if (status & (1 << 18)) {
             panic("CMD failed CRC error");
             return 0;
         }
     }
 
-    // If the expected response is R1b, the card is busy and should not be given
-    // any more work util ready
+    /*
+     * If the expected response is R1b, the card is busy and should
+     * not be given any more work util ready
+     */
     if (((cmd >> 6) & 0b11) == 3) {
-        // Response is R1b
+        /* Response is R1b */
         u32 timeout = 0xFFFFFFFF;
         do {
             if (timeout-- <= 1) {
@@ -230,12 +242,12 @@ u32 mmc_read_data(void) {
 
 void mmc_read_data_reverse(u8* buffer, u32 word_count) {
     for (uint8_t i = 0; i < word_count; i++) {
-        // Wait for data to appear in the RX register
+        /* Wait for data to appear in the RX register */
         while (!(MMC->SR & (1 << 1)));
 
         u32 reg = MMC->RDR;
 
-		// Remap the bytes
+		/* Remap the bytes */
 		buffer[((4 * word_count) - 1) - 4*i]       = (reg >> 0) & 0xFF;
 		buffer[((4 * word_count) - 1) - (4*i + 1)] = (reg >> 8) & 0xFF;
 		buffer[((4 * word_count) - 1) - (4*i + 2)] = (reg >> 16) & 0xFF;
@@ -244,7 +256,7 @@ void mmc_read_data_reverse(u8* buffer, u32 word_count) {
 }
 
 void mmc_write_data(u32 data) {
-    // Wait for the TX ready flag
+    /* Wait for the TX ready flag */
     while (!(MMC->SR & (1 << 2)));
     MMC->TDR = data;
 }

@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "idle.h"
 #include "scheduler.h"
@@ -21,7 +21,7 @@ static void idle_dequeue(struct thread* thread, struct rq* rq) {
     
 }
 
-/// Idle scheduling class
+/* Idle scheduling class */
 const struct scheduling_class idle_class = {
     .next        = NULL,
     .pick_thread = idle_pick_thread,

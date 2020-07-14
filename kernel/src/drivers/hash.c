@@ -1,11 +1,13 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "hash.h"
 #include "hardware.h"
 #include "panic.h"
 
-/// This descriptor describes ICM block number `1`. It must be aligned by 
-/// 512-bit
+/*
+ * This descriptor describes ICM block number `1`. It must be aligned
+ * by 512-bit
+ */
 __attribute__((__aligned__(64))) struct icm_desc hash_descriptor;
 
 enum icm_algorithm {
@@ -15,10 +17,10 @@ enum icm_algorithm {
 };
 
 struct icm_s {
-	// Sets the SHA algorithm
+	/* Sets the SHA algorithm */
 	enum icm_algorithm algorithm;
 	
-	// 4-bit setting the delay cylces between bursts
+	/* 4-bit setting the delay cylces between bursts */
 	u8 bus_utilization : 4;
 	
 	u8 custom_initial_hash : 1;
@@ -30,7 +32,7 @@ struct icm_s {
 };
 
 struct icm_desc {
-	// Start address of the current block
+	/* Start address of the current block */
 	u32 start_addr;
 	u32 cfg;
 	u32 size;
@@ -40,8 +42,10 @@ struct icm_desc {
 void hash256_generate(const void* data, u32 size, u8* hash) {
 	ICM->CTRL = (1 << 2);
 	
-	// Write configuration register. SHA256, secondary list branch disable
-	// and custom initial hash
+	/*
+	 * Write configuration register. SHA256, secondary list branc
+	 * disable and custom initial hash
+	 */
 	ICM->CFG = (1 << 2) | (1 << 13);
 	
 	hash_descriptor.start_addr = (u32)data;
