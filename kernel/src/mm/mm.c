@@ -294,7 +294,6 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
  * size might still be padded according to the physical memory settings
  */
 void* mm_alloc(u32 size, enum physmem_e region) {
-    print(ANSI_RED "Alloc: %d\n" ANSI_NORMAL, size);
     // The 1k and 4k physical memories are reserved
     if ((region == DRAM_BANK_2_4k) || (region == DRAM_BANK_2_1k)) {
         panic("Wrong parameter");

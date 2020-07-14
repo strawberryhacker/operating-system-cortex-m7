@@ -136,7 +136,7 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	default_handler
+	.word	timer0_ch0_handler  /* Timer 0 */
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -224,3 +224,6 @@ Vector_table:
 
 	.weak gmac_handler
 	.thumb_set gmac_handler, default_handler
+
+	.weak timer0_ch0_handler
+	.thumb_set timer0_ch0_handler, default_handler

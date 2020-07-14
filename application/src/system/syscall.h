@@ -22,4 +22,8 @@ void* NAKED NOINLINE syscall_mm_alloc(u32 size, enum physmem_e region);
 
 void NAKED NOINLINE syscall_mm_free(void* ptr);
 
+void NAKED NOINLINE syscall_print_byte(u8 data);
+
+u8 NAKED NOINLINE syscall_print_get_status(void);
+
 #endif

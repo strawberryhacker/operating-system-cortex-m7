@@ -125,7 +125,7 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	timer0_ch0_handler
+	.word	timer0_ch0_handler  // Timer 0
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler

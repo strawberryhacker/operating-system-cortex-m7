@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-#define NAME       "Example application"
+#define NAME       "Tictactoe"
 #define SCHEDULER  REAL_TIME
 #define STACK_SIZE 200
 

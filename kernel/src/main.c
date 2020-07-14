@@ -12,10 +12,12 @@
 #include "sd.h"
 #include "dynamic_linker.h"
 #include "run.h"
+#include "bootloader.h"
 
 #include <stddef.h>
 
 extern struct rq cpu_rq;
+extern volatile struct frame frame;
 
 static void blink_thread(void* arg) {
 
@@ -52,6 +54,38 @@ static void test(void* arg) {
 	}
 }
 
+static void frame_thread(void* arg) {
+	/*
+	 * CMD_ALLOCATE_MEM = 0x01
+     * CMD_BINARY       = 0x02
+     * CMD_BINARY_LAST  = 0x03
+	 */
+	u8* binary_buffer = 0;
+	u8* buffer_ptr = 0;
+	while (1) {
+		if (check_new_frame()) {
+			print("New frame\n");
+
+			if (frame.cmd == 0x01) {
+				u32 size = *(u32 *)frame.payload;
+				print("Allocoate size: %d\n", size);
+				binary_buffer = (u8 *)mm_alloc(size, SRAM);
+				buffer_ptr = binary_buffer;
+			} else if ((frame.cmd == 0x02) || (frame.cmd == 0x03)) {
+
+				for (u32 i = 0; i < frame.size; i++) {
+					*buffer_ptr++ = frame.payload[i];
+				}
+
+				if (frame.cmd == 0x03) {
+					dynamic_linker_run((u32 *)binary_buffer);
+				}
+			}
+			send_response(RESP_OK);
+		}
+	}
+}
+
 int main(void) {
 
 	kernel_entry();
@@ -80,10 +114,22 @@ int main(void) {
 		.arg = NULL
 	};
 
+	struct thread_info frame_info = {
+		.name = "Frame",
+		.stack_size = 64,
+		.thread = frame_thread,
+		.class = REAL_TIME,
+		.arg = NULL
+	};
+
 	//new_thread(&blink_info);
 	new_thread(&fat32_info);
-	new_thread(&test_info);
-	
+	//new_thread(&test_info);
+	new_thread(&frame_info);
+
 	scheduler_start();
 
+	
+
+	while (1);
 }

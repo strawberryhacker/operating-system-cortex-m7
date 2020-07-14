@@ -55,4 +55,6 @@ u8 run_binary(const char* path) {
 
     /* Link and run the executable */
     dynamic_linker_run((u32 *)binary);
+
+    return 1;
 }

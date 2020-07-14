@@ -29,7 +29,7 @@ void kernel_entry(void) {
 	cpsid_i();
 
 	/* Enable the coprocessor 10 and 11 for the FPU
-	//((u32 *)CPACR) = (0b11 << 20) | (0b11 << 22);
+	/((u32 *)CPACR) = (0b11 << 20) | (0b11 << 22);
 	//dsb();
 	//isb();*/
 

@@ -21,3 +21,13 @@ void NAKED NOINLINE syscall_mm_free(void* ptr) {
     asm volatile ("svc #4");
     asm volatile ("bx lr");
 }
+
+void NAKED NOINLINE syscall_print_byte(u8 data) {
+    asm volatile ("svc #5 \n\t");
+    asm volatile ("bx lr");
+}
+
+u8 NAKED NOINLINE syscall_print_get_status(void) {
+    asm volatile ("svc #6 \n\t");
+    asm volatile ("bx lr");
+}

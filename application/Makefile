@@ -3,7 +3,7 @@
 TOP = $(shell pwd)
 
 BUILDDIR = $(TOP)/build
-TARGET_NAME = application
+TARGET_NAME = tictactoe
 
 # Compilers
 CC      = arm-none-eabi-gcc
