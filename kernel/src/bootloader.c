@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "bootloader.h"
 #include "sections.h"

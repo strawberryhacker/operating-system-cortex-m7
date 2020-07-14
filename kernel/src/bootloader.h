@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef BOOTLOADER_H
 #define BOOTLOADER_H
