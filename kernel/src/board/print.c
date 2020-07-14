@@ -154,3 +154,19 @@ void print_count(const char* data, u32 count) {
         usart_write(USART1, *data++);
     }
 }
+
+/*
+ * Print one byte to the console whithout checking the buffer status.
+ * The user must check for the print status before calling this
+ */
+void print_byte(u8 data) {
+    usart_write_raw(USART1, data);
+}
+
+/*
+ * Check the THR status. Returns 1 if the transmit buffer is ready for
+ * new data
+ */
+u8 print_get_status(void) {
+    return usart_get_thr_status(USART1);
+}

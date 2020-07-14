@@ -11,96 +11,79 @@
 #include "mm.h"
 #include "sd.h"
 #include "dynamic_linker.h"
+#include "run.h"
 
 #include <stddef.h>
 
 extern struct rq cpu_rq;
 
 static void blink_thread(void* arg) {
+
+	char test_print[12] = "Hello World";
 	while (1) {
 		syscall_thread_sleep(1000);
-		print("Runtime:\n");
+
+		const char* ptr = (const char *)test_print;
+		while (*ptr) {
+			u8 status;
+			do {
+				status = syscall_print_get_status();
+				syscall_thread_sleep(1);
+			} while (!status);
+
+			syscall_print_byte(*ptr);
+
+			ptr++;
+		}
+		//print("Runtime:\n");
 	}
 }
 
-static void file(void* arg) {
-	/* Configure the hardware */
-	sd_init();
-	
-	/* Wait for the SD card to be insterted */
-	while (sd_is_connected() == 0);
-	
-	if (disk_mount(DISK_SD_CARD) == 0) {
-		panic("Mounting failed");
+/*
+ * Used for testing the run binary
+ */
+static void test(void* arg) {
+	syscall_thread_sleep(1000);
+
+	run_binary("C:/bin/tictactoe.bin");
+
+	while (1) {
+
 	}
-	printl("Mounting OK");
-
-	struct volume* vol = volume_get_first();
-
-	while (vol) {
-		printl("Volume: %12s (%c:)", vol->label, vol->letter);
-		vol = vol->next;
-	}
-
-	struct dir dir;
-	struct info* info = (struct info*)mm_alloc(sizeof(struct info), SRAM);
-
-	if (info == NULL) {
-		panic("Bad ptr");
-	}
-
-	fat_dir_open(&dir, "C:/", 3);
-
-	fstatus status;
-	print("\n");
-	do {
-		status = fat_dir_read(&dir, info);
-
-		if (status == FSTATUS_OK) {
-			fat_print_info(info);
-		}
-	} while (status == FSTATUS_OK);
-
-	/* Try to open a file */
-	struct file file;
-	fat_file_open(&file, "C:/application1.bin", 19);
-	
-	u32 write_status;
-	u8* file_buffer = (u8 *)mm_alloc_4k(1);
-	
-	do {
-		fat_file_read(&file, file_buffer, 4000, &write_status);
-	} while (write_status == 4000);
-	printl("Application is loaded into memory");
-	print("App addr: %4h\n", file_buffer);
-	dynamic_linker_run((u32 *)file_buffer);
-	
-	while (1);
 }
 
 int main(void) {
 
 	kernel_entry();
 
-	struct thread_info file_info = {
+	struct thread_info fat32_info = {
 		.name       = "FAT32 thread",
 		.stack_size = 1024,
-		.thread     = file,
+		.thread     = fat32_thread,
 		.class      = REAL_TIME,
 		.arg        = NULL
 	};
 
 	struct thread_info blink_info = {
 		.name = "Blink",
-		.stack_size = 32,
+		.stack_size = 256,
 		.thread = blink_thread,
 		.class = REAL_TIME,
 		.arg = NULL
 	};
 
-	new_thread(&blink_info);
-	new_thread(&file_info);
+	struct thread_info test_info = {
+		.name = "Test",
+		.stack_size = 1024,
+		.thread = test,
+		.class = REAL_TIME,
+		.arg = NULL
+	};
 
+	//new_thread(&blink_info);
+	new_thread(&fat32_info);
+	new_thread(&test_info);
+	
 	scheduler_start();
 
 }

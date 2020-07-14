@@ -737,9 +737,9 @@ static fstatus fat_follow_path(struct dir* dir, const char* path, u32 length) {
 		// Now `frag_ptr` will point to the first character in the name
 		// fragment, and `frag_size` will contain the size
 
-		print("Searching for directory: " ANSI_NORMAL);
-		print_count(frag_ptr, frag_size);
-		print("\n");
+		//print("Searching for directory: " ANSI_NORMAL);
+		//print_count(frag_ptr, frag_size);
+		//print("\n");
 
 		// Search for a matching directory name in the current directory. If
 		// matched, the `fat_dir_search` will update the `dir` pointer as well
@@ -834,73 +834,31 @@ void fat_print_info(struct info* info) {
 /// This is the `main` functions that is used to test the file system
 void fat32_thread(void* arg) {
 	
-	// Configure the hardware
+	/* Configure the hardware */
 	sd_init();
-	
-	// Wait for the SD card to be insterted
-	while (sd_is_connected() == 0);
-	
-	// Try to mount the disk. If this is not working the disk initialize 
-	// functions may be ehh...
-	if (disk_mount(DISK_SD_CARD) == 0) {
-		panic("Mounting failed");
-	}
 
-	// Print all the volumes on the system
-	print(BLUE "Displaying system volumes:\n");
-	struct volume* vol = volume_get_first();
-	while (vol) {
-		for (u8 i = 0; i < 11; i++) {
-			if (vol->label[i]) {
-				print("%c", vol->label[i]);
-			}
-		}
-		print(" (%c:)\n", vol->letter);
-		vol = vol->next;
-	}
-	print("\n");
-	
-	
-	// List all directories
-	struct dir dir;
-	fat_dir_open(&dir, "C:", 0);
-	
-	struct info* info = (struct info *)mm_alloc(sizeof(struct info), 
-		SRAM);
-
-	fstatus status;
-	print("\nListing directories in: C:/\n");
-	do {
-		status = fat_dir_read(&dir, info);
-		
-		if (fat_memcmp(info->name, "Test.bin", info->name_length)) {
-			printl(ANSI_GREEN "OK" ANSI_NORMAL);
-		}
-		
-		// Print the information
-		if (status == FSTATUS_OK) {
-			fat_print_info(info);
-		}
-	} while (status != FSTATUS_EOF);
-	print(BLUE "- EOD -\n");
-
-	struct file file;
-	status = fat_file_open(&file, "C:/bigbangtheory.txt", 20);
-	fat_print_status(status);
-
-	u32 bytes_written = 0;
-	u8 file_buffer[24];
-	status = fat_file_read(&file, file_buffer, 24, &bytes_written);
-	fat_print_status(status);
-
-	printl("Bytes written: %d", bytes_written);
-	for (u8 i = 0; i < bytes_written; i++) {
-		print("%c", file_buffer[i]);
-	}
-	print("\n");
-	print_flush();
+	u8 sd_status = 0;
 
 	while (1) {
+		if (sd_is_connected() && (sd_status == 0)) {
+			/* Try to mount the card 10 times */
+			for (u8 i = 0; i < 10; i++) {
+				if (disk_mount(DISK_SD_CARD)) {
+					printl("SD card mounted");
+					sd_status = 1;
+					break;
+				}
+				syscall_thread_sleep(50);
+			}
+		}
+		if (!sd_is_connected() && sd_status){
+			if (disk_eject(DISK_SD_CARD)) {
+				printl("SD card ejected");
+				sd_status = 0;
+			} else {
+				panic("SD eject failed");
+			}
+		}
 		syscall_thread_sleep(500);
 	}
 }

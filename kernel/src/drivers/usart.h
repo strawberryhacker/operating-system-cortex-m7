@@ -48,9 +48,17 @@ static inline void usart_write(usart_reg* reg, u8 data) {
     while (!(reg->CSR & (1 << 1)));
     reg->THR = data;
 }
+/* Transmit a character whithout checking the buffer first */
+static inline void usart_write_raw(usart_reg* reg, u8 data) {
+    reg->THR = data;
+}
 
 static inline u8 usart_read(usart_reg* reg) {
     return reg->RHR;
+}
+
+static inline u8 usart_get_thr_status(usart_reg* reg) {
+    return reg->CSR & (1 << 1);
 }
 
 static inline void usart_flush(usart_reg* reg) {

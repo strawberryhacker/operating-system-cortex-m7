@@ -2,6 +2,7 @@
 
 #include "mm.h"
 #include "panic.h"
+#include "print.h"
 
 #include <stddef.h>
 
@@ -215,7 +216,8 @@ void mm_list_insert(struct mm_node* node, struct mm_node* root,
  * Allocates `size` number of bytes from a physical memory
  */
 void* mm_gp_alloc(u32 size, enum physmem_e index) {
-    
+    print("Reuquested memory: %d\n", size);
+
     struct physmem* physmem = physical_memories[index];
     void* return_ptr = NULL;
 
@@ -248,7 +250,8 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
         iter = iter->next;
     }
     if (iter->next == NULL) {
-        panic("Not enough memory");
+        print("Warning");
+        return NULL;
     }
 
     /*
@@ -283,10 +286,6 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
     /* Mark the memory as allocated */
     iter->next = (struct mm_node *)0xC0DEBABE;
 
-    if (return_ptr == NULL) {
-        panic("NULL pointer returned");
-    }
-
     return return_ptr;
 }
 
@@ -295,26 +294,42 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
  * size might still be padded according to the physical memory settings
  */
 void* mm_alloc(u32 size, enum physmem_e region) {
+    print(ANSI_RED "Alloc: %d\n" ANSI_NORMAL, size);
     // The 1k and 4k physical memories are reserved
     if ((region == DRAM_BANK_2_4k) || (region == DRAM_BANK_2_1k)) {
         panic("Wrong parameter");
     }
 
-    return mm_gp_alloc(size, region);
+    void* ret = mm_gp_alloc(size, region);
+
+    if (ret == NULL) {
+        panic("Alloc failed");
+    }
+    return ret;
 }
 
 /*
  * Allocates a number of 4k pages
  */
 void* mm_alloc_4k(u32 count) {
-    return mm_gp_alloc(count * 4096, DRAM_BANK_2_4k);
+    void* ret = mm_gp_alloc(count * 4096, DRAM_BANK_2_4k);
+    if (ret == NULL) {
+        panic("4k alloc failed");
+    }
+    return ret;
 }
 
 /*
  * Allocates a number of 1k pages
  */
 void* mm_alloc_1k(u32 count) {
-    return mm_gp_alloc(count * 1024, DRAM_BANK_2_1k);   
+    void* ret = mm_gp_alloc(count * 1024, DRAM_BANK_2_1k); 
+
+    if (ret == NULL) {
+        panic("1k alloc failed");
+    }
+
+    return ret; 
 }
 
 /*

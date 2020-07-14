@@ -81,7 +81,7 @@ struct thread* new_thread(struct thread_info* thread_info) {
     }
 	
     /* Allocate the stack and thread control block */
-    struct thread* thread = (struct thread *)mm_alloc_1k(size_1k);
+    struct thread* thread = (struct thread *)mm_alloc(size, SRAM);
 
     /* Calculate the stack base and the new stack pointer */
     thread->stack_base = (u32 *)((u8 *)thread + sizeof(struct thread));

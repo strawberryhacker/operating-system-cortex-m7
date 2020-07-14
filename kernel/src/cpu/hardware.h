@@ -569,6 +569,52 @@ typedef struct {
 } timer_reg;
 
 /*
+ * DMA channel registers
+ */
+typedef struct {
+	_w  u32 CIE;
+	_w  u32 CID;
+	_r  u32 CIM;
+	_r  u32 CIS;
+	_rw u32 CSA;
+	_rw u32 CDA;
+	_rw u32 CNDA;
+	_rw u32 CNDC;
+	_rw u32 CUBC;
+	_rw u32 CBC;
+	_rw u32 CC;
+	_rw u32 CDS_MSP;
+	_rw u32 CSUS;
+	_rw u32 CDUS;
+	_r  u32 RESERVED[2];
+} dma_channel_reg;
+
+/*
+ * DMA registers
+ */
+typedef struct {
+	_r  u32 GTYPE;
+	_rw u32 GCFG;
+	_rw u32 GWAC;
+	_w  u32 GIE;
+	_w  u32 GID;
+	_r  u32 GIM;
+	_r  u32 GIS;
+	_w  u32 GE;
+	_w  u32 GD;
+	_r  u32 GS;
+	_rw u32 GRS;
+	_rw u32 GWS;
+	_w  u32 GRWS;
+	_w  u32 GRWR;
+	_w  u32 GSWR;
+	_r  u32 GSWS;
+	_w  u32 GSWF;
+	_r  u32 RESERVED[3];
+	dma_channel_reg channel[24];
+} dma_reg;
+
+/*
  * Defines the base address of the SOC peripherals
  */
 #define CLOCK    ((clock_reg *)0x400E0600)

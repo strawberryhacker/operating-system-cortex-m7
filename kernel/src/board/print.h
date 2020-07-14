@@ -30,4 +30,8 @@ void print_flush(void);
 
 void print_count(const char* data, u32 count);
 
+void print_byte(u8 data);
+
+u8 print_get_status(void);
+
 #endif

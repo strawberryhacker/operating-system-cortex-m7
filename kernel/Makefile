@@ -44,6 +44,7 @@ kernel-y += /src/kernel/background.c
 kernel-y += /src/kernel/idle.c
 kernel-y += /src/kernel/syscall.c
 kernel-y += /src/kernel/dynamic_linker.c
+kernel-y += /src/kernel/run.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c

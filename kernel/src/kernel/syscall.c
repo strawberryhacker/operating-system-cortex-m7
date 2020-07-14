@@ -5,6 +5,7 @@
 #include "thread.h"
 #include "gpio.h"
 #include "panic.h"
+#include "print.h"
 
 /*
  * Syscall arguments will automaticall be placed in the registers
@@ -30,6 +31,16 @@ void NAKED NOINLINE syscall_mm_free(void* ptr) {
     asm volatile ("bx lr");
 }
 
+void NAKED NOINLINE syscall_print_byte(u8 data) {
+    asm volatile ("svc #5 \n\t");
+    asm volatile ("bx lr");
+}
+
+u8 NAKED NOINLINE syscall_print_get_status(void) {
+    asm volatile ("svc #6 \n\t");
+    asm volatile ("bx lr");
+}
+
 /*
  * Core SVC handler which does the unstacking of the SVC argument
  * and function parameters
@@ -50,7 +61,7 @@ void svc_handler_ext(u32* stack_ptr) {
      */
     u8 svc = *((u8 *)stack_ptr[6] - 2);
 
-    print("SVC: %d\n", svc);
+    //print("SVC: %d\n", svc);
 
     switch (svc) {
         case 1 : {
@@ -70,6 +81,14 @@ void svc_handler_ext(u32* stack_ptr) {
         case 4 : {
             panic("Warning");
             mm_free((void *)stack_ptr[0]);
+            break;
+        } 
+        case 5 : {
+            print_byte((u8)stack_ptr[0]);
+            break;
+        }
+        case 6 : {
+            stack_ptr[0] = (u8)print_get_status();
             break;
         }
     }
