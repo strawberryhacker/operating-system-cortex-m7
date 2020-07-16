@@ -41,9 +41,6 @@ struct thread_info {
      * set this variable to the base address of the code segment
      */
     u32* code_addr;
-
-    /* This flag is set if the thread should be terminated */
-    u8 exit_pending;
 };
 
 /*

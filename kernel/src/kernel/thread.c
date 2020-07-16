@@ -153,8 +153,6 @@ tid_t new_thread(struct thread_info* thread_info) {
     /* Update the code addr field */
     thread->code_addr = thread_info->code_addr;
 
-    thread->exit_pending = 0;
-
     icache_invalidate();
     dcache_clean();
 

@@ -38,7 +38,11 @@ ASMFLAGS += -mfpu=fpv5-sp-d16 -mfloat-abi=hard
 SRC +=
 
 obj-y += /src/main.c
+obj-y += /src/game.c
 obj-y += /src/application.c
+obj-y += /src/generic/print.c
+obj-y += /src/generic/sprint.c
+obj-y += /src/generic/memory.c
 
 system-y += /src/system/syscall.c
 
