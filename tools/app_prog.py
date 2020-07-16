@@ -82,7 +82,7 @@ class flasher:
 
         # Payload 
         data = bytearray(payload)
--
+        
         # End fragment consist of payload crc
         fcs = bytearray([self.calculate_fcs(cmd_byte + size + payload)])
         end_byte = bytearray([self.END_BYTE])

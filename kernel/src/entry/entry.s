@@ -79,13 +79,13 @@ inf_loop:
 
 
 /*
- * Default handler alias for unused interrupts. If interrupts are
- * enabled and triggered without the handler being declared, this
+ * Default exception alias for unused interrupts. If interrupts are
+ * enabled and triggered without the exception being declared, this
  * functions is executed
  */
 .section .text, "ax", %progbits
-default_handler:
-	b default_handler
+default_exception:
+	b default_exception
 
 /*
  * Definition of the Cortex-M7 vector table
@@ -97,133 +97,133 @@ Vector_table:
 	.word	entry
 
 	/* Cortex-M7 core interrupts */
-	.word	nmi_handler          /* NMI */
-	.word	hard_fault_handler   /* Hard fault */
-	.word	mem_fault_handler    /* Memory fault */
-	.word	bus_fault_handler    /* Bus fault */
-	.word	usage_fault_handler  /* Usage fault  */
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	svc_handler          /* SVC */
-	.word	default_handler
-	.word	default_handler
-	.word	pendsv_handler       /* PendSV */
-	.word	systick_handler      /* Systick */
+	.word	nmi_exception          /* NMI */
+	.word	hard_fault_exception   /* Hard fault */
+	.word	mem_fault_exception    /* Memory fault */
+	.word	bus_fault_exception    /* Bus fault */
+	.word	usage_fault_exception  /* Usage fault  */
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	svc_exception          /* SVC */
+	.word	default_exception
+	.word	default_exception
+	.word	pendsv_exception       /* PendSV */
+	.word	systick_exception      /* Systick */
 
 	/* Paripheral interrupts */
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	usart0_handler      /* USART0 */
-	.word	usart1_handler      /* USART1 */
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	timer0_ch0_handler  /* Timer 0 */
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	gmac_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
-	.word	default_handler
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	usart0_exception      /* USART0 */
+	.word	usart1_exception      /* USART1 */
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	timer0_ch0_exception  /* Timer 0 */
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	gmac_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
+	.word	default_exception
 
 	/*
-	 * If any interrupt are enabled but the handler not present, it
-	 * will run the default handler in an infinite loop
+	 * If any interrupt are enabled but the exception not present, it
+	 * will run the default exception in an infinite loop
 	 */
-	.weak systick_handler
-	.thumb_set systick_handler, default_handler
+	.weak systick_exception
+	.thumb_set systick_exception, default_exception
 
-	.weak usart1_handler
-	.thumb_set usart1_handler, default_handler
+	.weak usart1_exception
+	.thumb_set usart1_exception, default_exception
 
-	.weak usart0_handler
-	.thumb_set usart0_handler, default_handler
+	.weak usart0_exception
+	.thumb_set usart0_exception, default_exception
 
-	.weak nmi_handler
-	.thumb_set nmi_handler, default_handler
+	.weak nmi_exception
+	.thumb_set nmi_exception, default_exception
 
-	.weak hard_fault_handler
-	.thumb_set hard_fault_handler, default_handler
+	.weak hard_fault_exception
+	.thumb_set hard_fault_exception, default_exception
 
-	.weak mem_fault_handler
-	.thumb_set mem_fault_handler, default_handler
+	.weak mem_fault_exception
+	.thumb_set mem_fault_exception, default_exception
 
-	.weak bus_fault_handler
-	.thumb_set bus_fault_handler, default_handler
+	.weak bus_fault_exception
+	.thumb_set bus_fault_exception, default_exception
 
-	.weak usage_fault_handler
-	.thumb_set usage_fault_handler, default_handler
+	.weak usage_fault_exception
+	.thumb_set usage_fault_exception, default_exception
 
-	.weak svc_handler
-	.thumb_set svc_handler, default_handler
+	.weak svc_exception
+	.thumb_set svc_exception, default_exception
 
-	.weak pendsv_handler
-	.thumb_set pendsv_handler, default_handler
+	.weak pendsv_exception
+	.thumb_set pendsv_exception, default_exception
 
-	.weak gmac_handler
-	.thumb_set gmac_handler, default_handler
+	.weak gmac_exception
+	.thumb_set gmac_exception, default_exception
 
-	.weak timer0_ch0_handler
-	.thumb_set timer0_ch0_handler, default_handler
+	.weak timer0_ch0_exception
+	.thumb_set timer0_ch0_exception, default_exception

@@ -216,7 +216,6 @@ void mm_list_insert(struct mm_node* node, struct mm_node* root,
  * Allocates `size` number of bytes from a physical memory
  */
 void* mm_gp_alloc(u32 size, enum physmem_e index) {
-    print("Reuquested memory: %d\n", size);
 
     struct physmem* physmem = physical_memories[index];
     void* return_ptr = NULL;

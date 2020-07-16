@@ -3,7 +3,7 @@
 #ifndef GMAC_H
 #define GMAC_H
 
-/* Gigabit ethernet chip driver */
+/* 100base-T ethernet chip driver */
 
 #include "types.h"
 

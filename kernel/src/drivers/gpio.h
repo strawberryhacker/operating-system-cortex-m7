@@ -34,6 +34,8 @@ void gpio_clear(gpio_reg* port, u8 pin);
 
 void gpio_toggle(gpio_reg* port, u8 pin);
 
+u32 gpio_read(gpio_reg* port);
+
 u8 gpio_get_pin_status(gpio_reg* port, u8 pin);
 
 void gpio_set_pull(gpio_reg* port, u8 pin, enum gpio_pull pull);

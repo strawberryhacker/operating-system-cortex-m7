@@ -58,6 +58,10 @@ void gpio_toggle(gpio_reg* port, u8 pin) {
     }
 }
 
+u32 gpio_read(gpio_reg* port) {
+    return port->PDSR;
+}
+
 u8 gpio_get_pin_status(gpio_reg* port, u8 pin) {
     return (port->PDSR & (1 << pin)) ? 1 : 0;
 }

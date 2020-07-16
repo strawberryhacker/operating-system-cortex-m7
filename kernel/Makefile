@@ -16,14 +16,19 @@ ARM_ASM = arm-none-eabi-as
 #-------------------------------------------------------------------------------
 CPFLAGS += -I$(TOP)/src
 
-CFLAGS += -x c -mthumb -O3 -ffunction-sections -mlong-calls -g3 -Wall
-CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-unused-variable
-CFLAGS += -Wno-unused-function
+CFLAGS   += -x c -mthumb -O1 -ffunction-sections -mlong-calls -g3 -Wall
+CFLAGS   += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-unused-variable
+CFLAGS   += -Wno-unused-function
 
-LDFLAGS += -mthumb -Wl,-Map="$(BUILDDIR)/$(TARGET_NAME).map" -Wl,--start-group
-LDFLAGS += -Wl,--end-group -Wl,--gc-sections -mcpu=cortex-m7 -Tlinker.ld
+LDFLAGS  += -mthumb -Wl,-Map="$(BUILDDIR)/$(TARGET_NAME).map" -Wl,--start-group
+LDFLAGS  += -Wl,--end-group -Wl,--gc-sections -mcpu=cortex-m7 -Tlinker.ld
 
 ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
+
+# FPU support
+CFLAGS   += -mfpu=fpv5-sp-d16 -mfloat-abi=hard
+LDFLAGS  += -mfpu=fpv5-sp-d16 -mfloat-abi=hard
+ASMFLAGS += -mfpu=fpv5-sp-d16 -mfloat-abi=hard
 
 #-------------------------------------------------------------------------------
 # Include source files
@@ -31,7 +36,6 @@ ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 SRC +=
 
 obj-y += /src/main.c
-obj-y += /src/bootloader.c
 
 kernel-y += /src/kernel/kernel_entry.c
 kernel-y += /src/kernel/fault.c
@@ -46,6 +50,7 @@ kernel-y += /src/kernel/idle.c
 kernel-y += /src/kernel/syscall.c
 kernel-y += /src/kernel/dynamic_linker.c
 kernel-y += /src/kernel/run.c
+kernel-y += /src/kernel/bootloader.c
 
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c
@@ -74,6 +79,8 @@ generic-y += /src/generic/crc.c
 generic-y += /src/generic/memory.c
 generic-y += /src/generic/panic.c
 
+misc-y += /src/misc/programming.c
+
 net-y += /src/net/ip.c
 
 mm-y += /src/mm/mm.c
@@ -94,6 +101,7 @@ MM_OBJ := $(patsubst %.c, %.o, $(mm-y))
 OBJ_OBJ := $(patsubst %.c, %.o, $(obj-y))
 DISK_OBJ := $(patsubst %.c, %.o, $(disk-y))
 NET_OBJ := $(patsubst %.c, %.o, $(net-y))
+MISC_OBJ := $(patsubst %.c, %.o, $(misc-y))
 
 OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
@@ -104,6 +112,7 @@ OBJ += $(addprefix $(BUILDDIR), $(MM_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(OBJ_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DISK_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(NET_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(MISC_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers
@@ -114,6 +123,7 @@ CPFLAGS += -I$(TOP)/src/mm
 CPFLAGS += -I$(TOP)/src/kernel
 CPFLAGS += -I$(TOP)/src/disk
 CPFLAGS += -I$(TOP)/src/net
+CPFLAGS += -I$(TOP)/src/misc
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------

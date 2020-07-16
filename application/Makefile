@@ -27,6 +27,11 @@ LDFLAGS += -Wl,--gc-sections -fpic
 
 ASMFLAGS += -mcpu=cortex-m7 -mthumb -g
 
+# FPU support
+CFLAGS   += -mfpu=fpv5-sp-d16 -mfloat-abi=hard
+LDFLAGS  += -mfpu=fpv5-sp-d16 -mfloat-abi=hard
+ASMFLAGS += -mfpu=fpv5-sp-d16 -mfloat-abi=hard
+
 #-------------------------------------------------------------------------------
 # Include source files
 #-------------------------------------------------------------------------------
@@ -53,7 +58,7 @@ CPFLAGS += -I$(TOP)
 #-------------------------------------------------------------------------------
 .SECONDARY: $(OBJ)
 .PHONY: all elf bin lss hex
-all: elf lss bin hex
+all: elf lss bin hex program
 
 elf: $(BUILDDIR)/$(TARGET_NAME).elf
 bin: $(BUILDDIR)/$(TARGET_NAME).bin
@@ -61,7 +66,7 @@ lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
 program:
-	@python3 ../tools/programmer.py -com /dev/ttyS3 -f build/app.bin
+	@python3 ../tools/app_prog.py -c /dev/ttyS3 -f build/$(TARGET_NAME).bin
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O binary $< $@

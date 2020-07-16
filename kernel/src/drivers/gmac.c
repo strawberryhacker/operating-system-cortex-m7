@@ -154,6 +154,9 @@ static void gmac_init_dummy_buffer_pool(void) {
     }
 }
 
+/*
+ * Initilaizes the GMAC interface
+ */
 void gmac_init(void) {
     /*
      * Several configuration options must be done while the TX
@@ -196,15 +199,24 @@ void gmac_init(void) {
     GMAC->IER = (1 << 7) | (1 << 1);
 }
 
+/*
+ * Deinitializes the GMAC interface
+ */
 void gmac_deinit(void) {
     GMAC->IDR = 0xFFFFFFFF;
     GMAC->NCR = 0x00000000;
 }
 
+/*
+ * Enables the GMAC
+ */
 void gmac_enable(void) {
     GMAC->NCR |= (1 << 2) | (1 << 3);
 }
 
+/*
+ * Disables the GMAC
+ */
 void gmac_disable(void) {
     GMAC->NCR &= ~(1 << 2) | (1 << 3);
 }

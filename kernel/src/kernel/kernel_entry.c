@@ -15,6 +15,8 @@
 #include "types.h"
 #include "sd_protocol.h"
 #include "bootloader.h"
+#include "cache.h"
+#include "fpu.h"
 
 void kernel_entry(void) {
     /* Disable the watchdog timer */
@@ -28,11 +30,7 @@ void kernel_entry(void) {
 	cpsie_f();
 	cpsid_i();
 
-	/* Enable the coprocessor 10 and 11 for the FPU
-	/((u32 *)CPACR) = (0b11 << 20) | (0b11 << 22);
-	//dsb();
-	//isb();*/
-
+	fpu_enable();
 	/*
 	 * The CPU will run at 300 Mhz so the flash access cycles has to be
 	 * updated
@@ -47,6 +45,10 @@ void kernel_entry(void) {
 	
 	/* Initilalize the DRAM interface */
 	dram_init();
+
+	/* Enable L1 I-cache and L1 D-cache */
+	dcache_enable();
+	icache_enable();
 
 	/* Initialize serial communication */
 	print_init();

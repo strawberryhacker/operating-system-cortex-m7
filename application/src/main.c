@@ -11,7 +11,8 @@ int main(void) {
     // will take care of it. No startup code is needed. Please read the 
     // docmentation before implementing apps. 
     // ====================================================================
-    char test_print[64] = "Hello world\n";
+    
+    char test_print[64] = "Yoo\n";
     while (1) {
         syscall_thread_sleep(500);
         syscall_gpio_toggle(GPIOC, 8);
@@ -28,8 +29,6 @@ int main(void) {
 
 			ptr++;
 		}
-        
     }
-
     return 1;
  }

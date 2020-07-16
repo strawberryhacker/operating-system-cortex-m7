@@ -49,7 +49,7 @@ volatile u32 reschedule_pending = 0;
  */
 void scheduler_run(void);
 
-extern struct thread* new_thread(struct thread_info* thread_info);
+extern tid_t new_thread(struct thread_info* thread_info);
 
 /*
  * The `idle_thread` is enqueued by the scheduler into the idle
@@ -81,6 +81,22 @@ static struct thread* core_scheduler(void) {
 }
 
 /*
+ * Returns a thread based on its tid number
+ */
+struct thread* get_thread(struct rq *rq, tid_t tid) {
+	struct dlist_node *it = rq->threads.first;
+
+	while (it) {
+		struct thread *thread = (struct thread *)it->obj;
+		if (thread->tid == tid) {
+			return thread;
+		}
+		it = it->next;
+	}
+	return NULL;
+}
+
+/*
  * Configures the SysTick and PendSV interrupt priorities, add the
  * idle thread and starts the scheduler
  */
@@ -105,7 +121,8 @@ void scheduler_start(void) {
 	};
 
 	/* Make the idle and test thread */
-	cpu_rq.idle = new_thread(&idle_info);
+	tid_t idle_tid = new_thread(&idle_info);
+	cpu_rq.idle = get_thread(&cpu_rq, idle_tid);
 
 	/*
 	 * The `scheduler_run` does not care about the `curr_thread`.
@@ -191,7 +208,7 @@ void calculate_runtime(void) {
 	}
 }
 
-void systick_handler(void) {
+void systick_exception(void) {
 	if (scheduler_status) {
 		cpsid_f();
 		/* Compute the runtime of the current running thread */
@@ -229,7 +246,7 @@ void systick_handler(void) {
 		systick_set_cvr(SYSTICK_RVR);
 		cpsie_f();
 
-		/* Pand the context switch */
+		/* Pend the context switch */
 		pendsv_set_pending();
 	}
 }

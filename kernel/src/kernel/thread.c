@@ -7,6 +7,7 @@
 #include "cpu.h"
 #include "panic.h"
 #include "memory.h"
+#include "cache.h"
 
 #include <stddef.h>
 
@@ -49,6 +50,17 @@ u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
     *stack_pointer-- = 0xCAFECAFE;          /* R1  */
     *stack_pointer-- = (u32)arg;            /* R0  */
 
+    /*
+     * The following registers will be manually stacked by the 
+     * stmdb instruction in the context switch. The link register
+     * has to stay on the top. The link register (or EXC_RETURN
+     * in an exception handler) holds the stacking status when 
+     * entering an exception handler
+     */
+
+    /* Setup the EXC_RETURN with no FPU and PSP usage*/
+    *stack_pointer-- = 0xFFFFFFFD;
+
     /* Setup the rest of the processor registers */
     *stack_pointer-- = 0xCAFECAFE;          /* R11 */
     *stack_pointer-- = 0xCAFECAFE;          /* R10 */
@@ -66,8 +78,8 @@ u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
  * Adds a new thread to the sceduler and enqueues is using its
  * designated scheduling class
  */
-struct thread* new_thread(struct thread_info* thread_info) {
-    static u8 count = 0;
+tid_t new_thread(struct thread_info* thread_info) {
+    static tid_t tid = 1;
     suspend_scheduler();
 
     /*
@@ -135,13 +147,24 @@ struct thread* new_thread(struct thread_info* thread_info) {
     thread->runtime_curr = 0;
     thread->runtime_new = 0;
 
+    /* Assign a thread ID number */
+    thread->tid = tid++;
+
+    /* Update the code addr field */
+    thread->code_addr = thread_info->code_addr;
+
+    thread->exit_pending = 0;
+
+    icache_invalidate();
+    dcache_clean();
+
+    resume_scheduler();
+
     dmb();
     dsb();
     isb();
 
-    resume_scheduler();
-
-	return thread;
+	return thread->tid;
 }
 
 void thread_sleep(u64 ms) {
@@ -155,4 +178,12 @@ void thread_sleep(u64 ms) {
     scheduler_enqueue_delay((struct thread *)curr_thread);
 
     reschedule();
+}
+
+void kill_thread(tid_t tid) {
+    suspend_scheduler();
+
+    
+
+    resume_scheduler();
 }

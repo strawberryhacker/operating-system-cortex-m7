@@ -12,10 +12,10 @@
 .global test_sp
 
 .section .text
-.global svc_handler
-.type svc_handler, %function 
+.global svc_exception
+.type svc_exception, %function 
 
-svc_handler:
+svc_exception:
     /*
      * Check which stack pointer is in use and load that into r0. This will 
      * be used as the first argument in the `svc_handler_ext` function. The 

@@ -348,6 +348,23 @@ typedef struct {
 } cache_reg;
 
 /*
+ * Memory proteciton unit
+ */
+typedef struct {
+	_r  u32 TYPE;
+	_rw u32 CTRL;
+	_rw u32 RNR;
+	_rw u32 RBAR;
+	_rw u32 RASR;
+	_rw u32 RBAR_A1;
+	_rw u32 RASR_A1;
+	_rw u32 RBAR_A2;
+	_rw u32 RASR_A2;
+	_rw u32 RBAR_A3;
+	_rw u32 RASR_A3;
+} mpu_reg;
+
+/*
  * Multimedia card interface registers
  */
 typedef struct {
@@ -626,7 +643,8 @@ typedef struct {
 #define MATRIX   ((matrix_reg *)0x40088000)
 #define DRAM     ((dram_reg *)0x40084000)
 #define SCB      ((scb_reg *)0xE000ED00)
-#define CACHE    ((scb_reg *)0xE000EF50)
+#define MPU      ((mpu_reg *)0xE000ED90)
+#define CACHE    ((cache_reg *)0xE000EF50)
 #define MMC      ((mmc_reg *)0x40000000)
 #define GMAC     ((gmac_reg *)0x40050000)
 #define GPIOA    ((gpio_reg *)0x400E0E00)
@@ -641,11 +659,6 @@ typedef struct {
 #define TIMER1   ((timer_reg *)0x40010000)
 #define TIMER2   ((timer_reg *)0x40014000)
 #define TIMER3   ((timer_reg *)0x40054000)
-
-/*
- * Defines the address of the coprocessor access control register
- */
-#define CPACR (u32)0xE000ED88
 
 /*
  * Defines the address of the Cortex-M7 vecotr table offset register

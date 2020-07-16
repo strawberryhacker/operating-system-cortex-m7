@@ -17,6 +17,8 @@ enum sched_class {
     IDLE
 };
 
+typedef uint32_t tid_t;
+
 /*
  * Info structure used for initializing new threads
  */
@@ -33,6 +35,15 @@ struct thread_info {
     void* arg;
 
     enum sched_class class;
+
+    /*
+     * Optional code address. If the code is dynamically allocated
+     * set this variable to the base address of the code segment
+     */
+    u32* code_addr;
+
+    /* This flag is set if the thread should be terminated */
+    u8 exit_pending;
 };
 
 /*
@@ -82,6 +93,16 @@ struct thread {
     /* Variables used for calulating runtime statistics */
     u64 runtime_curr;
     u64 runtime_new;
+
+    /* Thread ID number */
+    tid_t tid;
+
+    /* 
+     * Code base address. If this field is zero no dynamic code 
+     * is being used and the scheduler does not have to delete
+     * the memory.
+     */
+    u32* code_addr;
 };
 
 /*

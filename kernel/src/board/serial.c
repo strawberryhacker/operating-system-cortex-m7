@@ -46,6 +46,7 @@ void serial_init(void) {
 
     /* Enable the NVIC */
     nvic_enable(13);
+    nvic_set_prioriy(13, NVIC_PRI_1);
 }
 
 /*

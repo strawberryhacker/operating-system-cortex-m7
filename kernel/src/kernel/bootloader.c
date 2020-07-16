@@ -11,6 +11,7 @@
 #include "crc.h"
 #include "hardware.h"
 #include "clock.h"
+#include "cache.h"
 
 #define START_BYTE 0xAA
 #define END_BYTE   0x55
@@ -110,7 +111,7 @@ void bootloader_init(void) {
         (const struct image_info *)image_info.bootloader_info;
 
     /* Print the bootloader and kernel version */
-    printl(ANSI_NORMAL "\n\n\n\nUsing Vanilla bootloader" ANSI_GREEN " v%d.%d" ANSI_NORMAL,
+    printl(ANSI_NORMAL "\n\n\n\nUsing Vanilla bootloader" ANSI_GREEN "v%d.%d" ANSI_NORMAL,
         info->major_version, info->minor_version);
 
     printl("Using Vanilla kernel" ANSI_GREEN "     v%d.%d\n" ANSI_NORMAL,
@@ -138,10 +139,8 @@ u8 check_new_frame(void) {
     }
 }
 
-void usart0_handler(void) {
+void usart0_exception(void) {
 	char data = serial_read();
-
-    //print_raw("R");
 
     // If the bus state is not IDLE the timeout interface will be reloaded
     if (bus_state != STATE_IDLE) {
@@ -149,6 +148,10 @@ void usart0_handler(void) {
     }
 
 	if ((data == 0x00) && (bus_state == STATE_IDLE)) {
+
+        /* The bootloader does not use cache and is self modifying */
+        dcache_disable();
+	    icache_disable();
 
 		print_flush();
 		memory_copy("StayInBootloader", boot_signature, 16);
@@ -207,7 +210,6 @@ void usart0_handler(void) {
 
                 if (fcs == frame.fcs) {
                     frame_received = 1;
-                    print("End");
                 } else {
                     send_response(RESP_ERROR | RESP_FCS_ERROR);
                 }

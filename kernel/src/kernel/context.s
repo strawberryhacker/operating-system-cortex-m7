@@ -25,9 +25,9 @@
  * handler stack the remainding register R4-R11 and switchs the stack pointer.
  */
 .section .text
-.global pendsv_handler
-.type pendsv_handler, %function 
-pendsv_handler:
+.global pendsv_exception
+.type pendsv_exception, %function 
+pendsv_exception:
 	/*
 	 * The treads uses the PSP. This has to be manually retrieve
 	 * since the execption is using the MSP.
@@ -35,9 +35,22 @@ pendsv_handler:
 	mrs r0, psp
 	isb
 
-	stmdb r0!, {r4-r11}
+	/*
+	 * Bit 4 in the EXC_RETURN indicates that the stack contains
+	 * extra space for the floating point registers. These might 
+	 * be stacked or the lazer state preservation might be active.
+	 * This can be read from the FPCCR.LSPACT bit. The next context
+	 * holds it FPU status in the EXC_RETURN in the LR therefore
+	 * this register is stacked twice.
+	 */
+	tst lr, #0x10
+	it eq
+	vstmdbeq r0!, {s16-s31}
 
-	/* Update the stack pointer of the current running thread */
+	/* Store the general purpose register not stacked by the CPU */
+	stmdb r0!, {r4-r11, lr}
+
+	/* Update the stack pointer of  the current running thread */
 	ldr r1, =curr_thread
 	ldr r2, [r1]
 	str r0, [r2]
@@ -50,7 +63,13 @@ pendsv_handler:
 	/* Get the stack pointer from the next thread to run */
 	ldr r1, [r2]
 
-	ldmia r1!, {r4-r11}
+	/* Restore the general purpose registers not unstacked by the CPU */
+	ldmia r1!, {r4-r11, lr}
+
+	/* Check if the new context uses floating point context */
+	tst lr, #0x10
+	it eq
+	vldmiaeq r0!, {s16-s31}
 
 	/* Load the stack pointer into PSP */
 	msr psp, r1
@@ -93,6 +112,10 @@ scheduler_run:
 	ldr r0, [r1]
 	ldr r1, [r0]
 
+	/* Clear the CONTROL.FPCA if the FPU was in user before this point */
+	mov r0, #0
+	msr control, r0
+
 	/* The threads should use PSP */
 	mov r0, #2
 	msr control, r0
@@ -103,7 +126,7 @@ scheduler_run:
 	isb
 
 	/* Setup the core registers for the first thread */
-	pop {r4-r11}
+	pop {r4-r11, lr}
 	pop {r0-r3}
 	pop {r12}
 	add sp, sp, #4
@@ -114,6 +137,7 @@ scheduler_run:
 	dsb
 	isb
 
+	cpsie i
 	cpsie f
 
     bx lr

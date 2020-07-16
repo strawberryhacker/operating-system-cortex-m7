@@ -31,7 +31,7 @@ struct app_info {
  * Dynamically link and run the binary
  */
 void dynamic_linker_run(u32* binary) {
-
+    
     /* Get the application information */
     struct app_info* app_info = (struct app_info *)binary;
     struct thread_info thread_info;

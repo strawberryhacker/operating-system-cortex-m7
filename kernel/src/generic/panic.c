@@ -5,6 +5,7 @@
 #include "sections.h"
 #include "memory.h"
 #include "cpu.h"
+#include "cache.h"
 
 /*
  * This is declared in the `bootloader.h`
@@ -18,6 +19,9 @@ extern __bootsig__ u8 boot_signature[32];
 void panic_handler(const char* file_name, u32 line_number, const char* reason) {
     
     cpsid_f();
+
+    dcache_disable();
+    icache_disable();
     
     print("Panic! %s \n", reason);
     print("File: %s \n", file_name);
