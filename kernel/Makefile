@@ -16,7 +16,7 @@ ARM_ASM = arm-none-eabi-as
 #-------------------------------------------------------------------------------
 CPFLAGS += -I$(TOP)/src
 
-CFLAGS   += -x c -mthumb -O1 -ffunction-sections -mlong-calls -g3 -Wall
+CFLAGS   += -x c -mthumb -O3 -ffunction-sections -mlong-calls -g3 -Wall
 CFLAGS   += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-unused-variable
 CFLAGS   += -Wno-unused-function
 
@@ -78,6 +78,7 @@ generic-y += /src/generic/sprint.c
 generic-y += /src/generic/crc.c
 generic-y += /src/generic/memory.c
 generic-y += /src/generic/panic.c
+generic-y += /src/generic/ringbuffer.c
 
 misc-y += /src/misc/programming.c
 
@@ -138,7 +139,7 @@ bin: $(BUILDDIR)/$(TARGET_NAME).bin
 lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
-program:
+program: $(BUILDDIR)/$(TARGET_NAME).bin
 	@python3 ../tools/kernel_prog.py -c /dev/ttyS3 -f build/kernel.bin
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf

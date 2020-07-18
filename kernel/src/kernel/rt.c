@@ -13,11 +13,19 @@ static struct thread* rt_pick_thread(struct rq* rq) {
     }
 
     struct dlist_node* node = dlist_remove_first(&rq->rt_rq);
-    return (struct thread *)node->obj;
+
+    struct thread* th = (struct thread *)node->obj;
+
+    th->rq_list = NULL;
+
+    return th;
 }
 
 static void rt_enqueue(struct thread* thread, struct rq* rq) {
     dlist_insert_last(&thread->rq_node, &rq->rt_rq);
+
+    /* Update the current list */
+    thread->rq_list = &rq->rt_rq;
 }
 
 static void rt_dequeue(struct thread* thread, struct rq* rq) {

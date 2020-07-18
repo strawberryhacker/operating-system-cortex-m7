@@ -22,4 +22,6 @@ void NAKED NOINLINE syscall_print_byte(u8 data);
 
 u8 NAKED NOINLINE syscall_print_get_status(void);
 
+u32 NAKED NOINLINE syscall_read_print(char* data, u32 size);
+
 #endif

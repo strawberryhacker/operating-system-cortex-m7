@@ -41,6 +41,11 @@ u8 NAKED NOINLINE syscall_print_get_status(void) {
     asm volatile ("bx lr");
 }
 
+u32 NAKED NOINLINE syscall_read_print(char* data, u32 size) {
+    asm volatile ("svc #7 \n\t");
+    asm volatile ("bx lr");
+}
+
 /*
  * Core SVC handler which does the unstacking of the SVC argument
  * and function parameters
@@ -60,8 +65,6 @@ void svc_handler_ext(u32* stack_ptr) {
      * value pointed to by PC. Therefore svc argument is *PC - 2
      */
     u8 svc = *((u8 *)stack_ptr[6] - 2);
-
-    //print("SVC: %d\n", svc);
 
     switch (svc) {
         case 1 : {
@@ -91,5 +94,10 @@ void svc_handler_ext(u32* stack_ptr) {
             stack_ptr[0] = (u8)print_get_status();
             break;
         }
+        case 7 : {
+            stack_ptr[0] = read_print_buffer((char *)stack_ptr[0], stack_ptr[1]);
+            break;
+        }
+        
     }
 }

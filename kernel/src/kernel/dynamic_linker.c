@@ -30,7 +30,7 @@ struct app_info {
 /*
  * Dynamically link and run the binary
  */
-void dynamic_linker_run(u32* binary) {
+tid_t dynamic_linker_run(u32* binary) {
     
     /* Get the application information */
     struct app_info* app_info = (struct app_info *)binary;
@@ -39,6 +39,7 @@ void dynamic_linker_run(u32* binary) {
     thread_info.stack_size = app_info->stack;
     thread_info.arg = NULL;
     thread_info.class = app_info->scheduler;
+    thread_info.code_addr = binary;
 
     /*
      * Set the entry point of the binary. Bit number 0 must be set
@@ -55,7 +56,9 @@ void dynamic_linker_run(u32* binary) {
     printl("Launching application: %12s\n", thread_info.name);
 
     /* Make the new thread */
-    new_thread(&thread_info);
+    tid_t tid = new_thread(&thread_info);
+
+    return tid;
 }
 
 static void dynamic_linker(u32* binary) {

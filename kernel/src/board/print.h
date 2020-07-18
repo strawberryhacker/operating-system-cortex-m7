@@ -34,4 +34,6 @@ void print_byte(u8 data);
 
 u8 print_get_status(void);
 
+u32 read_print_buffer(char* data, u32 size);
+
 #endif

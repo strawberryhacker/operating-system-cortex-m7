@@ -75,6 +75,7 @@ struct thread {
     u32* stack_base;
 
     /* Runqueue list node */
+    struct dlist* rq_list;
     struct dlist_node rq_node;
     struct dlist_node thread_node;
 
@@ -93,6 +94,9 @@ struct thread {
 
     /* Thread ID number */
     tid_t tid;
+
+    /* Flag is set to one is an exit is pending */
+    u8 exit_pending;
 
     /* 
      * Code base address. If this field is zero no dynamic code 
@@ -137,6 +141,8 @@ void suspend_scheduler(void);
 void resume_scheduler(void);
 
 u64 get_kernel_tick(void);
+
+struct thread* get_thread(struct rq *rq, tid_t tid);
 
 u64 get_idle_runtime(void);
 

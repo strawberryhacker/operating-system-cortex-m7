@@ -4,7 +4,8 @@
 #define DYNAMIC_LINKER_H
 
 #include "types.h"
+#include "scheduler.h"
 
-void dynamic_linker_run(u32* binary);
+tid_t dynamic_linker_run(u32* binary);
 
 #endif

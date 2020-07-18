@@ -20,8 +20,9 @@
  * The CONTROL.FPCA is set when the FPU is used and cleared when a
  * new context is started for example in a exception handler
  * 
- * The EXC_RETURN[4] indicates that an exceptions stack frame
- * for an exception return contains floating point register.
+ * The EXC_RETURN[4] indicates that an exception stack frame
+ * contains either floating point registers, or allocated 
+ * space for it
  * 
  * The FPCCR.LSPACT indicates the status of the lazy state
  * preservation. It is set to one when space is allocated on the

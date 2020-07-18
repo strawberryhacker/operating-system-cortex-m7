@@ -12,10 +12,9 @@ int main(void) {
     // will take care of it. No startup code is needed. Please read the 
     // docmentation before implementing apps. 
     // ====================================================================
-
+    game_init();
     draw_board();
-    while (1) {
-        syscall_thread_sleep(2000);
-    }
+    game_loop();
+    
     return 1;
  }

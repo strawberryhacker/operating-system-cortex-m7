@@ -26,7 +26,9 @@ extern volatile struct thread* curr_thread;
  * all exiting threads go through this function
  */
 void thread_exit(void) {
-    panic("Exit");
+    printl("Exiting thread");
+    print_flush();
+    curr_thread->exit_pending = 1;
     while (1);
 }
 
@@ -132,6 +134,8 @@ tid_t new_thread(struct thread_info* thread_info) {
     thread->thread_node.next = NULL;
     thread->thread_node.prev = NULL;
 
+    thread->rq_list = NULL;
+
     /* Assign a name to the thread */
     thread->name_len = string_len(thread_info->name);
     memory_copy(thread_info->name, thread->name, THREAD_MAX_NAME_LEN);
@@ -149,6 +153,8 @@ tid_t new_thread(struct thread_info* thread_info) {
 
     /* Assign a thread ID number */
     thread->tid = tid++;
+
+    thread->exit_pending = 0;
 
     /* Update the code addr field */
     thread->code_addr = thread_info->code_addr;
@@ -181,7 +187,14 @@ void thread_sleep(u64 ms) {
 void kill_thread(tid_t tid) {
     suspend_scheduler();
 
-    
+    struct thread* th = get_thread(&cpu_rq, tid);
+
+    if (th) {
+        th->exit_pending = 1;
+        print("Killing %8s\n", th->name);
+    } else {
+        print("Thread does not exist");
+    }
 
     resume_scheduler();
 }

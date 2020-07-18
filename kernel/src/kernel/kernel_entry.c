@@ -31,6 +31,7 @@ void kernel_entry(void) {
 	cpsid_i();
 
 	fpu_enable();
+
 	/*
 	 * The CPU will run at 300 Mhz so the flash access cycles has to be
 	 * updated

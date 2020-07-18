@@ -31,3 +31,8 @@ u8 NAKED NOINLINE syscall_print_get_status(void) {
     asm volatile ("svc #6 \n\t");
     asm volatile ("bx lr");
 }
+
+u32 NAKED NOINLINE syscall_read_print(char* data, u32 size) {
+    asm volatile ("svc #7 \n\t");
+    asm volatile ("bx lr");
+}

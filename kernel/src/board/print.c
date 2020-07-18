@@ -6,6 +6,7 @@
 #include "usart.h"
 #include "sprint.h"
 #include "nvic.h"
+#include "ringbuffer.h"
 
 #include <stdarg.h>
 
@@ -15,6 +16,9 @@
  * system
  */
 static char debug_buffer[64];
+static char receive_buffer[256];
+
+struct ringbuffer rb;
 
 /*
  * Initializes the system serial port USART1 with the following configuration
@@ -41,6 +45,16 @@ void print_init(void) {
         .buad_rate = 115200
     };
     usart_init(USART1, &debug_usart);
+
+    /* Enable receive complete interrupt */
+    usart_interrupt_enable(USART1, USART_IRQ_RXRDY);
+
+    /* Set up the ringbuffer */
+    ringbuffer_init(&rb, (u8 *)receive_buffer, 256);
+
+    /* Set up the NVIC */
+    nvic_enable(14);
+    nvic_set_prioriy(14, NVIC_PRI_2);
 }
 
 /*
@@ -169,4 +183,26 @@ void print_byte(u8 data) {
  */
 u8 print_get_status(void) {
     return usart_get_thr_status(USART1);
+}
+
+/*  
+ * Try to read a number of bytes from the receive buffer into
+ * the data pointer and returns the number of bytes read.
+ */
+u32 read_print_buffer(char* data, u32 size) {
+    u32 status = ringbuffer_read_mult(&rb, (u8 *)data, size);
+
+    return status;
+}
+
+/*
+ * Interrupt exeption is called when a new character is
+ * available in the reive holding register
+ */
+void usart1_exception(void) {
+
+    /* Read the RHR to clear the interrupt flag */
+    u8 rec = usart_read(USART1);
+
+    ringbuffer_add(&rb, rec);
 }

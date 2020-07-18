@@ -13,6 +13,8 @@
 .extern curr_thread;
 .extern next_thread;
 
+.global test_kill
+
 /* 
  * The PendSV handler is a software triggered interrupt, which is triggered 
  * after the scheduler has picked the next thread to run. It is configured with
@@ -35,6 +37,13 @@ pendsv_exception:
 	mrs r0, psp
 	isb
 
+	/* Check if the current thread is valid */
+	ldr r1, =curr_thread
+	ldr r2, [r1]
+	mov r3, #0
+	cmp r3, r2
+	beq _new_thread
+
 	/*
 	 * Bit 4 in the EXC_RETURN indicates that the stack contains
 	 * extra space for the floating point registers. These might 
@@ -43,6 +52,7 @@ pendsv_exception:
 	 * holds it FPU status in the EXC_RETURN in the LR therefore
 	 * this register is stacked twice.
 	 */
+
 	tst lr, #0x10
 	it eq
 	vstmdbeq r0!, {s16-s31}
@@ -51,10 +61,9 @@ pendsv_exception:
 	stmdb r0!, {r4-r11, lr}
 
 	/* Update the stack pointer of  the current running thread */
-	ldr r1, =curr_thread
-	ldr r2, [r1]
 	str r0, [r2]
 
+_new_thread:
 	/* Make `curr_thread` point to the `next_thread` */
 	ldr r0, =next_thread
 	ldr r2, [r0]

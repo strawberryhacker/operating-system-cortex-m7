@@ -4,6 +4,7 @@
 #include "bootloader.h"
 #include "dynamic_linker.h"
 #include "mm.h"
+#include "thread.h"
 
 /*
  * Defined in bootloader.h
@@ -19,6 +20,9 @@ void fpi(void* arg) {
 	
 	u8* binary_buffer = 0;
 	u8* buffer_ptr = 0;
+
+	tid_t curr_tid = 0;
+
 	while (1) {
 		if (check_new_frame()) {
 
@@ -33,7 +37,12 @@ void fpi(void* arg) {
 				}
 
 				if (frame.cmd == 0x03) {
-					dynamic_linker_run((u32 *)binary_buffer);
+
+					if (curr_tid) {
+						kill_thread(curr_tid);
+					}
+
+					curr_tid = dynamic_linker_run((u32 *)binary_buffer);
 				}
 			}
 			send_response(RESP_OK);

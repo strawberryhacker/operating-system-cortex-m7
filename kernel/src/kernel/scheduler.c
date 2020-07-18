@@ -8,6 +8,7 @@
 #include "gpio.h"
 #include "print.h"
 #include "syscall.h"
+#include "dlist.h"
 
 #include <stddef.h>
 
@@ -18,8 +19,8 @@
  * point to the next thread to run. After the context switch 
  * `curr_thread` will point to the same thread as `next_thread`
  */
-volatile struct thread* curr_thread;
-volatile struct thread* next_thread;
+struct thread* curr_thread;
+struct thread* next_thread;
 
 /* Scheduler status tells if the core scheduler is allowed to run */
 volatile u8 scheduler_status;
@@ -179,6 +180,7 @@ static void process_expired_delays(void) {
 
 				/* Remove the thread for the delay queue */
 				dlist_remove(iter, &cpu_rq.sleep_q);
+				((struct thread *)iter->obj)->rq_list = NULL;
 
 				/* Place the thread back into the running list */
 				struct thread* t = (struct thread *)iter->obj;
@@ -197,7 +199,45 @@ static void process_expired_delays(void) {
 	}
 }
 
-void calculate_runtime(void) {
+/* 
+ * Remove a thread completly from the system. This includes deleting
+ * the code and the thread control block. It will also remove the
+ * thread from all list. This MUST be called in the scheduler.
+ */
+static void scheduler_remove_thread(struct thread* thread) {
+
+	/* Remove the threads from all the lists */
+	dlist_remove(&curr_thread->thread_node, &cpu_rq.threads);
+
+	if (curr_thread->rq_list) {
+		dlist_remove(&curr_thread->rq_node, curr_thread->rq_list);
+	}
+
+	/* Verify that the thread does not exits in any list */
+	if ((curr_thread->rq_node.next != NULL) || 
+	    (curr_thread->rq_node.prev != NULL) ||
+		(curr_thread->thread_node.next != NULL) ||
+		(curr_thread->thread_node.prev != NULL)) {
+		panic("Exiting thread exist in a list");
+	}
+
+	/* Delete the threads memory footprint */
+	if (curr_thread->code_addr) {
+		mm_free(curr_thread->code_addr);
+	}
+	
+	/* Delete the thread control block */
+	mm_free((void *)curr_thread);
+
+	/* This tells the context switcher to skip stack saving */
+	curr_thread = NULL;
+}
+
+/*
+ * This functions goes over all the threads and saves the new 
+ * runtime window into current runtime. 
+ */
+static void calculate_runtime(void) {
 	struct dlist_node* iter = cpu_rq.threads.first;
 
 	while (iter != NULL) {
@@ -208,26 +248,41 @@ void calculate_runtime(void) {
 	}
 }
 
+/*
+ * Returns the current runtime of the current thread
+ */
+static u64 get_curr_thread_runtime(void) {
+	/* Compute the runtime of the current running thread */
+	u64 curr_runtime;
+	if (reschedule_pending) {
+		reschedule_pending = 0;
+
+		/* Calculate the runtime */
+		u32 cvr = systick_get_cvr();
+		curr_runtime = (u64)(SYSTICK_RVR - cvr);
+	} else {
+		/* No reschedule is pending so the runtime is SYSTICK_RVR */
+		curr_runtime = SYSTICK_RVR;
+	}
+
+	return curr_runtime;
+}
+
+/*
+ * This calls the scheduler. It is called every millisecond or
+ * after a reschedule.
+ */
 void systick_exception(void) {
 	if (scheduler_status) {
 		cpsid_f();
-		/* Compute the runtime of the current running thread */
-		u64 curr_runtime;
-		if (reschedule_pending) {
-			reschedule_pending = 0;
 
-			/* Calculate the runtime */
-			u32 cvr = systick_get_cvr();
-			curr_runtime = (u64)(SYSTICK_RVR - cvr);
-		} else {
-			/* No reschedule is pending so the runtime is SYSTICK_RVR */
-			curr_runtime = SYSTICK_RVR;
-		}
+		u64 curr_runtime = get_curr_thread_runtime();
 
 		tick += curr_runtime;
 		stats_tick += curr_runtime;
 		curr_thread->runtime_new += curr_runtime;
 
+		/* Every second the scheduler will calulate the thread new runtime */
 		if (stats_tick >= SYSTICK_RVR * 1000) {
 			stats_tick = 0;
 			calculate_runtime();
@@ -239,6 +294,14 @@ void systick_exception(void) {
 		if (curr_thread->tick_to_wake == 0) {
 			/* The current thread has to be enqueued again */
 			curr_thread->class->enqueue((struct thread *)curr_thread, &cpu_rq);
+		}
+
+		/*
+		 * Check if the thread should be removed. No reference to
+		 * curr_thread should be performed after this point. 
+		 */
+		if (curr_thread->exit_pending) {
+			scheduler_remove_thread(curr_thread);
 		}
 
 		/* Call the core scheduler */
@@ -289,6 +352,9 @@ void scheduler_enqueue_delay(struct thread* thread) {
 			dlist_insert_last(&thread->rq_node, &cpu_rq.sleep_q);
 		}
 	}
+
+	/* Update the thread list */
+	thread->rq_list = &cpu_rq.sleep_q;
 
 	/*
 	 * If the new thread is placed first in the sleep queue, the first
