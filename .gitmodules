@@ -1,0 +1,6 @@
+[submodule "application/src/generic"]
+	path = application/src/generic
+	url = https://github.com/strawberryhacker/vanilla-app-generic
+[submodule "application/src/system"]
+	path = application/src/system
+	url = https://github.com/strawberryhacker/vanilla-app-system
