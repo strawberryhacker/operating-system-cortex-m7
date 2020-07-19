@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef SPRINT_H
 #define SPRINT_H

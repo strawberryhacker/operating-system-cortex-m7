@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "syscall.h"
 

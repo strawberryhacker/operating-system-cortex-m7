@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "types.h"
 
@@ -23,7 +23,7 @@ struct app_info {
     u32* entry;
     u32 stack;
 
-    // Dynamic linking information
+    /* Dynamic linking information */
     u32* got_start;
     u32* got_end;
     u32* plt_start;
@@ -37,7 +37,7 @@ int main(void);
 
 void __libc_init_array(void);
 
-/// Initializes the c library and jumps to the main application
+/* Initializes the c library and jumps to the main application */
 static void app_startup(void* arg) {
     __libc_init_array();
 

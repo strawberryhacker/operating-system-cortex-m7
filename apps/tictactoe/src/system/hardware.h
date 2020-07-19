@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef HARDWARE_H
 #define HARDWARE_H
@@ -9,7 +9,9 @@
 #define _w volatile 
 #define _rw volatile
 
-/// Clock registers
+/*
+ * Clock registers
+ */
 typedef struct {
 	_w  u32 SCER;
 	_w  u32 SCDR;
@@ -57,7 +59,9 @@ typedef struct {
 	_r  u32 AIPR;
 } clock_reg;
 
-/// Flash registers
+/*
+ * Flash registers
+ */
 typedef struct {
 	_rw u32 FMR;
 	_w  u32 FCR;
@@ -67,14 +71,18 @@ typedef struct {
 	_rw u32 WPMR;
 } flash_reg;
 
-/// Watchdog registers
+/*
+ * Watchdog registers
+ */
 typedef struct {
 	_w  u32 CR;
 	_rw u32 MR;
 	_r  u32 SR;
 } watchdog_reg;
 
-/// GPIO registers
+/*
+ * GPIO registers
+ */
 typedef struct {
 	_w  u32 PER;
 	_w  u32 PDR;
@@ -147,7 +155,9 @@ typedef struct {
 	_r  u32 PCRHR;
 } gpio_reg;
 
-/// Systick registers
+/*
+ * Systick registers
+ */
 typedef struct {
 	_rw u32 CSR;
 	_rw u32 RVR;
@@ -155,7 +165,9 @@ typedef struct {
 	_r  u32 CALIB;
 } systick_reg;
 
-/// USART registers
+/*
+ * USART registers
+ */
 typedef struct {
 	_w  u32 CR;
 	_rw u32 MR;
@@ -173,7 +185,9 @@ typedef struct {
 	_r  u32 NER;
 } usart_reg;
 
-/// NVIC registers
+/*
+ * NVIC registers
+ */
 typedef struct {
 	_rw u32 ISER[8];
 	_r  u32 RESERVED1[24];
@@ -190,6 +204,9 @@ typedef struct {
 	_r  u32 STIR;
 } nvic_reg;
 
+/*
+ * Integrity check monitor registers
+ */
 typedef struct {
 	_rw u32 CFG;
 	_w  u32 CTRL;
@@ -206,11 +223,17 @@ typedef struct {
 	_w  u32 UIHVAL[8];
 } icm_reg;
 
+/*
+ * Bus matrix priority registers
+ */
 typedef struct {
 	_rw u32 PRAS;
 	_rw u32 PRBS;
 } matrix_pri_reg;
 
+/*
+ * Bus matrix registers
+ */
 typedef struct {
 	_rw u32 MCFG[13];
 	_r  u32 RESERVED1[3];
@@ -231,6 +254,9 @@ typedef struct {
 	_r  u32 WPSR;
 } matrix_reg;
 
+/*
+ * DRAM controller registers
+ */
 typedef struct {
 	_rw u32 MR;
 	_rw u32 TR;
@@ -248,6 +274,9 @@ typedef struct {
 	_w  u32 OCMS_KEY2;
 } dram_reg;
 
+/*
+ * Cortex-M7 system control block registers
+ */
 typedef struct {
 	_r  u32 CPUID;
 	_rw u32 ICSR;
@@ -301,6 +330,9 @@ typedef struct {
 	_rw u32 ABFSR;
 } scb_reg;
 
+/*
+ * Cache registers
+ */
 typedef struct {
 	_w  u32 ICIALLU;
 	_r  u32 RESERVED;
@@ -315,6 +347,26 @@ typedef struct {
 	_r  u32 DONT_USE;
 } cache_reg;
 
+/*
+ * Memory proteciton unit
+ */
+typedef struct {
+	_r  u32 TYPE;
+	_rw u32 CTRL;
+	_rw u32 RNR;
+	_rw u32 RBAR;
+	_rw u32 RASR;
+	_rw u32 RBAR_A1;
+	_rw u32 RASR_A1;
+	_rw u32 RBAR_A2;
+	_rw u32 RASR_A2;
+	_rw u32 RBAR_A3;
+	_rw u32 RASR_A3;
+} mpu_reg;
+
+/*
+ * Multimedia card interface registers
+ */
 typedef struct {
 	_w  u32 CR;
 	_rw u32 MR;
@@ -341,33 +393,391 @@ typedef struct {
 	_rw u32 FIFO[256];
 } mmc_reg;
 
-#define CLOCK ((clock_reg *)0x400E0600)
-#define FLASH ((flash_reg *)0x400E0C00)
+/*
+ * Gigabit MAC SA registers
+ */
+typedef struct {
+	_rw u32 SAB;
+	_rw u32 SAT;
+} gmac_sa;
+
+/*
+ * Gigabit MAC ST2CW registers
+ */
+typedef struct {
+	_rw u32 ST2CW0;
+	_rw u32 ST2CW1;
+} gmac_st2cw;
+
+/*
+ * Gigabit MAC registers
+ */
+typedef struct {
+	_rw u32 NCR;
+	_rw u32 NCFGR;
+	_r  u32 NSR;
+	_rw u32 UR;
+	_rw u32 DCFGR;
+	_rw u32 TSR;
+	_rw u32 RBQB;
+	_rw u32 TBQB;
+	_rw u32 RSR;
+	_r  u32 ISR;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_rw u32 IMR;
+	_rw u32 MAN;
+	_r  u32 RPQ;
+	_rw u32 TPQ;
+	_rw u32 TPSF;
+	_rw u32 RPSF;
+	_rw u32 RJFML;
+	_r  u32 RESERVED1[13];
+	_rw u32 HBR;
+	_rw u32 HRT;
+	gmac_sa SA[4];
+	_rw u32 TIDM1;
+	_rw u32 TIDM2;
+	_rw u32 TIDM3;
+	_rw u32 TIDM4;
+	_rw u32 WOL;
+	_rw u32 IPGS;
+	_rw u32 SVLAN;
+	_rw u32 TPFCP;
+	_rw u32 SAMB1;
+	_rw u32 SAMT1;
+	_r  u32 RESERVED2[3];
+	_rw u32 NCS;
+	_rw u32 SCL;
+	_rw u32 SCH;
+	_r  u32 EFTSH;
+	_r  u32 EFRSH;
+	_r  u32 PEFTSH;
+	_r  u32 PEFRSH;
+	_r  u32 RESERVED3[2];
+	_r  u32 OTLO;
+	_r  u32 OTHI;
+	_r  u32 FT;
+	_r  u32 BCFT;
+	_r  u32 MFT;
+	_r  u32 PFT;
+	_r  u32 BFT64;
+	_r  u32 TBFT127;
+	_r  u32 TBFT255;
+	_r  u32 TBFT511;
+	_r  u32 TBFT1023;
+	_r  u32 TBFT1518;
+	_r  u32 GTBFT1518;
+	_r  u32 TUR;
+	_r  u32 SCF;
+	_r  u32 MCF;
+	_r  u32 EC;
+	_r  u32 LC;
+	_r  u32 DTF;
+	_r  u32 CSE;
+	_r  u32 ORLO;
+	_r  u32 ORHI;
+	_r  u32 FR;
+	_r  u32 BCFR;
+	_r  u32 MFR;
+	_r  u32 PFR;
+	_r  u32 BFR64;
+	_r  u32 TBFR127;
+	_r  u32 TBFR255;
+	_r  u32 TBFR511;
+	_r  u32 TBFR1023;
+	_r  u32 TBFR1518;
+	_r  u32 TMXBFR;
+	_r  u32 UFR;
+	_r  u32 OFR;
+	_r  u32 JR;
+	_r  u32 FCSE;
+	_r  u32 LFFE;
+	_r  u32 RSE;
+	_r  u32 AE;
+	_r  u32 RRE;
+	_r  u32 ROE;
+	_r  u32 IHCE;
+	_r  u32 TCE;
+	_r  u32 UCE;
+	_r  u32 RESERVED4[2];
+	_rw u32 TISUBN;
+	_rw u32 TSH;
+	_r  u32 RESERVED5[3];
+	_rw u32 TSL;
+	_rw u32 TN;
+	_w  u32 TA;
+	_rw u32 TI;
+	_r  u32 EFTSL;
+	_r  u32 EFTN;
+	_r  u32 EFRSL;
+	_r  u32 EFRN;
+	_r  u32 PEFTSL;
+	_r  u32 PEFTN;
+	_r  u32 PEFRSL;
+	_r  u32 PEFRN;
+	_r  u32 RESERVED6[28];
+	_r  u32 RXLPI;
+	_r  u32 RXLPITIME;
+	_r  u32 TXLPI;
+	_r  u32 TXLPITIME;
+	_r  u32 RESERVED7[96];
+	_r  u32 ISRPQ[5];
+	_r  u32 RESERVED8[11];
+	_rw u32 TBQBAPQ[5];
+	_r  u32 RESERVED9[11];
+	_rw u32 RBQBAPQ[5];
+	_r  u32 RESERVED10[3];
+	_rw u32 RBSRPQ[5];
+	_r  u32 RESERVED11[2];
+	_rw u32 CBSCR;
+	_rw u32 CBSISQA;
+	_rw u32 CBSISQB;
+	_r  u32 RESERVED12[14];
+	_rw u32 ST1RPQ[4];
+	_r  u32 RESERVED13[12];
+	_rw u32 ST2RPQ[8];
+	_r  u32 RESERVED14[40];
+	_w  u32 IERPQ[5];
+	_r  u32 RESERVED15[3];
+	_w  u32 IDRPQ[5];
+	_r  u32 RESERVED16[3];
+	_rw u32 IMRPQ[5];
+	_r  u32 RESERVED17[35];
+	_rw u32 ST2ER[4];
+	_r  u32 RESERVED18[4];
+	gmac_st2cw ST2CW[24];
+} gmac_reg;
+
+/*
+ * Timer channel registers
+ */
+typedef struct {
+	_w  u32 CCR;
+	_rw u32 CMR;
+	_rw u32 SMMR;
+	_r  u32 RAB;
+	_r  u32 CV;
+	_rw u32 RA;
+	_rw u32 RB;
+	_rw u32 RC;
+	_r  u32 SR;
+	_w  u32 IER;
+	_w  u32 IDR;
+	_r  u32 IMR;
+	_rw u32 EMR;
+	_r  u32 RESERVED[3];
+} timer_channel;
+
+/*
+ * Timer module registers
+ */
+typedef struct {
+	timer_channel channel[3];
+	_w  u32 BCR;
+	_rw u32 BMR;
+	_w  u32 QIER;
+	_w  u32 QIDR;
+	_r  u32 QIMR;
+	_r  u32 QISR;
+	_rw u32 FMR;
+	_r  u32 RESERVED[2];
+	_rw u32 WPMR;
+} timer_reg;
+
+/*
+ * DMA channel registers
+ */
+typedef struct {
+	_w  u32 CIE;
+	_w  u32 CID;
+	_r  u32 CIM;
+	_r  u32 CIS;
+	_rw u32 CSA;
+	_rw u32 CDA;
+	_rw u32 CNDA;
+	_rw u32 CNDC;
+	_rw u32 CUBC;
+	_rw u32 CBC;
+	_rw u32 CC;
+	_rw u32 CDS_MSP;
+	_rw u32 CSUS;
+	_rw u32 CDUS;
+	_r  u32 RESERVED[2];
+} dma_channel_reg;
+
+/*
+ * DMA registers
+ */
+typedef struct {
+	_r  u32 GTYPE;
+	_rw u32 GCFG;
+	_rw u32 GWAC;
+	_w  u32 GIE;
+	_w  u32 GID;
+	_r  u32 GIM;
+	_r  u32 GIS;
+	_w  u32 GE;
+	_w  u32 GD;
+	_r  u32 GS;
+	_rw u32 GRS;
+	_rw u32 GWS;
+	_w  u32 GRWS;
+	_w  u32 GRWR;
+	_w  u32 GSWR;
+	_r  u32 GSWS;
+	_w  u32 GSWF;
+	_r  u32 RESERVED[3];
+	dma_channel_reg channel[24];
+} dma_reg;
+
+/*
+ * USB device DMA
+ */
+typedef struct {
+	_rw u32 DEVDMANXTDSC;
+	_rw u32 DEVDMAADDRESS;
+	_rw u32 DEVDMACONTROL;
+	_rw u32 DEVDMASTATUS;
+} usb_device_dma;
+
+/*
+ * USB host DMA
+ */
+typedef struct {
+	_rw u32 HSTDMANXTDSC;
+	_rw u32 HSTDMAADDRESS;
+	_rw u32 HSTDMACONTROL;
+	_rw u32 HSTDMASTATUS;
+} usb_host_dma;
+
+/*
+ * USB registers
+ */
+typedef struct {
+
+	/* Device register */
+	_rw u32 DEVCTRL;
+	_r  u32 DEVISR;
+	_w  u32 DEVICR;
+	_w  u32 DEVIFR;
+	_r  u32 DEVIMR;
+	_w  u32 DEVIDR;
+	_w  u32 DEVIER;
+	_rw u32 DEVEPT;
+	_r  u32 DEVFNUM;
+	_r  u32 RESERVED1[55];
+
+	_rw u32 DEVEPTCFG[10];
+	_r  u32 RESERVED2[2];
+	_r  u32 DEVEPTISR[10];
+	_r  u32 RESERVED3[2];
+	_w  u32 DEVEPTICR[10];
+	_r  u32 RESERVED4[2];
+	_rw u32 DEVEPTIFR[10];
+	_r  u32 RESERVED5[2];
+	_rw u32 DEVEPTIMR[10];
+	_r  u32 RESERVED6[2];
+	_w  u32 DEVEPTIER[10];
+	_r  u32 RESERVED7[2];
+	_w  u32 DEVEPTIDR[10];
+	_r  u32 RESERVED8[50];
+	usb_device_dma device_dma[7];
+	_r  u32 RESERVED9[32];
+
+	/* Host registers */
+	_rw u32 HSTCTRL;
+	_r  u32 HSTISR;
+	_w  u32 HSTICR;
+	_w  u32 HSTIFR;
+	_r  u32 HSTIMR;
+	_w  u32 HSTIDR;
+	_w  u32 HSTIER;
+	_rw u32 HSTPIP;
+	_rw u32 HSTFNUM;
+	_rw u32 HSTADDR1;
+	_rw u32 HSTADDR2;
+	_rw u32 HSTADDR3;
+	_r  u32 RESERVED10[52];
+
+	_rw u32 HSTPIPCFG[10];
+	_r  u32 RESERVED11[2];
+	_r  u32 HSTPIPISR[10];
+	_r  u32 RESERVED12[2];
+	_w  u32 HSTPIPICR[10];
+	_r  u32 RESERVED13[2];
+	_w  u32 HSTPIPIFR[10];
+	_r  u32 RESERVED14[2];
+	_r  u32 HSTPIPIMR[10];
+	_r  u32 RESERVED15[2];
+	_w  u32 HSTPIPIER[10];
+	_r  u32 RESERVED16[2];
+	_w  u32 HSTPIPIDR[10];
+	_r  u32 RESERVED17[2];
+	_rw u32 HSTPIPINRQ[10];
+	_r  u32 RESERVED18[2];
+	_rw u32 HSTPIPERR[10];
+	_r  u32 RESERVED19[26];
+	usb_host_dma host_dma[7];
+	_r  u32 RESERVED20[32];
+
+	/* General USB control */
+	_rw u32 CTRL;
+	_r  u32 SR;
+	_w  u32 SCR;
+	_w  u32 SFR;
+} usb_reg;
+
+/*
+ * UTMI registers
+ */
+typedef struct {
+	_r  u32 RESERVED1[4];
+	_rw u32 OHCIICR;
+	_r  u32 RESERVED2[7];
+	_rw u32 CKTRIM;
+} utmi_reg;
+
+/*
+ * Defines the base address of the SOC peripherals
+ */
+#define CLOCK    ((clock_reg *)0x400E0600)
+#define FLASH    ((flash_reg *)0x400E0C00)
 #define WATCHDOG ((watchdog_reg *)0x400E1850)
-#define SYSTICK ((systick_reg *)0xE000E010)
-#define NVIC ((nvic_reg *)0xE000E100)
-#define ICM ((icm_reg *)0x40048000)
-#define MATRIX ((matrix_reg *)0x40088000)
-#define DRAM ((dram_reg *)0x40084000)
-#define SCB ((scb_reg *)0xE000ED00)
-#define CACHE ((scb_reg *)0xE000EF50)
-#define MMC ((mmc_reg *)0x40000000)
+#define SYSTICK  ((systick_reg *)0xE000E010)
+#define NVIC     ((nvic_reg *)0xE000E100)
+#define ICM      ((icm_reg *)0x40048000)
+#define MATRIX   ((matrix_reg *)0x40088000)
+#define DRAM     ((dram_reg *)0x40084000)
+#define SCB      ((scb_reg *)0xE000ED00)
+#define MPU      ((mpu_reg *)0xE000ED90)
+#define CACHE    ((cache_reg *)0xE000EF50)
+#define MMC      ((mmc_reg *)0x40000000)
+#define GMAC     ((gmac_reg *)0x40050000)
+#define GPIOA    ((gpio_reg *)0x400E0E00)
+#define GPIOB    ((gpio_reg *)0x400E1000)
+#define GPIOC    ((gpio_reg *)0x400E1200)
+#define GPIOD    ((gpio_reg *)0x400E1400)
+#define GPIOE    ((gpio_reg *)0x400E1600)
+#define USART0   ((usart_reg *)0x40024000)
+#define USART1   ((usart_reg *)0x40028000)
+#define USART2   ((usart_reg *)0x4002C000)
+#define TIMER0   ((timer_reg *)0x4000C000)
+#define TIMER1   ((timer_reg *)0x40010000)
+#define TIMER2   ((timer_reg *)0x40014000)
+#define TIMER3   ((timer_reg *)0x40054000)
+#define USBHS      ((usb_reg *)0x40038000)
+#define UTMI     ((utmi_reg *)0x400E0400)
 
-#define CPACR 0xE000ED88
+/*
+ * Defines the address of the Cortex-M7 vecotr table offset register
+ */
+#define VECTOR_TABLE_BASE (u32)0xE000ED08
 
-#define GPIOA ((gpio_reg *)0x400E0E00)
-#define GPIOB ((gpio_reg *)0x400E1000)
-#define GPIOC ((gpio_reg *)0x400E1200)
-#define GPIOD ((gpio_reg *)0x400E1400)
-#define GPIOE ((gpio_reg *)0x400E1600)
-
-#define USART0 ((usart_reg *)0x40024000)
-#define USART1 ((usart_reg *)0x40028000)
-#define USART2 ((usart_reg *)0x4002C000)
-
-#define VECTOR_TABLE_BASE 0xE000ED08
-
-#define KERNEL_IMAGE_ADDR 0x00404200
-
+/*
+ * Defines the address of which the kernel will be loaded. This does
+ * not equal the vector table base address of the kernel.
+ */
+#define KERNEL_IMAGE_ADDR (u32)0x00404000
 
 #endif
