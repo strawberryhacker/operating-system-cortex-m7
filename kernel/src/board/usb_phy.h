@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+
 /*
  * Initializes the USB PHY including the interrupt and clock controller
  */

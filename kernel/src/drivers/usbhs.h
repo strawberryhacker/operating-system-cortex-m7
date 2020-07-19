@@ -12,6 +12,12 @@
  * tranceiver goes into READY state again. 
  */
 
+#define USBHS_DPRAM_ADDR 0xA0100000
+#define USBHS_RAM_SIZE 0x8000
+
+#define usbhs_get_fifo_ptr(epn, scale)                                                                         \
+	(((volatile uint##scale##_t(*)[USBHS_RAM_SIZE / ((scale) / 8)]) USBHS_DPRAM_ADDR)[(epn)])
+
 enum usb_operation {
     USB_HOST,
     USB_DEVICE
@@ -21,6 +27,13 @@ enum usb_speed {
     USB_FULL_SPEED,
     USB_HIGH_SPEED,
     USB_LOW_SPEED
+};
+
+enum usb_host_speed {
+    HOST_SPEED_NORMAL,
+    HOST_SPEED_LOW_POWER,
+    HOST_SPEED_FORCED_HS,
+    HOST_SPEED_FORCED_FS
 };
 
 #define USB_PIPE_TYPE_CTRL      0

@@ -31,10 +31,10 @@ int main(void)
 
 	new_thread(&fpi_info);
 
+	cpsie_i();
+	cpsie_f();
 	usb_phy_init();
-	print("USB enabled\n");
 
-	print("Speed: %d\n", usbhs_get_speed_status());
 	while (1);
 
 	scheduler_start();

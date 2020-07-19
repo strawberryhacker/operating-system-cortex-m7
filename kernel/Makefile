@@ -127,6 +127,7 @@ CPFLAGS += -I$(TOP)/src/kernel
 CPFLAGS += -I$(TOP)/src/disk
 CPFLAGS += -I$(TOP)/src/net
 CPFLAGS += -I$(TOP)/src/misc
+CPFLAGS += -I$(TOP)/src/usb
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------
