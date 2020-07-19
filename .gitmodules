@@ -4,3 +4,9 @@
 [submodule "application/src/system"]
 	path = application/src/system
 	url = https://github.com/strawberryhacker/vanilla-app-system
+[submodule "apps/tictactoe/src/generic"]
+	path = apps/tictactoe/src/generic
+	url = https://github.com/strawberryhacker/vanilla-app-generic
+[submodule "apps/tictactoe/src/system"]
+	path = apps/tictactoe/src/system
+	url = https://github.com/strawberryhacker/vanilla-app-system
