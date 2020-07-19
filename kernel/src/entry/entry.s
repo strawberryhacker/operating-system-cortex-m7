@@ -147,7 +147,7 @@ Vector_table:
 	.word	default_exception
 	.word	default_exception
 	.word	default_exception
-	.word	default_exception
+	.word	usb_exception
 	.word	default_exception
 	.word	default_exception
 	.word	default_exception
@@ -227,3 +227,6 @@ Vector_table:
 
 	.weak timer0_ch0_exception
 	.thumb_set timer0_ch0_exception, default_exception
+
+	.weak usb_exception
+	.thumb_set usb_exception, default_exception
