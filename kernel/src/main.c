@@ -31,11 +31,5 @@ int main(void)
 
 	new_thread(&fpi_info);
 
-	cpsie_i();
-	cpsie_f();
-	usb_phy_init();
-
-	while (1);
-
 	scheduler_start();
 }
