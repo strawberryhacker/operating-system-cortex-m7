@@ -27,14 +27,14 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - Basic driver support &check;
 - SD card support &check;
 - General purpose DMA core itegrated with the scheduler
-- Multiclass scheduler w/FPU support and lazy stacking
+- Multiclass scheduler w/FPU support and lazy stacking &check;
 - Runtime statistics &check;
 - Memory statistics 
 - System calls &check;
 - Locks &check;
-- Runtime program execution (.bin)
+- Runtime program execution (.bin) &check;
 - LCD support with video playback (raw format)
-- FAT32 stack
+- FAT32 stack &check;
 - TCP/IP stack
 - Server support
 - Audio interface
