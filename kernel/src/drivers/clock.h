@@ -52,6 +52,11 @@ enum rc_frecuency {
 	RC_12_MHz
 };
 
+enum upll_mult {
+    UPLL_x40,
+    UPLL_x30
+};
+
 /*
  * The full clock network of the chip can be found in the SAMe70
  * datasheet at page 251
@@ -85,5 +90,10 @@ void pck_enable(enum pck pck);
 void pck_disable(enum pck pck);
 
 void clock_tree_reset(void);
+
+/*
+ * Sets up the UPLL for the USB tranceiver
+ */
+void upll_init(enum upll_mult mult);
 
 #endif

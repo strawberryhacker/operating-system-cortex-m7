@@ -160,7 +160,7 @@ tid_t new_thread(struct thread_info* thread_info) {
     thread->code_addr = thread_info->code_addr;
 
     icache_invalidate();
-    dcache_clean();
+    dcache_clean();        // Clean and invalidate
 
     resume_scheduler();
 

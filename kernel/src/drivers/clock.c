@@ -235,3 +235,30 @@ void clock_tree_reset(void) {
 	rc_frequency_select(RC_12_MHz);
 	clock_source_disable(CRYSTAL_OSCILLATOR);
 }
+
+/*
+ * Sets up the UPLL for the USB tranceiver. The source is allways the 
+ * either 12 or 16 MHz crystal oscillator.
+ */
+void upll_init(enum upll_mult mult)
+{
+    /* Set the multiplying factor in the USB transmitter macrocell */
+    UTMI->CKTRIM = mult;
+
+    /* Choose maximum startup time */
+    CLOCK->UCKR = (0b1111 << 20) | (1 << 16);
+    while (!(CLOCK->SR & (1 << 6)));
+
+    /*
+     * The UPLL is now stable so the system can configure the
+     * 48MHz clock. Both the peripheral clock, 480 MHz clock and
+     * the 48 MHz clock are required by the USB peripheral
+     */
+    CLOCK->MCKR &= ~(1 << 13);  /* UPLLDIV2 */
+    while (!(CLOCK->SR & (1 << 3)));
+
+    CLOCK->USB = (1 << 0) | (9 << 8); /* USBHS clock divided by 9 + 1 */
+
+    CLOCK->SCER = (1 << 5);
+    while (!(CLOCK->SCSR & (1 << 5)));
+}

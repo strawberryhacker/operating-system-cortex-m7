@@ -632,6 +632,113 @@ typedef struct {
 } dma_reg;
 
 /*
+ * USB device DMA
+ */
+typedef struct {
+	_rw u32 DEVDMANXTDSC;
+	_rw u32 DEVDMAADDRESS;
+	_rw u32 DEVDMACONTROL;
+	_rw u32 DEVDMASTATUS;
+} usb_device_dma;
+
+/*
+ * USB host DMA
+ */
+typedef struct {
+	_rw u32 HSTDMANXTDSC;
+	_rw u32 HSTDMAADDRESS;
+	_rw u32 HSTDMACONTROL;
+	_rw u32 HSTDMASTATUS;
+} usb_host_dma;
+
+/*
+ * USB registers
+ */
+typedef struct {
+
+	/* Device register */
+	_rw u32 DEVCTRL;
+	_r  u32 DEVISR;
+	_w  u32 DEVICR;
+	_w  u32 DEVIFR;
+	_r  u32 DEVIMR;
+	_w  u32 DEVIDR;
+	_w  u32 DEVIER;
+	_rw u32 DEVEPT;
+	_r  u32 DEVFNUM;
+	_r  u32 RESERVED1[55];
+
+	_rw u32 DEVEPTCFG[10];
+	_r  u32 RESERVED2[2];
+	_r  u32 DEVEPTISR[10];
+	_r  u32 RESERVED3[2];
+	_w  u32 DEVEPTICR[10];
+	_r  u32 RESERVED4[2];
+	_rw u32 DEVEPTIFR[10];
+	_r  u32 RESERVED5[2];
+	_rw u32 DEVEPTIMR[10];
+	_r  u32 RESERVED6[2];
+	_w  u32 DEVEPTIER[10];
+	_r  u32 RESERVED7[2];
+	_w  u32 DEVEPTIDR[10];
+	_r  u32 RESERVED8[50];
+	usb_device_dma device_dma[7];
+	_r  u32 RESERVED9[32];
+
+	/* Host registers */
+	_rw u32 HSTCTRL;
+	_r  u32 HSTISR;
+	_w  u32 HSTICR;
+	_w  u32 HSTIFR;
+	_r  u32 HSTIMR;
+	_w  u32 HSTIDR;
+	_w  u32 HSTIER;
+	_rw u32 HSTPIP;
+	_rw u32 HSTFNUM;
+	_rw u32 HSTADDR1;
+	_rw u32 HSTADDR2;
+	_rw u32 HSTADDR3;
+	_r  u32 RESERVED10[52];
+
+	_rw u32 HSTPIPCFG[10];
+	_r  u32 RESERVED11[2];
+	_r  u32 HSTPIPISR[10];
+	_r  u32 RESERVED12[2];
+	_w  u32 HSTPIPICR[10];
+	_r  u32 RESERVED13[2];
+	_w  u32 HSTPIPIFR[10];
+	_r  u32 RESERVED14[2];
+	_r  u32 HSTPIPIMR[10];
+	_r  u32 RESERVED15[2];
+	_w  u32 HSTPIPIER[10];
+	_r  u32 RESERVED16[2];
+	_w  u32 HSTPIPIDR[10];
+	_r  u32 RESERVED17[2];
+	_rw u32 HSTPIPINRQ[10];
+	_r  u32 RESERVED18[2];
+	_rw u32 HSTPIPERR[10];
+	_r  u32 RESERVED19[26];
+	usb_host_dma host_dma[7];
+	_r  u32 RESERVED20[32];
+
+	/* General USB control */
+	_rw u32 CTRL;
+	_r  u32 SR;
+	_w  u32 SCR;
+	_w  u32 SFR;
+} usb_reg;
+
+/*
+ * UTMI registers
+ */
+typedef struct {
+	_r  u32 RESERVED1[4];
+	_rw u32 OHCIICR;
+	_r  u32 RESERVED2[7];
+	_rw u32 CKTRIM;
+} utmi_reg;
+
+/*
  * Defines the base address of the SOC peripherals
  */
 #define CLOCK    ((clock_reg *)0x400E0600)
@@ -659,6 +766,8 @@ typedef struct {
 #define TIMER1   ((timer_reg *)0x40010000)
 #define TIMER2   ((timer_reg *)0x40014000)
 #define TIMER3   ((timer_reg *)0x40054000)
+#define USB      ((usb_reg *)0x40038000)
+#define UTMI     ((utmi_reg *)0x400E0400)
 
 /*
  * Defines the address of the Cortex-M7 vecotr table offset register

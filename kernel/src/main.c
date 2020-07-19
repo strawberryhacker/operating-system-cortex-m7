@@ -10,8 +10,11 @@
 #include "programming.h"
 #include "panic.h"
 #include "ringbuffer.h"
+#include "usbhs.h"
+#include "usb_phy.h"
 
 #include <stddef.h>
+
 
 int main(void)
 {
@@ -27,6 +30,12 @@ int main(void)
 	};
 
 	new_thread(&fpi_info);
+
+	usb_phy_init();
+	print("USB enabled\n");
+
+	print("Speed: %d\n", usbhs_get_speed_status());
+	while (1);
 
 	scheduler_start();
 }

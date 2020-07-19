@@ -64,6 +64,7 @@ driver-y += /src/drivers/matrix.c
 driver-y += /src/drivers/mmc.c
 driver-y += /src/drivers/gmac.c
 driver-y += /src/drivers/dma.c
+driver-y += /src/drivers/usbhs.c
 
 disk-y += /src/disk/sd_protocol.c
 disk-y += /src/disk/disk_io.c
@@ -73,6 +74,7 @@ board-y += /src/board/serial.c
 board-y += /src/board/print.c
 board-y += /src/board/sd.c
 board-y += /src/board/ethernet.c
+board-y += /src/board/usb_phy.c
 
 generic-y += /src/generic/sprint.c
 generic-y += /src/generic/crc.c
