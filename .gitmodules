@@ -10,3 +10,9 @@
 [submodule "apps/tictactoe/src/system"]
 	path = apps/tictactoe/src/system
 	url = https://github.com/strawberryhacker/vanilla-app-system
+[submodule "apps/template/src/generic"]
+	path = apps/template/src/generic
+	url = https://github.com/strawberryhacker/vanilla-app-generic
+[submodule "apps/template/src/system"]
+	path = apps/template/src/system
+	url = https://github.com/strawberryhacker/vanilla-app-system
