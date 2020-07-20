@@ -1,0 +1,1 @@
+I want do be able to turn on the microcontroller. Open a self written terminal on runtime and start writing an assembly program. After this I want to be able to assemble this .asm or .s file into a valid executable binary which I can run on the operating system. This way you can take the microcontroller and a keyboard with you and develop an application without any tools. 

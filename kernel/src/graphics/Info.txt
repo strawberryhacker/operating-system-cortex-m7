@@ -1,0 +1,1 @@
+Here I will make functions for accsessing shared video memory, allowing for connecting various TFT LCD displays. This will also have DMA support to avoid several applications having to do one million syscalls each frame.
