@@ -5,16 +5,207 @@
 #include "gpio.h"
 #include "cpu.h"
 
-struct usb_pipe enum_pipe = {
-    .irq_freq = 0,
-    .endpoint = 0,
-    .type = USB_PIPE_TYPE_CTRL,
-    .token = USB_PIPE_TOKEN_SETUP,
-    .autosw = 0,
-    .size = USB_PIPE_SIZE_64B,
-    .banks = USB_PIPE_BANKS_1,
-    .alloc = 1
-};
+/*
+ * Freezes the USB clock. Only asynchronous interrupt can trigger 
+ * and interrupt. The CPU can only read/write FRZCLK and USBE when
+ * this but is set
+ */
+void usbhs_freeze_clock(void)
+{
+    u32 reg = USBHS->CTRL;
+    reg &= ~(1 << 24);      /* Clear UID */
+    reg |= (1 << 8);        /* Set VBUSHWC */
+    reg |= (1 << 14);
+    USBHS->CTRL = reg;
+}
+
+/*
+ * Unfreezes the USB clock
+ */
+void usbhs_unfreeze_clock(void)
+{
+    u32 reg = USBHS->CTRL;
+    reg &= ~(1 << 24);      /* Clear UID */
+    reg |= (1 << 8);        /* Set VBUSHWC */
+    reg &= ~(1 << 14);
+    USBHS->CTRL = reg; 
+}
+
+/*
+ * Enable the USB interface
+ */
+void usbhs_enable(void)
+{
+    u32 reg = USBHS->CTRL;
+    reg &= ~(1 << 24);      /* Clear UID */
+    reg |= (1 << 8);        /* Set VBUSHWC */
+    reg |= (1 << 15);
+    USBHS->CTRL = reg;
+}
+
+/*
+ * Disables the USB interface. This act as a hardware reset, thus 
+ * resetting USB interface, disables the USB tranceiver and disables
+ * the USB clock inputs. This does not reset FRZCLK and UIMOD
+ */
+void usbhs_disable(void)
+{
+    u32 reg = USBHS->CTRL;
+    reg &= ~(1 << 24);      /* Clear UID */
+    reg |= (1 << 8);        /* Set VBUSHWC */
+    reg &= ~(1 << 15);
+    USBHS->CTRL = reg;
+}
+
+/*
+ * Sets the USB operating mode; host or device
+ */
+void usbhs_set_mode(enum usb_mode mode)
+{
+    u32 reg = USBHS->CTRL;
+    reg &= ~(1 << 24);      /* Clear UID */
+    reg |= (1 << 8);        /* Set VBUSHWC */
+
+    if (mode == USB_HOST) {
+        reg &= ~(1 << 25);
+    } else {
+        reg |= (1 << 25);
+    }
+    USBHS->CTRL = reg;
+}
+
+/*
+ * Enables the remote connection error interrupt
+ */
+static inline void usbhs_enable_connection_error(void) 
+{
+    u32 reg = USBHS->CTRL;
+    reg &= ~(1 << 24);      /* Clear UID */
+    reg |= (1 << 8);        /* Set VBUSHWC */
+    reg |= (1 << 4);
+    USBHS->CTRL = reg;
+}
+
+/*
+ * Disables the remote connection error interrupt
+ */
+static inline void usbhs_disable_connection_error(void) 
+{
+    u32 reg = USBHS->CTRL;
+    reg &= ~(1 << 24);      /* Clear UID */
+    reg |= (1 << 8);        /* Set VBUSHWC */
+    reg &= ~(1 << 4);
+    USBHS->CTRL = reg;
+}
+
+/*
+ * Checks if the USB UTMI 30MHz clock is usable. Returns 1 if
+ * the clock is usable, 0 if not
+ */
+u8 usbhs_clock_usable(void)
+{
+    if (USBHS->SR & (1 << 14)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/*
+ * Checks if a connection error has occured on the USB bus.
+ * Returns 1 if an error has occured, 0 if not
+ */
+static inline u8 usbhs_check_conenction_error(void)
+{
+    if (USBHS->SR & (1 << 4)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/*
+ * Returns the speed status. This should be checked at the end 
+ * of a reset request.
+ */
+static inline enum usb_device_speed usbhs_get_speed_status(void)
+{
+    u32 reg = (USBHS->SR >> 12) & 0b11;
+    return (enum usb_device_speed)reg;
+}
+
+
+/*
+ * Clears the connection error flag
+ */
+static inline void usbhs_clear_connection_error_flag(void)
+{
+    USBHS->SCR = (1 << 4);
+}
+
+/*
+ * Sets the connection error flag
+ */
+static inline void usbhs_set_connection_error_flag(void)
+{
+    USBHS->SFR = (1 << 4);
+}
+
+/*
+ * Enables the VBUS request. The host includes two weak pulldowns
+ * on the D+ and D- lines. When a devices is connected one of
+ * the pulldowns os overpowered by one of the devices pullups. 
+ * Which line is pulled high determines the speed of the deivce. 
+ * To enable this detection VBS request must be enabled.
+ */
+static inline void usbhs_vbus_request_enable(void)
+{
+    USBHS->SFR = (1 << 9);
+}
+
+/*
+ * Sends a USB resume on the bus
+ */
+static inline void usbhs_send_resume(void)
+{
+    USBHS->HSTCTRL |= (1 << 10);
+}
+
+/*
+ * Sends a USB reset. It might be useful to write this bit to 
+ * zero when a device disconnection is detected.
+ */
+static inline void usbhs_send_reset(void)
+{
+    USBHS->HSTCTRL |= (1 << 9);
+}
+
+/*
+ * Clears the reset bit in the configuration register. This is
+ * said to have no effect, but right above it, it is reccomended
+ */
+static inline void usbhs_clear_reset(void)
+{
+    USBHS->HSTCTRL &= ~(1 << 9);
+}
+
+/*
+ * Starts generating SOFs and uSOFs. This will be automatically 
+ * generated after a bus reset if the host was in suspend state
+ * (SOF enable zero). This also sets the WAKEUP flag.
+ */
+static inline void usbhs_sof_enable(void)
+{
+    USBHS->HSTCTRL |= (1 << 8);
+}
+
+/*
+ * Disables SOF and uSOF generation
+ */
+static inline void usbhs_sof_disable(void)
+{
+    USBHS->HSTCTRL &= ~(1 << 8);
+}
 
 /*
  * Sets the host speed capability
@@ -28,342 +219,483 @@ static inline void usbhs_set_host_speed(enum usb_host_speed speed)
 }
 
 /*
- * Sends a USB resume. NOTE this should only be called when SOF are
- * generated on the bus SOFE = 1
+ * Interrupt section
+ * 
+ * The USB interface has a quite complicated interrupt structure.
+ * A overview can be found at page 754 in the datasheet. The 
+ * host controller has ONE global status register used when
+ * detecting interrupts. This register includes some basic flags
+ * used for the root hub. In addition it includes one flag per pipe
+ * used to indicate that a pipe interrupt has happended. A pipe 
+ * interrupt has an independent status register used to report
+ * events. The same thing with DMA. This way, if the pipe flag
+ * is cleared not pipe interrupt is generated.  
  */
-static inline void usbhs_send_resume(void)
+
+/*
+ * Returns the global USB host status register
+ */
+static inline u32 usbhs_get_global_status(void)
 {
-    USBHS->HSTCTRL |= (1 << 10);
+    return USBHS->HSTISR;
 }
 
 /*
- * Send a USB reset on the bus
+ * Clear the mask in the global status register
  */
-static inline void usbhs_send_reset(void)
+static inline void usbhs_clear_global_status(u32 mask)
 {
-    USBHS->HSTCTRL |= (1 << 9);
+    USBHS->HSTICR = mask;
 }
 
 /*
- * Enables SOF generation on the bus
+ * Sets the mask in the global status register (debugging purpose)
  */
-static inline void usbhs_sof_enable(void)
+static inline void usbhs_force_global_status(u32 mask)
 {
-    USBHS->HSTCTRL |= (1 << 8);
+    USBHS->HSTIFR = mask;
 }
 
 /*
- * Disables SOF generation on the bus
+ * Returns the global interrupt mask. This indicates which events
+ * will trigger an interrupt
  */
-static inline void usbhs_sof_disable(void)
+static inline u32 usbhs_get_global_interrupt_mask(void)
 {
-    USBHS->HSTCTRL &= ~(1 << 8);
+    return USBHS->HSTIMR;
 }
 
 /*
- * Enables the USB interface and un-freezes the clock. This must 
- * be called prior to enabling the USB clock.
+ * Disables the interrupts corresponding to the input mask
  */
-void usbhs_enable(void)
+static inline void usbhs_disable_global_interrupt(u32 mask)
 {
-    u32 reg = USBHS->CTRL;
-    reg |= (1 << 15);
-    reg |= (1 << 24);   /* Must be set */
-    reg &= ~(1 << 14);
-    USBHS->CTRL = reg;
+    USBHS->HSTIDR = mask;
 }
 
 /*
- * Gets the pipe byte count
+ * Enables the interrupts corresponding to the input mask
  */
-static u32 usbhs_get_pipe_byte_count(u8 pipe)
+static inline void usbhs_enable_global_interrupt(u32 mask)
 {
-    u32 count = USBHS->HSTPIPISR[pipe];
-
-    return (count >> 20) & 0x7FF;
+    USBHS->HSTIER = mask;
 }
 
 /*
- * Disables the USB interface. This is mandatory before disabling
- * USB clock source to avoid freezing the USB in an undefined state
+ * Returns the current frame number
  */
-void usbhs_disable(void)
+static inline u32 usbhs_get_frame_number(void)
 {
-    /*
-     * The USBHS disable can be called even though the clock is
-     * freezed. The USBHS transceiver is disabled, clock inputs
-     * are disabled, peripheral is reset, and all registers become
-     * read only.
-     * 
-     * This does NOT disable or reset the DPRAM
-     */
-    u32 reg = USBHS->CTRL;
-    reg &= ~(1 << 15);
-    reg |= (1 << 24);     /* Must be set */
-    USBHS->CTRL = reg;
+    return (u32)((USBHS->HSTFNUM >> 3) & 0x7FF);
 }
 
 /*
- * Sets the main USB operation; either host or device
+ * Clears the frame number
  */
-void usbhs_set_operation(enum usb_operation operation) 
+static inline void usbhs_clear_frame_number(void)
 {
-    u32 reg = USBHS->CTRL;
-    if (operation == USB_HOST) {
-        reg &= ~(1 << 25);
-    } else {
-        reg |= (1 << 25);
-    }
-    USBHS->CTRL = reg;
+    /* Perform a write operation to the FNUM field */
+    USBHS->HSTFNUM &= ~(0x7FF << 3);
 }
 
 /*
- * In host operation this returns the speed status
- */
-enum usb_speed usbhs_get_speed_status(void)
-{
-    return (enum usb_speed)((USBHS->SR >> 12) & 0b11);
-}
-
-/*
- * Resets all the pipes
- */
-static void usbhs_reset_pipes(void)
-{
-    USBHS->HSTPIP |= 0x1FF0000;
-    USBHS->HSTPIP &= ~0x1FF0000;
-}
-
-/*
- * Sets the 7 bit address field of a pipe. Takes in the pipe number
- * and the pipe endpoint address
+ * Sets the pipe endpoint address. It takes in the endpoint
+ * number between 0 and 9, and a 7 bit address.
  */
 static void usbhs_set_pipe_addr(u8 pipe, u8 addr)
 {
-    volatile u32* reg_ptr = (volatile u32 *)&USBHS->HSTADDR1;
+    /* I don't know if byte or halfword access are allowed */
+    u32* reg_ptr = (u32 *)&USBHS->HSTADDR1 + (pipe >> 2);
 
-    /* Get the right offset */
-    u8 reg_offset = pipe >> 2;
-    u8 bit_offset = ((pipe & 0x3) << 3); 
+    /* Compute the offset in the current register */
+    u8 offset = ((pipe & 0x3) << 0x3);
 
-    u32 reg = *(reg_ptr + reg_offset);
-    reg &= ~(0x7F << bit_offset);
-    reg |= ((addr & 0x7F) << bit_offset);
-    *(reg_ptr + reg_offset) = reg;
+    /* Update the address */
+    u32 reg = *reg_ptr;
+    reg &= ~(0x7F << offset);
+    reg |= ((addr & 0x7F) << offset);
+    *reg_ptr = reg;
 }
 
 /*
- * Resets, configures and allocates the given list of pipes
+ * Assert reset on the specified pipe
  */
-void usbshs_init_pipes(struct usb_pipe* pipe, u32 pipe_count)
+static inline void usbhs_pipe_reset_assert(u8 pipe)
 {
-    for (u32 i = 0; i < pipe_count; i++) {
-        /* Reset the pipe */
-        USBHS->HSTPIP |= (1 << (16 + i));
-        USBHS->HSTPIP &= ~(1 << (16 + i));
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIP |= (1 << (pipe + 16));
+}
 
-        /* Enable the pipe */
-        USBHS->HSTPIP |= (1 << i);
+/*
+ * Deassert reset on the specified pipe
+ */
+static inline void usbhs_pipe_reset_deassert(u8 pipe)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIP &= ~(1 << (pipe + 16));
+}
 
-        /* Configure the pipe */
-        u32 reg = 0;
-        reg |= (pipe->irq_freq << 24);
-        reg |= (pipe->endpoint << 16);
-        reg |= (pipe->type << 12);
-        reg |= (pipe->token << 8);
-        reg |= (pipe->autosw << 10);
-        reg |= (pipe->size << 4);
-        reg |= (pipe->banks << 2);
+/*
+ * Enables the specifed pipe
+ */
+static inline void usbhs_pipe_enable(u8 pipe)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIP |= (1 << pipe);
+}
 
-        USBHS->HSTPIPCFG[i] = reg;
+/*
+ * Disables the specifed pipe
+ */
+static inline void usbhs_pipe_disable(u8 pipe)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIP &= ~(1 << pipe);
+}
 
-        reg |= (pipe->alloc << 1);
+/*
+ * Returns the specified pipes status register
+ */
+static inline u32 usbhs_pipe_get_status(u8 pipe)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    return USBHS->HSTPIPISR[pipe];
+}
 
-        USBHS->HSTPIPCFG[i] = reg;
+/*
+ * Clears the input mask in the specified pipes status register
+ */
+static inline void usbhs_pipe_clear_status(u8 pipe, u32 mask)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIPICR[pipe] = mask;
+}
 
-        if (!(USBHS->HSTPIPISR[i] & (1 << 18))) {
-            panic("Pipe error");
-        }
-        print("Pipe #%d ok\n", i);
+/*
+ * Sets the input mask in the specified pipes status register
+ */
+static inline void usbhs_pipe_force_status(u8 pipe, u32 mask)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIPIFR[pipe] = mask;
+}
 
-        USBHS->HSTIER = (1 << (i + 8));
-        USBHS->HSTPIPICR[i] = 0xFF;
-        USBHS->HSTPIPIER[i] = 0xFF;
+/*
+ * Return the specified pipe interrupt mask
+ */
+static inline u32 usbhs_pipe_get_interrupt_mask(u8 pipe)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    return USBHS->HSTPIPIMR[pipe];
+}
 
-        usbhs_set_pipe_addr(i, 0);
+/*
+ * Enables the interrupt corresponding to the specified
+ * pipes interrupt mask
+ */
+static inline void usbhs_pipe_enable_interrupt(u8 pipe, u32 mask)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIPIER[pipe] = mask;
+}
+
+/*
+ * Disables the interrupt corresponding to the specified
+ * pipes interrupt mask
+ */
+static inline void usbhs_pipe_disable_interrupt(u8 pipe, u32 mask)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIPIDR[pipe] = mask;
+}
+
+/*
+ * Performs a predefined number of IN request before the pipe 
+ * is frozen. This makes the device send IN packets. 
+ */
+static inline void usbhs_pipe_in_request_defined(u8 pipe, u8 count)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIPINRQ[pipe] = count;
+}
+
+/*
+ * Performs IN requests on the given pipe untill the pipe is frozen
+ */
+static inline void usbhs_pipe_in_request_continous(u8 pipe, u8 count)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIPINRQ[pipe] = (1 << 8);
+}
+
+/*
+ * Writes the given configuration mask to the given pipe
+ */
+static inline void usbhs_pipe_set_configuration(u8 pipe, u32 cfg)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    USBHS->HSTPIPCFG[pipe] = cfg;
+}
+
+/*
+ * Writes the given configuration mask to the given pipe
+ */
+static inline u32 usbhs_pipe_get_configuration(u8 pipe)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    return USBHS->HSTPIPCFG[pipe];
+}
+
+/*
+ * Checks the given pipe configuration status. This indicates
+ * if the configurations fields are set according to the
+ * pipe capabilities.
+ */
+static inline u8 usbhs_pipe_check_configuration(u8 pipe) 
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+
+    if (USBHS->HSTPIPISR[pipe] & (1 << 18)) {
+        return 1;
+    } else {
+        return 0;
     }
 }
 
 /*
- * Asks the device for its configuration descriptor
+ * Sets the pipe token
  */
-static void _get_dev_desc(void)
+static inline void usbhs_pipe_set_token(u8 pipe, enum pipe_token token)
 {
-    printl("Sending first frame");
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    
+    u32 reg = USBHS->HSTPIPCFG[pipe];
+    reg &= ~(0b11 << 8);
+    reg |= (token << 8);
+    USBHS->HSTPIPCFG[pipe] = reg;
+}
 
-    usbshs_init_pipes(&enum_pipe, 1);
+/*
+ * Sets the pipe interrupt frequency. Only useful for interrupt pipes
+ */
+static inline void usbhs_pipe_set_freq(u8 pipe, u8 irq_freq)
+{
+    if (pipe >= 10) {
+        panic("Pipe out of bound");
+    }
+    
+    u32 reg = USBHS->HSTPIPCFG[pipe];
+    reg &= ~(0xFF << 24);
+    reg |= (irq_freq << 24);
+    USBHS->HSTPIPCFG[pipe] = reg;
+}
 
-    /* Enable pipe 0 */
-    print("Pipe status: %32b\n", USBHS->HSTPIP);
-    print("Pipe #0 cfg: %32b\n", USBHS->HSTPIPCFG[0]);
+/*
+ * Initializes the USB interface
+ */
+void usbhs_init(void)
+{
+    /* The USB should be enabled because of the clock config */
+    usbhs_unfreeze_clock();
+    usbhs_set_mode(USB_HOST);
+    usbhs_enable();
 
-    volatile u8 request[8];
-    request[0] = 0x80;
-    request[1] = 0x06;
-    request[2] = 0x00;
-    request[3] = 0x01;
+    /* We disable all interrupts that might have been set */
+    for (u32 i = 0; i < 10; i++) {
+        usbhs_pipe_disable_interrupt(i, 0xFFFFFFFF);
+    }
+    usbhs_disable_global_interrupt(0xFFFFFFFF);
 
-    request[4] = 0x00;
-    request[5] = 0x00;
-    request[6] = 0x12;
-    request[7] = 0x00;
+    /* Enable VBUS request to start monitoring connect status */
+    usbhs_vbus_request_enable();
 
-    /* (volatile u8 *)usbhs_get_fifo_ptr(0, 8) */
-    volatile u8* dpram_dest = (volatile u8*)0xA0100000;
-    volatile u8* src = (volatile u8 *)request;
+    /* Enable wakeup and connection interrupt */
+    usbhs_enable_global_interrupt((1 << 6) | (1 << 0));
+}
 
-    /* Set setup in pipcfg - ICR TXSTPI - copy - ier txstpe - idr fifocon pfreeze*/
-    USBHS->HSTPIPCFG[0] &= ~(0b11 << 8);
-    USBHS->HSTPIPICR[0] = (1 << 2);
-    cpsid_i();
-    print("Byte cnt: %d\n", usbhs_get_pipe_byte_count(0));
+/*
+ * This functions gets called when a reset has been sent on the bus
+ */
+static void reset_callback(void)
+{
+    /* Configure the control pipe */
+    u32 cfg = (3 << 4) | (1 << 1);
+
+    usbhs_pipe_enable(0);
+    usbhs_pipe_set_configuration(0, cfg);
+    if (usbhs_pipe_check_configuration(0) == 0) {
+        panic("Pipe configuration not ok");
+    }
+
+    printl("Pipe configuration ok");
+
+    usbhs_pipe_set_token(0, PIPE_TOKEN_SETUP);
+    usbhs_pipe_clear_status(0, 1 << 2);
+
+    u8 setup[8];
+    setup[0] = 0x80;
+    setup[1] = 0x06;
+    setup[2] = 0x00;
+    setup[3] = 0x01;
+
+    setup[4] = 0x00;
+    setup[5] = 0x00;
+    setup[6] = 0x12;
+    setup[7] = 0x00;
+    volatile u8* dest = usbhs_get_fifo_ptr(0, 8);
+    volatile u8* src = setup;
+
     for (u8 i = 0; i < 8; i++) {
-        *dpram_dest++ = *src++;
+        *dest++ = *src++;
     }
-    *dpram_dest++ = *src++;
-    cpsie_i();
-    print("Byte cnt: %d\n", usbhs_get_pipe_byte_count(0));
 
-    USBHS->HSTPIPIER[0] = 0xFF;
-    USBHS->HSTPIPIDR[0] = (1 << 14) | (1 << 17);
-} 
+    print("Error: %32b\n", USBHS->HSTPIPERR[0]);
+    print("Size: %d\n", (usbhs_pipe_get_status(0) >> 20) & 0b11111111111);
+    print("Status: %32b\n", usbhs_pipe_get_status(0));
 
-/*
- * Initialized the USB host interface
- */
-u8 usbhs_init(struct usb_host* host_desc, struct usb_pipe* pipes, u32 pipe_count)
-{
-    /* Check if the clock is usable */
-    while (!(USBHS->SR & (1 << 14)));
-    print("Clock usable\n");
-
-    /* Un-freeze the USB clock */
-    USBHS->CTRL &= ~(1 << 14);
-
-    /* Set high-speed operation */
-    usbhs_set_host_speed(HOST_SPEED_NORMAL);
-
-    /* Disable VBUS hardware control */
-    USBHS->CTRL |= (1 << 8);
-
-    /* Enable device detection */
-    USBHS->SFR = (1 << 9);
-
-    /* Enable interrupts */
-    USBHS->HSTIER = (1 << 0) | (1 << 2) | (1 << 5) | (1 << 6) | (1 << 1);
-    USBHS->HSTICR = 0xFFFFFFFF;
-
-    usbshs_init_pipes(pipes, pipe_count);
-
-    return 1;
+    usbhs_enable_global_interrupt(0xFF << 8);
+    usbhs_pipe_enable_interrupt(0, 0xFF);
+    usbhs_pipe_disable_interrupt(0, (1 << 14) | (1 << 17));
 }
 
 /*
- * USB core pipe interrupt handler. This gets called when one of the 
- * pipes triggers an interrupt and must be serviced. This function
- * should clear all the pipe interrupt flags and take the appropriate
- * action
+ * Root hub handler. This is called when a root hub change
+ * occurs and it should clear the corresponding interrupt flag
  */
-static void usbhs_pipe_interrupt(u32 status)
+static void usbhs_root_hub_handler(u32 global_status)
+{  
+    usbhs_clear_global_status(0x5F);
+
+    if (global_status & (1 << 0)) {
+        printl("Device connected");
+        usbhs_clear_global_status(1 << 2);
+        usbhs_enable_global_interrupt(1 << 2);
+        usbhs_send_reset();
+    }
+
+    if (global_status & (1 << 1)) {
+        printl("Device disconnected");
+    }
+
+    if (global_status & (1 << 6)) {
+        printl("Wakeup");
+    }
+
+    if (global_status & (1 << 2)) {
+        reset_callback();
+        /* Disable reset send interrupt */
+        usbhs_disable_global_interrupt(1 << 2);
+    }
+    print("\n");
+}
+
+/*
+ * Pipe handler. This gets called when a pipe interrupt occurs. 
+ * This code should clear the corresponding interrupt flag
+ */
+static void usbhs_pipe_handler(u32 global_status)
 {
-    print("Pipe IRQ\n");
-    /* Get the first pipe which indicates interrupt */
-    u8 pipe_number = 0;
-    for (pipe_number = 0; pipe_number < 10; pipe_number++) {
-        if (status & (1 << (8 + pipe_number))) {
+    u8 pipe;
+
+    /* Go through all the pipes and find the first interrupted one */
+    for (pipe = 0; pipe < 10; pipe++) {
+        if (global_status & (1 << (pipe + 8))) {
             break;
         }
     }
+    /* Get the first interrupted pipe status */
+    u32 pipe_status = usbhs_pipe_get_status(pipe);
 
-    u32 pipe_status = USBHS->HSTPIPISR[pipe_number];
-    USBHS->HSTICR = (1 << (8 + pipe_number));
-    USBHS->HSTPIPICR[pipe_number] = 0xFFFFFFFF;
+    /* Clear the pipe status flags [0..7] and the global pipe flag */
+    usbhs_pipe_clear_status(pipe, 0xFF);
+    usbhs_clear_global_status((1 << (pipe + 8)));
 
+    /* Transmitted setup packet */
     if (pipe_status & (1 << 2)) {
-        print("Byte cnt: %d\n", usbhs_get_pipe_byte_count(0));
-        print("Pipe ready");
+        printl("Setup transmitted on pipe %d\n", pipe);
+        print("cfg: %32b\n", usbhs_pipe_get_configuration(pipe));
+
+        usbhs_pipe_set_token(0, PIPE_TOKEN_IN);
+        usbhs_pipe_clear_status(0, (1 << 7) | (1 << 0));
+        usbhs_pipe_enable_interrupt(0, 1 << 0);
+        usbhs_pipe_disable_interrupt(0, (1 << 14) | (1 << 17));
     }
 
     if (pipe_status & (1 << 0)) {
-        print("yey\n");
+        u8 buffer[32];
+        print("Size: %d\n", (usbhs_pipe_get_status(0) >> 20) & 0b11111111111);
+        u8 size = (usbhs_pipe_get_status(0) >> 20) & 0b11111111111;
+        volatile u8* src = usbhs_get_fifo_ptr(0, 8);
+        volatile u8* dest = buffer;
+
+        for (u8 i = 0; i < size; i++) {
+            *dest++ = *src++;
+        }
+
+        for (u8 i = 0; i < size; i++) {
+            print("%1h, ", buffer[i]);
+        }
+        print("\nPacket received\n");
     }
 }
 
 /*
- * USB core SOF interrupt handler. This gets called when either a frame
- * or a microframe has been transmitted. 
+ * SOF handler. This gets called when a SOF and a  uSOF has
+ * been sent on the line. This code should clear the SOF flag.
  */
-static void usbhs_sof_interrupt(u32 status)
+static void usbhs_sof_handler(u32 global_status)
 {
-    USBHS->HSTICR = (1 << 5);
+    usbhs_clear_global_status(1 << 5);
 }
 
 /*
- * USB core root hub interrupt handler. This gets called when a root
- * hub change occurs and needs to be serviced. This can be; wakeup,
- * upstream resume, downstream resume, reset sent, device disconnection
- * or device connection. 
- */
-static void usbhs_root_hub_interrupt(u32 status)
-{
-    USBHS->HSTICR = 0b1011111;
-
-    /* Connect */
-    if (status & (1 << 0)) {
-        printl("Connect");
-        usbhs_send_reset();
-        USBHS->HSTICR = (1 << 0);
-    }
-    /* Disconnect */
-    if (status & (1 << 1)) {
-        USBHS->HSTICR = (1 << 1);
-        usbhs_sof_disable();
-        printl("Disconnect");
-    }
-    /* Reset sent */
-    if (status & (1 << 2)) {
-        USBHS->HSTICR = (1 << 2);
-        printl("Getting device descriptor");
-        usbhs_reset_pipes();
-        _get_dev_desc();
-    }
-    /* Wakeup */
-    if (status & (1 << 6)) {
-        USBHS->HSTICR = (1 << 6);
-        printl("Wakeup");
-    }
-}
-
-/*
- * USB host exception
+ * USB core exception
  */
 void usb_exception(void)
 {
-    u32 status = USBHS->HSTISR;
-
-    /* Pipe interrupt handler */
-    if (status & 0x3FF00) {
-        usbhs_pipe_interrupt(status);
+    u32 global_status = usbhs_get_global_status();
+    
+    if (global_status & 0x3FF00) {
+        usbhs_pipe_handler(global_status);
+    }
+     
+    if (global_status & 0x20) {
+        usbhs_sof_handler(global_status);
     }
 
-    /* SOF interrupt handler */
-    if (status & 0x20) {
-        usbhs_sof_interrupt(status);
+    if (global_status & 0x5FF) {
+        usbhs_root_hub_handler(global_status);
     }
-
-    /* Root hub interrupt handler */
-    if (status & 0x5F) {
-        usbhs_root_hub_interrupt(status);
-    }
-    gpio_toggle(GPIOC, 8);
 }

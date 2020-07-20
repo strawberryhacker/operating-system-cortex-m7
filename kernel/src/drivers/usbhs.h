@@ -3,114 +3,89 @@
 
 #include "types.h"
 
-/*
- * CUrrenlty this driver will only support host operating mode. The
- * different USB host states are; IDLE, READY and SUSPEND. When the 
- * device is first plugged in the USB interface sees a connection and 
- * moves to READY state, since SOF enable is not set the USB interface 
- * will move directly to suspend state. If SOF are then generated the 
- * tranceiver goes into READY state again. 
- */
-
 #define USBHS_DPRAM_ADDR 0xA0100000
-#define USBHS_RAM_SIZE 0x8000
+#define USBHS_DPRAM_EP_SIZE 0x8000
 
 #define usbhs_get_fifo_ptr(epn, scale)                                                                         \
-	(((volatile uint##scale##_t(*)[USBHS_RAM_SIZE / ((scale) / 8)]) USBHS_DPRAM_ADDR)[(epn)])
+	(volatile uint##scale##_t *)(USBHS_DPRAM_ADDR + USBHS_DPRAM_EP_SIZE * epn)
 
-enum usb_operation {
+#define _usbhs_get_fifo_ptr(epn, scale)                                                                         \
+	(((volatile uint##scale##_t(*)[USBHS_DPRAM_EP_SIZE / ((scale) / 8)]) USBHS_DPRAM_ADDR)[(epn)])
+
+/*
+ * Defines the USB mode of operation 
+ */
+enum usb_mode {
     USB_HOST,
     USB_DEVICE
 };
 
-enum usb_speed {
-    USB_FULL_SPEED,
-    USB_HIGH_SPEED,
-    USB_LOW_SPEED
+/*
+ * This enum indicates the deivce speed status in host mode
+ */
+enum usb_device_speed {
+    USB_DEVICE_FS,
+    USB_DEVICE_HS,
+    USB_DEVICE_LS
 };
 
+/*
+ * This enum specifies the host speed capability
+ */
 enum usb_host_speed {
-    HOST_SPEED_NORMAL,
-    HOST_SPEED_LOW_POWER,
-    HOST_SPEED_FORCED_HS,
-    HOST_SPEED_FORCED_FS
+    USB_HOST_SPEED_NORMAL,
+    USB_HOST_SPEED_LS,
+    USB_HOST_SPEED_HS,
+    USB_HOST_SPEED_FS
 };
 
-#define USB_PIPE_TYPE_CTRL      0
-#define USB_PIPE_TYPE_ISO       1
-#define USB_PIPE_TYPE_BULK      2
-#define USB_PIPE_TYPE_INTERRUPT 3
-
-#define USB_PIPE_TOKEN_SETUP    0
-#define USB_PIPE_TOKEN_IN       1
-#define USB_PIPE_TOKEN_OUT      2
-
-#define USB_PIPE_SIZE_8B        0
-#define USB_PIPE_SIZE_16B       1
-#define USB_PIPE_SIZE_32B       2
-#define USB_PIPE_SIZE_64B       3
-#define USB_PIPE_SIZE_128B      4
-#define USB_PIPE_SIZE_256B      5
-#define USB_PIPE_SIZE_512B      6
-#define USB_PIPE_SIZE_1024B     7
-
-#define USB_PIPE_BANKS_1        0
-#define USB_PIPE_BANKS_2        1
-#define USB_PIPE_BANKS_3        2
-
 /*
- * Pipe structure
+ * Defines the tokens available for a pipe
  */
-struct usb_pipe {
-    /* Pipe configuration */
-    u8 irq_freq : 8;
-    u8 endpoint : 4;
-    u8 type     : 2;
-    u8 token    : 2;
-    u8 autosw   : 1;
-    u8 size     : 3;
-    u8 banks    : 2;
-    u8 alloc    : 1;
-
-    /* Pipe transfer done callback */
-    void (*pipe_callback)(struct usb_pipe*);
+enum pipe_token {
+    PIPE_TOKEN_SETUP,
+    PIPE_TOKEN_IN,
+    PIPE_TOKEN_OUT
 };
 
 /*
- * Main USB host instance
+ * Initializes the USB interface
  */
-struct usb_host {
-    /* Pointer to the pipes */
-    struct usb_pipe* pipes;
-    u32 pipe_count;
-};
+void usbhs_init(void);
 
 /*
- * Enables the USB interface and un-freezes the clock. This must 
- * be called prior to enabling the USB clock.
+ * Freezes the USB clock. Only asynchronous interrupt can trigger 
+ * and interrupt. The CPU can only read/write FRZCLK and USBE when
+ * this but is set
+ */
+void usbhs_freeze_clock(void);
+
+/*
+ * Unfreezes the USB clock
+ */
+void usbhs_unfreeze_clock(void);
+
+/*
+ * Enable the USB interface
  */
 void usbhs_enable(void);
 
 /*
- * Disables the USB interface. This is mandatory before disabling
- * USB clock source to avoid freezing the USB in an undefined state
+ * Disables the USB interface. This act as a hardware reset, thus 
+ * resetting USB interface, disables the USB tranceiver and disables
+ * the USB clock inputs. This does not reset FRZCLK and UIMOD
  */
 void usbhs_disable(void);
 
 /*
- * Sets the main USB operation; either host or device
+ * Sets the USB operating mode; host or device
  */
-void usbhs_set_operation(enum usb_operation operation);
+void usbhs_set_mode(enum usb_mode mode);
 
 /*
- * In host operation this returns the speed status
+ * Checks if the USB UTMI 30MHz clock is usable. Returns 1 if
+ * the clock is usable, 0 if not
  */
-enum usb_speed usbhs_get_speed_status(void);
-
-/*
- * Initialized the USB host interface
- */
-u8 usbhs_init(struct usb_host* host_desc, struct usb_pipe* pipes,
-    u32 pipe_count);
+u8 usbhs_clock_usable(void);
 
 #endif

@@ -15,7 +15,6 @@
 
 #include <stddef.h>
 
-
 int main(void)
 {
 	kernel_entry();
@@ -30,6 +29,9 @@ int main(void)
 	};
 
 	new_thread(&fpi_info);
+
+	usb_phy_init();
+	while (1);
 
 	scheduler_start();
 }

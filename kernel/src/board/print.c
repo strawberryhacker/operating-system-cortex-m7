@@ -196,6 +196,20 @@ u32 read_print_buffer(char* data, u32 size) {
 }
 
 /*
+ * Prints a register
+ */
+void print_register(const char* name, u32 reg)
+{
+    printl("%s", name);
+    for (u8 i = 0; i < 4; i++) {
+        u8 reg_byte = (reg >> ((3 - i) * 8)) & 0xFF;
+        print("%4b ", reg_byte >> 4);
+        print("%4b", reg_byte);
+        print("\n");
+    }
+}
+
+/*
  * Interrupt exeption is called when a new character is
  * available in the reive holding register
  */
