@@ -4,6 +4,7 @@
 #include "panic.h"
 #include "gpio.h"
 #include "cpu.h"
+#include "usb_protocol.h"
 
 /*
  * Freezes the USB clock. Only asynchronous interrupt can trigger 
@@ -664,9 +665,20 @@ static void usbhs_pipe_handler(u32 global_status)
             *dest++ = *src++;
         }
 
-        for (u8 i = 0; i < size; i++) {
-            print("%1h, ", buffer[i]);
-        }
+        struct usb_dev_desc* desc = (struct usb_dev_desc*)buffer;
+
+        print("Length: %d\n", desc->length);
+        print("Desc type: %1h\n", desc->descriptor_type);
+        print("BCD USB: %2h\n", desc->bcd_usb);
+        print("Dev class: %1h\n", desc->device_class);
+        print("Dev subclass: %d\n", desc->device_subclass);
+        print("Dev protocol: %d\n", desc->device_protocol);
+        print("Max packet: %d\n", desc->max_packet_size);
+        print("Vendor: %2h\n", desc->vendor_id);
+        print("Product: %2h\n", desc->product_id);
+        print("BCD device: %2d\n", desc->bcd_device);
+        print("Num config: %d\n", desc->num_configurations);
+
         print("\nPacket received\n");
     }
 }
