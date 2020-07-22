@@ -247,3 +247,17 @@ u32 dlist_search(struct dlist_node* node, struct dlist* list) {
     }
     return 0;
 }
+
+void dlist_init(struct dlist* list)
+{
+    list->first = NULL;
+    list->last = NULL;
+    list->size = 0;
+}
+
+void dlist_node_init(struct dlist_node* node)
+{
+    node->next = NULL;
+    node->prev = NULL;
+    node->obj = NULL;
+}

@@ -1,16 +1,23 @@
+/* Copyright (C) StrawberryHacker */
+
 #ifndef USBHS_H
 #define USBHS_H
 
 #include "types.h"
+#include "dlist.h"
+
+/* Defines the maximum number of pipes supported by hardware */
+#define MAX_PIPES 10
 
 #define USBHS_DPRAM_ADDR 0xA0100000
 #define USBHS_DPRAM_EP_SIZE 0x8000
 
-#define usbhs_get_fifo_ptr(epn, scale)                                                                         \
-	(volatile uint##scale##_t *)(USBHS_DPRAM_ADDR + USBHS_DPRAM_EP_SIZE * epn)
-
-#define _usbhs_get_fifo_ptr(epn, scale)                                                                         \
-	(((volatile uint##scale##_t(*)[USBHS_DPRAM_EP_SIZE / ((scale) / 8)]) USBHS_DPRAM_ADDR)[(epn)])
+/*
+ * Returns an 8 bit pointer to the DPRAM base address
+ * associated with a pipe
+ */
+#define usbhs_get_fifo_ptr(pipe) \
+	(volatile u8 *)(USBHS_DPRAM_ADDR + (USBHS_DPRAM_EP_SIZE * pipe))
 
 /*
  * Defines the USB mode of operation 
@@ -49,9 +56,135 @@ enum pipe_token {
 };
 
 /*
- * Initializes the USB interface
+ * Root hub event. This enum describes a root hub event
  */
-void usbhs_init(void);
+enum root_hub_event {
+    RH_EVENT_CONNECT,
+    RH_EVENT_DISCONNECT,
+    RH_EVENT_RESET,
+    RH_EVENT_WAKEUP,
+    RH_EVENT_DOWNSTREAM_RESUME,
+    RH_EVENT_UPSTREAM_RESUME
+};
+
+/*
+ * Holds the pipe status
+ */
+enum pipe_status {
+    PIPE_STATUS_FREE,
+    PIPE_STATUS_IDLE
+};
+
+/*
+ * Transfer status
+ */
+enum usb_x_status {
+    USB_X_STATUS_OK,
+    USB_X_STATUS_STOP,
+    USB_X_STATUS_STALL,
+    USB_X_STATUS_RESET,
+    USB_X_STATUS_SETUP,
+    USB_X_STATUS_CONTROL_IN,
+    USB_X_STATUS_CONTROL_OUT,
+    USB_X_STATUS_ZLP_IN,
+    USB_X_STATUS_ZLP_OUT,
+    USB_X_STATUS_DATA_IN,
+    USB_X_STATUS_DATA_OUT
+};
+
+/*
+ * Describes all fields needed for a control transfer. A control
+ * transfer consist of three stages; a setup packet, an IN data 
+ * packet, and a ZLP OUT acknowledgment packet. Each of these
+ * consist of a token, data and a handshake. 
+ */
+struct usb_ctrl_transfer {
+    /* Control transfer setup packet is allways 8 bytes long */
+    u8* setup;
+
+    /* Contains a pointer to the receive buffer */
+    u8* data;
+    u32 receive_size;
+
+    /* Holds the timeout between packages */
+    i32 timeout;
+
+
+};
+
+/*
+ * Structure that hold pipe configuration information
+ */
+struct usb_pipe {
+    void (*callback)(struct usb_pipe*);
+
+    /*
+     * This field has two meanings depending upon the use. If
+     * a high-speed bulk OUT pipe is used this contains the 
+     * bit-interval between PING / OUT request, dependning if
+     * the PINGEN is set. This is per microframe. If an
+     * interrupt pipe is configured this holds the number of
+     * milliseconds between interrupt requests.
+     */
+    u8 interval;
+
+    /* Endpoint targeted by the pipe */
+    u8 endpoint;
+
+    /* Device address targeted by the pipe */
+    u8 addr;
+
+    u8 type             : 2;
+    u8 token            : 2;
+    u8 auto_bank_switch : 1;
+    u8 size             : 3;
+    u8 bank_count       : 2;
+
+    /* Only for high-speed bulk OUT pipes USB 2.0 */
+    u8 ping_enable;
+
+    /* General transfer state */
+    enum pipe_status status;
+    enum usb_x_status x_status;
+
+    union {
+        struct usb_ctrl_transfer control;
+    } x;
+};
+
+/*
+ * This structure hold private data that the USB hardware layer will 
+ * use to maintain pipes and schedule events. This is also referenced
+ * in teh usb_core structure. 
+ */
+struct usb_hardware {
+    /* Continous list of pipe descriptors */
+    struct usb_pipe* pipes;
+    u8 pipe_count;
+
+    u8 active_pipes;
+    u32 dpram_used;
+};
+
+/*
+ * Core USB structure
+ */
+struct usb_core {
+    struct usb_hardware* hw;
+
+    /* Callbacks for SOF */
+    void (*sof_callback)(struct usb_core*);
+
+    /* Callback for root hub change taking in the event */
+    void (*rh_callback)(struct usb_core*, enum root_hub_event);
+};
+
+/*
+ * Initializes the USB interface. This takes in the main USB core 
+ * structure, a list of pipes and the pipe count
+ */
+void usbhs_init(struct usb_core* core, struct usb_hardware* hw,
+                struct usb_pipe* pipes, u8 pipe_count);
 
 /*
  * Freezes the USB clock. Only asynchronous interrupt can trigger 
@@ -87,5 +220,47 @@ void usbhs_set_mode(enum usb_mode mode);
  * the clock is usable, 0 if not
  */
 u8 usbhs_clock_usable(void);
+
+/*
+ * Clears and disables all global interrupts
+ */
+void usbhs_interrupt_disable(void);
+
+/*
+ * Sends a USB reset. It might be useful to write this bit to 
+ * zero when a device disconnection is detected.
+ */
+void usbhs_send_reset(void);
+
+/*
+ * Performs a soft reset on all pipes. This means configuring the
+ * pipes, allocating them and updating the status
+ */
+void usbhs_pipe_soft_reset(struct usb_core* core);
+
+/*
+ * Performs a hard reset on all pipes. This means deallocating them
+ * and updating the status
+ */
+void usbhs_pipe_hard_reset(struct usb_core* core);
+
+/*
+ * Adds a pipe callback
+ */
+void usbhs_add_pipe_callback(struct usb_pipe* pipe,
+                             void (*cb)(struct usb_pipe *));
+
+/*
+ * Starts a control transfer
+ */
+void usbhs_control_transfer(struct usb_core* core, struct usb_pipe* pipe,
+                            u8* data, u8* setup, u8 req_size);
+
+/*
+ * Tries to allocate a pipe. This will handle any DPRAM
+ * conflicts and reallocate conflicting pipes. Returns the allocated
+ * pipe if success, else NULL
+ */
+struct usb_pipe* usbhs_pipe_allocate(struct usb_core* core, u32 cfg, u8 addr, u8 pipe0);
 
 #endif

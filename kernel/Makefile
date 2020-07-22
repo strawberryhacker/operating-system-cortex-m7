@@ -86,6 +86,8 @@ misc-y += /src/misc/programming.c
 
 net-y += /src/net/ip.c
 
+usb-y += /src/usb/usb.c
+
 mm-y += /src/mm/mm.c
 mm-y += /src/mm/mpu.c
 mm-y += /src/mm/cache.c
@@ -105,6 +107,7 @@ OBJ_OBJ := $(patsubst %.c, %.o, $(obj-y))
 DISK_OBJ := $(patsubst %.c, %.o, $(disk-y))
 NET_OBJ := $(patsubst %.c, %.o, $(net-y))
 MISC_OBJ := $(patsubst %.c, %.o, $(misc-y))
+USB_OBJ := $(patsubst %.c, %.o, $(usb-y))
 
 OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
@@ -116,6 +119,7 @@ OBJ += $(addprefix $(BUILDDIR), $(OBJ_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DISK_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(NET_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(MISC_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(USB_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers

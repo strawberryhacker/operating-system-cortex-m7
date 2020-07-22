@@ -26,6 +26,10 @@ struct dlist {
     u32 size;
 };
 
+void dlist_init(struct dlist* list);
+
+void dlist_node_init(struct dlist_node* node);
+
 u32 dlist_search(struct dlist_node* node, struct dlist* list);
 
 void dlist_insert_first(struct dlist_node* node, struct dlist* list);

@@ -1,22 +1,35 @@
+/* Copyright (C) StrawberryHacker */
+
 #ifndef USB_PROTOCOL_H
 #define USB_PROTOCOL_H
 
 #include "types.h"
 
 /*
- * Defines the fields in the SETUP packet request type
+ * This file defines the hardware driver layer for the USB host
+ * stack. Note that some coding conventions will not be followed
+ * in the USB stack due the USB protocol. This way searching on
+ * the internet will become easier.
+ * 
+ * Please refer to the USB 2.0 spesification while reading this;
+ * http://sdphca.ucsd.edu/lab_equip_manuals/usb_20.pdf references
+ * in this USB stack will be related to this document.
  */
-#define USB_REQ_TYPE_HOST_TO_DEVICE (u8)(0 << 7)
-#define USB_REQ_TYPE_DEVICE_TO_HOST (u8)(1 << 7)
 
-#define USB_REQ_TYPE_STANDARD       (u8)(0 << 5)
-#define USB_REQ_TYPE_CLASS          (u8)(1 << 5)
-#define USB_REQ_TYPE_VENDOR         (u8)(2 << 5)
+/*
+ * Defines the bitmask fields in the SETUP packet request type
+ */
+#define USB_REQ_TYPE_HOST_TO_DEVICE 0x00
+#define USB_REQ_TYPE_DEVICE_TO_HOST 0x80
 
-#define USB_REQ_TPYE_DEVICE         (u8)(0 << 0)
-#define USB_REQ_TPYE_INTERFACE      (u8)(1 << 0)
-#define USB_REQ_TPYE_ENDPOINT       (u8)(2 << 0)
-#define USB_REQ_TPYE_OTHER          (u8)(3 << 0)
+#define USB_REQ_TYPE_STANDARD       0x00
+#define USB_REQ_TYPE_CLASS          0x20
+#define USB_REQ_TYPE_VENDOR         0x40
+
+#define USB_REQ_TPYE_DEVICE         0x00
+#define USB_REQ_TPYE_INTERFACE      0x01
+#define USB_REQ_TPYE_ENDPOINT       0x02
+#define USB_REQ_TPYE_OTHER          0x03
 
 /*
  * Defines the different setup requests
@@ -34,34 +47,102 @@
 #define USB_REQ_SYNC_FRAME        12
 
 /*
- * Data packet for the USB control trasfer
+ * Structure describing the SETUP packet sent first in ALL control
+ * transfers. This takes up eigth bytes.
  */
 struct usb_setup {
-    u8 request_type;
-    u8 request;
-    u16 value;
-    u16 index;
-    u16 length;
+    u8 bmRequestType;
+    u8 bRequest;
+    u16 wValue;
+    u16 wIndex;
+    u16 wLength;
 };
 
 /*
- * Device descriptor
+ * Device descriptor. USB 2.0 specification page 262 
  */
 struct usb_dev_desc {
-    u8  length;           /* Size of descriptor in bytes */
-    u8  descriptor_type;  /* Allways set to 1 */
-    u16 bcd_usb;          /* USB spec relase number */
-    u8  device_class;
-    u8  device_subclass;
-    u8  device_protocol;
-    u8  max_packet_size;  /* Defines max packet size EP0 */
-    u16 vendor_id;
-    u16 product_id;
-    u16 bcd_device;
-    u8  manufacturer;
-    u8  product;
-    u8  serial_number;
-    u8  num_configurations;    
+    u8  bLength;
+    u8  bDescriptorType;
+    u16 bcdUSB;
+    u8  bDeviceClass;
+    u8  bDeviceSubClass;
+    u8  bDeviceProtocol;
+    u8  bMaxPacketSize;
+    u16 idVendor;
+    u16 idProduct;
+    u16 bcdDevice;
+    u8  iManufacturer;
+    u8  iProduct;
+    u8  iSerialNumber;
+    u8  bNumConfigurations;    
+};
+
+/*
+ * Device qualifier descriptor. USB 2.0 specification page 264
+ */
+struct usb_qualifier_desc {
+    u8  bLength;
+    u8  bDescriptorType;
+    u16 bcdUSB;
+    u8  bDeviceClass;
+    u8  bDeviceSubClass;
+    u8  bDeviceProtocol;
+    u8  bMaxPacketSize;
+    u8  bNumConfigurations;
+    u8  bReserved;
+};
+
+/*
+ * Configuration descriptor. USB 2.0 specification page 265
+ */
+struct usb_config_desc {
+    u8  bLength;
+    u8  bDescriptorType;
+    u16 wTotalLength;
+    u8  bNumInterfaces;
+    u8  bConfigurationValue;
+    u8  iConfiguration;
+    u8  bmAttributes;
+    u8  bMaxPower;
+};
+
+/*
+ * Interface descriptor. USB 2.0 specification page 268
+ */
+struct usb_interface_desc {
+    u8  bLength;
+    u8  bDescriptorType;
+    u8  bInterfaceNumber;
+    u8  bAlternateSetting;
+    u8  bNumEndpoints;
+    u8  bInterfaceClass;
+    u8  bInterfaceSubClass;
+    u8  bInterfaceProtocol;
+    u8  iInterface;
+};
+
+/*
+ * Endpoint descriptor. USB 2.0 specification page 269
+ */
+struct usb_ep_desc {
+    u8  bLength;
+    u8  bDescriptorType;
+    u8  bEndpointAddress;
+    u8  bmAttributes;
+    u16 wMaxPacketSize;
+    u8  bInterval;
+};
+
+/*
+ * String descriptor header. USB 2.0 specification page 273.
+ * This will only contain the first two fields of either the 
+ * string descriptor zero or the normal string descriptor. This
+ * is because the size is varying
+ */
+struct usb_string_desc {
+    u8  bLength;
+    u8  bDescriptorType;
 };
 
 #endif
