@@ -33,13 +33,13 @@ void usb_core_rh_callback(struct usb_core* core, enum root_hub_event event)
         /* Reallocate pipe zero */
         u32 cfg = (3 << 4);
         printl("Reset sent");
-        usbhs_pipe_allocate(core, cfg, 0, 1);
+        usbhc_pipe_allocate(core, cfg, 0, 1);
         struct usb_pipe* p = &core->hw->pipes[0];
 
-        usbhs_add_pipe_callback(p, usb_core_control_callback);
-        usbhs_control_transfer(core, p, req, buffer, 18);
+        usbhc_add_pipe_callback(p, usb_core_control_callback);
+        usbhc_control_transfer(core, p, req, buffer, 18);
     } else if (event == RH_EVENT_CONNECT) {
-        usbhs_send_reset();
+        usbhc_send_reset();
         printl("Connection");
     } else if (event == RH_EVENT_DISCONNECT) {
         printl("Disconnect");

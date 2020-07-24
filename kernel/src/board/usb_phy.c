@@ -1,7 +1,7 @@
 /* Copyright (C) StrawberryHacker */
 
 #include "usb_phy.h"
-#include "usbhs.h"
+#include "usbhc.h"
 #include "nvic.h"
 #include "clock.h"
 #include "panic.h"
@@ -27,19 +27,19 @@ void usb_phy_init(void)
      */
     peripheral_clock_enable(34);
 
-    usbhs_unfreeze_clock();
-    usbhs_set_mode(USB_HOST);
-    usbhs_enable();
+    usbhc_unfreeze_clock();
+    usbhc_set_mode(USB_HOST);
+    usbhc_enable();
 
     /* Enable the USB UPLL clock at 480 MHz */
     upll_init(UPLL_x40);
 
     /* Check if the USB clock is usable */
-    if (usbhs_clock_usable() == 0) {
+    if (usbhc_clock_usable() == 0) {
         panic("USB clock not usable");
     }
 
-    usbhs_init(&usb_core, &usb_hw, usb_pipes, PIPE_COUNT);
+    usbhc_init(&usb_core, &usb_hw, usb_pipes, PIPE_COUNT);
 
     nvic_enable(34);
     nvic_set_prioriy(34, NVIC_PRI_3);

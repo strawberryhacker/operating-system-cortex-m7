@@ -4,7 +4,7 @@
 #define USB_H
 
 #include "types.h"
-#include "usbhs.h"
+#include "usbhc.h"
 
 /*
  * USB core device structure

@@ -766,7 +766,7 @@ typedef struct {
 #define TIMER1   ((timer_reg *)0x40010000)
 #define TIMER2   ((timer_reg *)0x40014000)
 #define TIMER3   ((timer_reg *)0x40054000)
-#define USBHS      ((usb_reg *)0x40038000)
+#define USBHC    ((usb_reg *)0x40038000)
 #define UTMI     ((utmi_reg *)0x400E0400)
 
 /*

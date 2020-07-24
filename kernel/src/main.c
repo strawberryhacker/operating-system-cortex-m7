@@ -10,7 +10,7 @@
 #include "programming.h"
 #include "panic.h"
 #include "ringbuffer.h"
-#include "usbhs.h"
+#include "usbhc.h"
 #include "usb_phy.h"
 
 #include <stddef.h>

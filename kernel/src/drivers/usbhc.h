@@ -1,7 +1,7 @@
 /* Copyright (C) StrawberryHacker */
 
-#ifndef USBHS_H
-#define USBHS_H
+#ifndef usbhc_H
+#define usbhc_H
 
 #include "types.h"
 #include "dlist.h"
@@ -9,15 +9,15 @@
 /* Defines the maximum number of pipes supported by hardware */
 #define MAX_PIPES 10
 
-#define USBHS_DPRAM_ADDR 0xA0100000
-#define USBHS_DPRAM_EP_SIZE 0x8000
+#define usbhc_DPRAM_ADDR 0xA0100000
+#define usbhc_DPRAM_EP_SIZE 0x8000
 
 /*
  * Returns an 8 bit pointer to the DPRAM base address
  * associated with a pipe
  */
-#define usbhs_get_fifo_ptr(pipe) \
-	(volatile u8 *)(USBHS_DPRAM_ADDR + (USBHS_DPRAM_EP_SIZE * pipe))
+#define usbhc_get_fifo_ptr(pipe) \
+	(volatile u8 *)(usbhc_DPRAM_ADDR + (usbhc_DPRAM_EP_SIZE * pipe))
 
 /*
  * Defines the USB mode of operation 
@@ -152,6 +152,7 @@ struct usb_pipe {
     } x;
 };
 
+
 /*
  * This structure hold private data that the USB hardware layer will 
  * use to maintain pipes and schedule events. This is also referenced
@@ -183,77 +184,78 @@ struct usb_core {
  * Initializes the USB interface. This takes in the main USB core 
  * structure, a list of pipes and the pipe count
  */
-void usbhs_init(struct usb_core* core, struct usb_hardware* hw,
+void usbhc_init(struct usb_core* core, struct usb_hardware* hw,
                 struct usb_pipe* pipes, u8 pipe_count);
+
 
 /*
  * Freezes the USB clock. Only asynchronous interrupt can trigger 
  * and interrupt. The CPU can only read/write FRZCLK and USBE when
  * this but is set
  */
-void usbhs_freeze_clock(void);
+void usbhc_freeze_clock(void);
 
 /*
  * Unfreezes the USB clock
  */
-void usbhs_unfreeze_clock(void);
+void usbhc_unfreeze_clock(void);
 
 /*
  * Enable the USB interface
  */
-void usbhs_enable(void);
+void usbhc_enable(void);
 
 /*
  * Disables the USB interface. This act as a hardware reset, thus 
  * resetting USB interface, disables the USB tranceiver and disables
  * the USB clock inputs. This does not reset FRZCLK and UIMOD
  */
-void usbhs_disable(void);
+void usbhc_disable(void);
 
 /*
  * Sets the USB operating mode; host or device
  */
-void usbhs_set_mode(enum usb_mode mode);
+void usbhc_set_mode(enum usb_mode mode);
 
 /*
  * Checks if the USB UTMI 30MHz clock is usable. Returns 1 if
  * the clock is usable, 0 if not
  */
-u8 usbhs_clock_usable(void);
+u8 usbhc_clock_usable(void);
 
 /*
  * Clears and disables all global interrupts
  */
-void usbhs_interrupt_disable(void);
+void usbhc_interrupt_disable(void);
 
 /*
  * Sends a USB reset. It might be useful to write this bit to 
  * zero when a device disconnection is detected.
  */
-void usbhs_send_reset(void);
+void usbhc_send_reset(void);
 
 /*
  * Performs a soft reset on all pipes. This means configuring the
  * pipes, allocating them and updating the status
  */
-void usbhs_pipe_soft_reset(struct usb_core* core);
+void usbhc_pipe_soft_reset(struct usb_core* core);
 
 /*
  * Performs a hard reset on all pipes. This means deallocating them
  * and updating the status
  */
-void usbhs_pipe_hard_reset(struct usb_core* core);
+void usbhc_pipe_hard_reset(struct usb_core* core);
 
 /*
  * Adds a pipe callback
  */
-void usbhs_add_pipe_callback(struct usb_pipe* pipe,
+void usbhc_add_pipe_callback(struct usb_pipe* pipe,
                              void (*cb)(struct usb_pipe *));
 
 /*
  * Starts a control transfer
  */
-void usbhs_control_transfer(struct usb_core* core, struct usb_pipe* pipe,
+void usbhc_control_transfer(struct usb_core* core, struct usb_pipe* pipe,
                             u8* data, u8* setup, u8 req_size);
 
 /*
@@ -261,6 +263,6 @@ void usbhs_control_transfer(struct usb_core* core, struct usb_pipe* pipe,
  * conflicts and reallocate conflicting pipes. Returns the allocated
  * pipe if success, else NULL
  */
-struct usb_pipe* usbhs_pipe_allocate(struct usb_core* core, u32 cfg, u8 addr, u8 pipe0);
+struct usb_pipe* usbhc_pipe_allocate(struct usb_core* core, u32 cfg, u8 addr, u8 pipe0);
 
 #endif

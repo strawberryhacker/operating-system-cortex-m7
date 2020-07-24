@@ -64,7 +64,7 @@ driver-y += /src/drivers/matrix.c
 driver-y += /src/drivers/mmc.c
 driver-y += /src/drivers/gmac.c
 driver-y += /src/drivers/dma.c
-driver-y += /src/drivers/usbhs.c
+driver-y += /src/drivers/usbhc.c
 
 disk-y += /src/disk/sd_protocol.c
 disk-y += /src/disk/disk_io.c
@@ -147,7 +147,7 @@ lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
 program: $(BUILDDIR)/$(TARGET_NAME).bin
-	@python3 ../tools/kernel_prog.py -c /dev/ttyS3 -f build/kernel.bin
+	@python3 ../tools/kernel_prog.py -c /dev/ttyS4 -f build/kernel.bin
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O binary $< $@
