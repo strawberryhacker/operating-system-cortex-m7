@@ -177,7 +177,7 @@ void game_loop(void)
                 print("\nTry again\n");
             }
         }
-        syscall_thread_sleep(50);
+        syscall_thread_sleep(10);
 
     } while (winner == 0);
 

@@ -1,40 +1,48 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "hash.h"
 #include "hardware.h"
 #include "print.h"
 #include "panic.h"
 
-/// List descriptor is fetched from memory by the hash engine. The first
-/// descriptor address must be aligned by 64 bytes according to the datasheet 
-/// spesification page 1755
+/*
+ * List descriptor is fetched from memory by the hash engine. The first
+ * descriptor address must be aligned by 64 bytes according to the datasheet 
+ * spesification page 1755
+ */
 struct icm_desc {
-	// Start address of the current block
+	/* Start address of the current block */
 	u32 start_addr;
 
-	// Configures the operation applying to one region
+	/* Configures the operation applying to one region */
 	u32 cfg;
 
-	// The size field must be set to the number of 512-bit blocks minus one
+	/* The size field must be set to the number of 512-bit blocks minus one */
 	u32 size;
 
-	// This point to the next descriptor in the secondary list. Must be zero
-	// if secondary list branching is disabled
+	/* 
+	 * his point to the next descriptor in the secondary list. Must be zero
+	 * if secondary list branching is disabled
+	 */
 	struct icm_desc* next;
 };
 
-/// Currently the hash engine only supports single region hash calculation
+/* Currently the hash engine only supports single region hash calculation */
 __attribute__((aligned(64))) struct icm_desc region_one;
 
-/// Computes the SHA-256 over the `data` region with `size` number of bytes, and
-/// writes the computed hash to the memory pointed to by `hash`. This address must be
-/// 128-byte aligned
+/*
+ * Computes the SHA-256 over the `data` region with `size` number of bytes, and
+ * writes the computed hash to the memory pointed to by `hash`. This address must be
+ * 128-byte aligned
+ */
 void hash256_generate(const void* data, u32 size, u8* hash) {
 
 	ICM->CTRL = (1 << 2) | (1 << 1) | (0b111 << 9);
 	
-	// Write configuration register. SHA256, secondary list branch disable
-	// and custom initial hash
+	/*
+	 * Write configuration register. SHA256, secondary list branch disable
+	 * and custom initial hash
+	 */
 	ICM->CFG = (1 << 2) | (1 << 13);
 	
 	region_one.start_addr = (u32)data;
@@ -45,7 +53,7 @@ void hash256_generate(const void* data, u32 size, u8* hash) {
 	ICM->DSCR = (u32)&region_one;
 	ICM->HASH = (u32)hash;
 
-	// Initialize the hash memory destination to zero
+	/* Initialize the hash memory destination to zero */
 	for (u8 i = 0; i < 32; i++) {
 		hash[i] = 0x00;
 	}
@@ -65,15 +73,19 @@ void hash256_generate(const void* data, u32 size, u8* hash) {
 	ICM->CTRL = (1 << 2);
 }
 
-/// Computes the SHA-256 over the `data` region with `size` number of bytes, and
-/// compares the computed value agains the hash present at `hash`. It returns
-/// `1` if these match, `0` if not
+/*
+ * Computes the SHA-256 over the `data` region with `size` number of bytes, and
+ * compares the computed value agains the hash present at `hash`. It returns
+ * `1` if these match, `0` if not
+ */
 u8 hash256_verify(const void* data, u32 size, const u8* hash) {
 
 	ICM->CTRL = (1 << 2) | (1 << 1) | (0b111 << 9);
 	
-	// Write configuration register. SHA256, secondary list branch disable
-	// and custom initial hash
+	/*
+	 * Write configuration register. SHA256, secondary list branch disable
+	 * and custom initial hash
+	 */
 	ICM->CFG = (1 << 2) | (1 << 13);
 	
 	region_one.start_addr = (u32)data;

@@ -4,7 +4,7 @@
 
 #define NAME       "template"
 #define SCHEDULER  REAL_TIME
-#define STACK_SIZE 200
+#define STACK_SIZE 1000
 
 extern u32 _got_s;
 extern u32 _got_e;

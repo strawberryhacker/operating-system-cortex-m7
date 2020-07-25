@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "flash.h"
 #include "hardware.h"
@@ -11,18 +11,20 @@ void flash_set_access_cycles(u8 access_cycles) {
     FLASH->FMR = reg;
 }
 
-/// Performs an erase-write operation on a page in the first 16 KiB of memory
+/*
+ * Performs an erase-write operation on a page in the first 16 KiB of memory
+ */
 __ramfunc__ u8 flash_erase_write(u32 page, const u8* buffer) {
 	
-    // This only works in the two first 8k sectors
+    /* This only works in the two first 8k sectors */
     if (page >= 32) {
         return 0;
     }
 
-    // Wait for the flash to be ready for a new command
+    /* Wait for the flash to be ready for a new command */
     while (!(FLASH->FSR & 0b1));
 
-	// Write to the internal latch buffer
+	/* Write to the internal latch buffer */
     volatile u32* flash_dest = (volatile u32 *)(0x00400000 + 512 * page);
     u32* src_ptr = (u32 *)buffer;
     
@@ -30,25 +32,25 @@ __ramfunc__ u8 flash_erase_write(u32 page, const u8* buffer) {
 		*flash_dest++ = *src_ptr++;
 	}
 
-    // Memory barriers
+    /* Memory barriers */
     asm volatile ("dsb sy" : : : "memory");
     asm volatile ("dmb sy" : : : "memory");
 	
-	// Issue a erase then write command
+	/* Issue a erase then write command */
 	FLASH->FCR = (0x5A << 24) | ((page & 0xFFFF) << 8) | 0x3;
 	
-    // Wait for the command to go through
+    /* Wait for the command to go through */
     u32 status;
     do {
         status = FLASH->FSR;
     } while (!(status & 0b1111));
 	
-	// Check for error
+	/* Check for error */
 	if (status & 0b1110) {
 		return 0;
 	}
 
-    // Verify the flash
+    /* Verify the flash */
     const u8* src_1 = (const u8 *)(0x00400000 + 512 * page);
     for (u32 i = 0; i < 512; i++) {
         if (*src_1++ != *buffer++) {
@@ -59,9 +61,11 @@ __ramfunc__ u8 flash_erase_write(u32 page, const u8* buffer) {
 	return 1;
 }
 
-/// Erase `size` bytes of the flash from the start location of the kernel 
-/// image. This is set to be 0x00404000. The minimum erase size is 8k. The 
-/// function return the number of bytes erased from flash
+/*
+ * Erase `size` bytes of the flash from the start location of the kernel 
+ * image. This is set to be 0x00404000. The minimum erase size is 8k. The 
+ * function return the number of bytes erased from flash
+ */
 __ramfunc__ u32 flash_erase_image(u32 size) {
     u32 pages = size / 512;
     if (size % 512) {
@@ -73,28 +77,32 @@ __ramfunc__ u32 flash_erase_image(u32 size) {
         sect_8k++;
     }
 
-    // The functions should return the number of bytes erased
+    /* The functions should return the number of bytes erased */
     u32 erase_bytes = sect_8k * 8192;
 
-    // `sect_8k` now holds the number of 8k blocks to be erased from the the 
-    // kernel image base address
+    /*
+     * `sect_8k` now holds the number of 8k blocks to be erased from the the 
+     * kernel image base address
+     */
     u32 sect_8k_base = 32;
     for (u32 i = 0; i < sect_8k; i++) {
-        // Issue a 8k erase at `sect_8k_base`
+        /* Issue a 8k erase at `sect_8k_base` */
         while (!(FLASH->FSR & 0b1));
 
-        // For 8k erase or 16 sector erase, [1:0] should be 2 and [15:4] 
-        // should hold the page divided by 16. 
+        /*
+         * For 8k erase or 16 sector erase, [1:0] should be 2 and [15:4] 
+         * should hold the page divided by 16.
+         */
         u16 arg = (u16)(sect_8k_base & ~0b1111) | 2;
         FLASH->FCR = 0x5A000000 | (arg << 8) | 0x07;
 
-        // Wait for the command to be ready
+        /* Wait for the command to be ready */
         u32 status;
         do {
             status = FLASH->FSR;
         } while (!(status & 0b1));
 
-        // Check for errors
+        /* Check for errors */
         if (status & 0b1110) {
             return 0;
         }
@@ -103,13 +111,15 @@ __ramfunc__ u32 flash_erase_image(u32 size) {
     return erase_bytes;
 }
 
-/// Writes a sector to the flash at relativ offset `page` from the kernel image
-/// base address 0x00404000
+/* 
+ * Writes a sector to the flash at relativ offset `page` from the kernel image
+ * base address 0x00404000
+ */
 __ramfunc__ u8 flash_write_image_page(u32 page, const u8* buffer) {
 	
     while (!(FLASH->FSR & 0b1));
 
-    // Write page to the internal latchbuffer at relative offset
+    /* Write page to the internal latchbuffer at relative offset */
     volatile u32* flash_dest = (volatile u32 *)(0x00404000 + page * 512);
 	u32* buffer_ptr = (u32 *)buffer;
     for (u32 i = 0; i < 512; i += 4) {
@@ -121,18 +131,18 @@ __ramfunc__ u8 flash_write_image_page(u32 page, const u8* buffer) {
 
     FLASH->FCR = 0x5A000000 | (((page + 32) & 0xFF) << 8) | 0x01;
 
-    // Wait for the command to complete
+    /* Wait for the command to complete */
     u32 status;
     do {
         status = FLASH->FSR;
     } while (!(status & 0b1));
 
-    // Check for errors
+    /* Check for errors */
     if (status & 0b1110) {
         return 0;
     }
 
-    // Verify the flash
+    /* Verify the flash */
     const u8* src_1 = (const u8 *)(0x00404000 + page * 512);
     for (u32 i = 0; i < 512; i++) {
         if (*src_1++ != *buffer++) {

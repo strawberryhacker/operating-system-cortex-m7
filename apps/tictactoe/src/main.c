@@ -6,7 +6,7 @@
 #include "game.h"
 
 int main(void) {
-    
+    print("sdfkljsdflkjhdf sdlkfjh dflkjhsd lksjdh sdkljh sdflkjhsdf lkjsdhf \n");
     game_init();
     draw_board();
     game_loop();

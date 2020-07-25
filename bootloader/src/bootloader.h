@@ -1,3 +1,5 @@
+/* Copyright (C) StrawberryHacker */
+
 #ifndef BOOTLOADER_H
 #define BOOTLOADER_H
 
@@ -5,27 +7,29 @@
 #include "frame.h"
 
 struct image_info {
-    // Version number for the bootlaoder
+    /* Version number for the bootlaoder */
     u32 major_version;
     u32 minor_version;
 
-    // Start address of the bootlaoder
+    /* Start address of the bootlaoder */
     u32 bootloader_start;
 
-    // The total size allocated to the bootlaoder. This includes the two special
-    // structures 
+    /* 
+     * The total size allocated to the bootlaoder. This includes the two special
+     * structures
+     */ 
     u32 bootloader_size;
 
-    // Specifies where the bootloader info table is stored
+    /* Specifies where the bootloader info table is stored */
     u32 bootloader_info;
 
-    // Start address of the kernel
+    /* Start address of the kernel */
     u32 kernel_start;
 
-    // The allocated size for the kernel
+    /* The allocated size for the kernel */
     u32 kernel_size;
 
-    // Specifies where the kernel info is stored
+    /* Specifies where the kernel info is stored */
     u32 kernel_info;
 };
 

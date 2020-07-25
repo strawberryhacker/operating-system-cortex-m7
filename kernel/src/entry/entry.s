@@ -83,8 +83,12 @@ inf_loop:
  * enabled and triggered without the exception being declared, this
  * functions is executed
  */
+
+.global exception_fault
+
 .section .text, "ax", %progbits
 default_exception:
+	bl exception_fault
 	b default_exception
 
 /*

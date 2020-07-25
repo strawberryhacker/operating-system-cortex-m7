@@ -1,3 +1,5 @@
+/* Copyright (C) StrawberryHacker */
+
 #ifndef FRAME_H
 #define FRAME_H
 
@@ -5,7 +7,7 @@
 
 #define MAX_PAYLOAD_SIZE 512
 
-/// Response codes
+/* Response codes */
 #define RESP_OK          (u8)(0 << 0)
 #define RESP_ERROR       (u8)(1 << 0)
 #define RESP_RETRANSMIT  (u8)(1 << 1)
@@ -15,9 +17,11 @@
 #define RESP_TIMEOUT     (u8)(1 << 5)
 #define RESP_FRAME_ERROR (u8)(1 << 6)
 
-/// This struct will contain useful information from the frame. The struct
-/// has to be packed because the FCS is calulated from multiple fields so the 
-/// compiler can not add padding
+/*
+ * This struct will contain useful information from the frame. The struct
+ * has to be packed because the FCS is calulated from multiple fields so the 
+ * compiler can not add padding
+ */
 struct __attribute__((packed)) frame {
     u8  cmd;
     u16 size;

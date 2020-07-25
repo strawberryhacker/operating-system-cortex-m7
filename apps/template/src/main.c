@@ -14,6 +14,7 @@ int main(void) {
      * Please read the docmentation before implementing apps. 
      * ====================================================================
      */
-    
+    print("hellsdlfkjsdflksjdflkjf sdflkjsdflksjdf lsdkj sdflkkjsdflskj =n");
+    while (1);
     return 1;
  }

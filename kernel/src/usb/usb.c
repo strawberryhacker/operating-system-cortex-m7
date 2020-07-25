@@ -11,8 +11,8 @@ u8 buffer[8] = {0x80, 0x06, 0x00, 0x01, 0x00, 0x00, 0x12, 0x00};
 u8 req[18];
 
 /*  
- * Control transfer callback. This is called when a control transfer
- * completes by the hardware layer.
+ * Control transfer callback. This is called when a control transfer completes
+ * by the hardware layer.
 */
 void usb_core_control_callback(struct usb_pipe* pipe)
 {
@@ -47,8 +47,8 @@ void usb_core_rh_callback(struct usb_core* core, enum root_hub_event event)
 }
 
 /*
- * SOF callback. This is called by the lower level USB hardware
- * driver to notify a SOF interrupt
+ * SOF callback. This is called by the lower level USB hardware driver to
+ * notify a SOF interrupt
  */
 void usb_core_sof_callback(struct usb_core* core) {
 

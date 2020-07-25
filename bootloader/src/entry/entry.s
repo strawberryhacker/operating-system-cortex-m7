@@ -1,11 +1,13 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 .syntax unified
 .cpu cortex-m7
 .thumb
 
-/// These variables are declared in the linker script. They are pointing to 
-/// where they are located. 
+/*
+ * These variables are declared in the linker script. They are pointing to 
+ * where they are located. 
+ */
 .extern _relocate_s
 .extern _vector_table_s
 .extern _vector
@@ -16,20 +18,22 @@
 .extern _stack_e
 .extern _rodata_s
 
-/// Base address of the vector table offset register
+/* Base address of the vector table offset register */
 vector_table_reg: .word 0xE000ED08
 
-/// Startup routine is defined in the second entry in the vector table. This 
-/// is loaded into PC after the chip boots at address 0x00400000. This function 
-/// performs relocation of the .data segment, initialization of the .bss 
-/// segment and vector table relocation. Finally it calls `__libc_init_array`
-/// and branches to the main loop
+/*
+ * Startup routine is defined in the second entry in the vector table. This 
+ * is loaded into PC after the chip boots at address 0x00400000. This function 
+ * performs relocation of the .data segment, initialization of the .bss 
+ * segment and vector table relocation. Finally it calls `__libc_init_array`
+ * and branches to the main loop
+ */
 .section .text
 .global entry
 .type entry, %function
 
 entry:
-    // Relocate .data segment
+    /* Relocate .data segment */
 	ldr r0, =_data_s
 	ldr r1, =_data_e
 	ldr r4, =_rodata_s
@@ -45,7 +49,7 @@ relocate_loop:
 	bne relocate_loop
 
 zero_segment:
-	// Initialize .zero segment 
+	/* Initialize .zero segment */
 	ldr r0, =_bss_s
 	ldr r1, =_bss_e
 	subs r2, r1, r0
@@ -59,33 +63,35 @@ zero_loop:
 	bne zero_loop
 
 vector_table_set:
-	// Set vector table offset register
+	/* Set vector table offset register */
 	ldr r0, =_vector_table_s
 	ldr r1, vector_table_reg
 	bic.w r0, r0, #128
 	str r0, [r1]
 
-	// Branch to main
+	/* Branch to main */
 	bl __libc_init_array
 	bl main
 inf_loop:
 	b inf_loop
 
 
-/// Default handler alias for unused interrupts. If interrupts are enabled and
-/// triggered without the handler being declared, this functions is executed
+/*
+ * Default handler alias for unused interrupts. If interrupts are enabled and
+ * triggered without the handler being declared, this functions is executed
+ */
 .section .text, "ax", %progbits
 default_handler:
 	b default_handler
 
-/// Definition of the Cortex-M7 vector table
+/* Definition of the Cortex-M7 vector table */
 .section .vector_table, "a", %progbits
 .type Vector_table, %object
 Vector_table:
     .word	_stack_e
 	.word	entry
 
-	// Cortex-M7 core interrupts
+	/* Cortex-M7 core interrupts */
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -99,9 +105,9 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	systick_handler    // Systick
+	.word	systick_handler    /* Systick */
 
-	// Paripheral interrupts
+	/* Paripheral interrupts */
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -115,8 +121,8 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	usart0_handler     // USART0
-	.word	usart1_handler     // USART1
+	.word	usart0_handler     /* USART0 */
+	.word	usart1_handler     /* USART1 */
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -125,7 +131,7 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
-	.word	timer0_ch0_handler  // Timer 0
+	.word	timer0_ch0_handler  /* Timer 0 */
 	.word	default_handler
 	.word	default_handler
 	.word	default_handler
@@ -177,8 +183,10 @@ Vector_table:
 	.word	default_handler
 	.word	default_handler
 
-	// If any interrupt are enabled but the handler not present, it will run
-	// the default handler in an infinite loop
+	/*
+	 * If any interrupt are enabled but the handler not present, it will run
+	 * the default handler in an infinite loop
+	 */
 	.weak systick_handler
 	.thumb_set systick_handler, default_handler
 

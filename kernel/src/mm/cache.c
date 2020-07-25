@@ -17,13 +17,14 @@ void cache_info(void) {
  * Enables and invalidates the D-cache
  */
 void dcache_enable(void) {
+
     /* Select the L1 data cache */
     SCB->CSSELR = 0;
     dsb();
 
     /*
-     * Read the cache size ID register to determite the number
-     * of ways and number of sets
+     * Read the cache size ID register to determite the number of ways and
+     * number of sets
      */
     u32 cache_id = SCB->CCSIDR;
 
@@ -58,8 +59,8 @@ void dcache_disable(void) {
     isb();
 
     /*
-     * Read the cache size ID register to determite the number
-     * of ways and number of sets
+     * Read the cache size ID register to determite the number of ways and
+     * number of sets
      */
     u32 cache_id = SCB->CCSIDR;
 
@@ -86,8 +87,8 @@ void dcache_invalidate(void) {
     dsb();
 
     /*
-     * Read the cache size ID register to determite the number
-     * of ways and number of sets
+     * Read the cache size ID register to determite the number of ways and
+     * number of sets
      */
     u32 cache_id = SCB->CCSIDR;
 
@@ -114,8 +115,8 @@ void dcache_clean(void) {
     dsb();
 
     /*
-     * Read the cache size ID register to determite the number
-     * of ways and number of sets
+     * Read the cache size ID register to determite the number of ways and
+     * number of sets
      */
     u32 cache_id = SCB->CCSIDR;
 
@@ -142,8 +143,8 @@ void dcache_clean_invalidate(void) {
     dsb();
 
     /*
-     * Read the cache size ID register to determite the number
-     * of ways and number of sets
+     * Read the cache size ID register to determite the number of ways and
+     * number of sets
      */
     u32 cache_id = SCB->CCSIDR;
 
@@ -162,8 +163,8 @@ void dcache_clean_invalidate(void) {
 }
 
 /*
- * Invalidated the D-cache by virtual address to PoC. The input
- * address must be aligned with 32 bytes. 
+ * Invalidated the D-cache by virtual address to PoC. The input address must
+ * be aligned with 32 bytes. 
  */
 void dcache_invalidate_addr(const u32* addr, u32 size) {
     dsb();
@@ -186,8 +187,8 @@ void dcache_invalidate_addr(const u32* addr, u32 size) {
 }
 
 /*
- * Cleans the D-cache by virtual address to PoC. The input
- * address must be aligned with 32 bytes. 
+ * Cleans the D-cache by virtual address to PoC. The input address must be
+ * aligned with 32 bytes. 
  */
 void dcache_clean_addr(const u32* addr, u32 size) {
     dsb();
@@ -210,8 +211,8 @@ void dcache_clean_addr(const u32* addr, u32 size) {
 }
 
 /*
- * Cleans and invalidates the D-cache by virtual address to PoC.\
- * The input address must be aligned with 32 bytes. 
+ * Cleans and invalidates the D-cache by virtual address to PoC. The input
+ * address must be aligned with 32 bytes. 
  */
 void dcache_clean_invalidate_addr(const u32* addr, u32 size) {
     dsb();

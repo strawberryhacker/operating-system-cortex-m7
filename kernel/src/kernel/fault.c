@@ -5,6 +5,10 @@
 #include "print.h"
 #include "cpu.h"
 
+void exception_fault(void) {
+    panic("Exception fault");
+}
+
 static inline __attribute__((always_inline)) void print_bus_fault(void) {
     volatile u32 bus_status = ((*(volatile u32 *)0xE000ED28) >> 8) & 0xFF;
 

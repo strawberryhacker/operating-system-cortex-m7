@@ -1,4 +1,4 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #ifndef USART_H
 #define USART_H
@@ -44,7 +44,7 @@ void usart_deinit(usart_reg* reg);
 void usart_interrupt_enable(usart_reg* reg, u32 mask);
 
 static inline void usart_write(usart_reg* reg, u8 data) {
-    // Check that the THR is empty
+    /* Check that the THR is empty */
     while (!(reg->CSR & (1 << 1)));
     reg->THR = data;
 }
@@ -54,7 +54,7 @@ static inline u8 usart_read(usart_reg* reg) {
 }
 
 static inline void usart_flush(usart_reg* reg) {
-	// There should be no data in the TR nor THR
+	/* There should be no data in the TR nor THR */
 	while (!(reg->CSR & (1 << 9)));
 }
 

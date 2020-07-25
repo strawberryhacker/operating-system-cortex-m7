@@ -15,6 +15,13 @@
 
 #include <stddef.h>
 
+static void p(void* arg) {
+	while (1) {
+		syscall_thread_sleep(500);
+		print("ok\n");
+	}
+}
+
 int main(void)
 {
 	kernel_entry();
@@ -28,10 +35,17 @@ int main(void)
 		.code_addr  = 0
 	};
 
-	new_thread(&fpi_info);
+	struct thread_info p_info = {
+		.name       = "p",
+		.stack_size = 256,
+		.thread     = p,
+		.class      = REAL_TIME,
+		.arg        = NULL,
+		.code_addr  = 0
+	};
 
-	usb_phy_init();
-	while (1);
+	new_thread(&fpi_info);
+	new_thread(&p_info);
 
 	scheduler_start();
 }

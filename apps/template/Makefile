@@ -69,7 +69,7 @@ lss: $(BUILDDIR)/$(TARGET_NAME).lss
 hex: $(BUILDDIR)/$(TARGET_NAME).hex
 
 program:
-	@python3 ../../tools/app_prog.py -c /dev/ttyS3 -f build/$(TARGET_NAME).bin
+	@python3 ../../tools/app_prog.py -c /dev/ttyS4 -f build/$(TARGET_NAME).bin
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.elf
 	@$(OBJCOPY) -O binary $< $@

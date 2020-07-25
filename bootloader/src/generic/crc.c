@@ -1,10 +1,12 @@
-/// Copyright (C) StrawberryHacker
+/* Copyright (C) StrawberryHacker */
 
 #include "crc.h"
 
-/// Calculates the CRC-8 of a data region using `polynomial`
+/*
+ * Calculates the CRC-8 of a data region using `polynomial`
+ */
 u8 crc_calculate(const void* src, u32 size, u8 polynomial) {
-    // Return value
+    /* Return value */
     u8 crc = 0;
 
     const u8* src_ptr = (const u8 *)src;

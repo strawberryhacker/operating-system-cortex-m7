@@ -285,6 +285,7 @@ void systick_exception(void) {
 		/* Every second the scheduler will calulate the thread new runtime */
 		if (stats_tick >= SYSTICK_RVR * 1000) {
 			stats_tick = 0;
+			gpio_toggle(GPIOC, 8);
 			calculate_runtime();
 		}
 		
@@ -311,6 +312,8 @@ void systick_exception(void) {
 
 		/* Pend the context switch */
 		pendsv_set_pending();
+	} else {
+		print("x");
 	}
 }
 
