@@ -33,11 +33,21 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - System calls &check;
 - Locks &check;
 - Runtime program execution (.bin) &check;
+- Runtime program execution (.elf)
 - LCD support with video playback (raw format)
 - FAT32 stack &check;
 - TCP/IP stack
 - Server support
 - Audio interface
+- USB 2.0 high-speed host interface
+- USB MSC with FAT32 support
+- USB HID with support for mouse and keyboard
+- USB Audio class
+- GPU interface
+- ARMv7 assembler with floating point extension
+- GUI, terminals, LCD etc.
+- Add thread safety
+- Support mamory fault cleanup from program testing
 
 Everything will be completely bare metal - no libraries - literally
 
