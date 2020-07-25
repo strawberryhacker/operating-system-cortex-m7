@@ -48,6 +48,7 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - GUI, terminals, LCD etc.
 - Add thread safety
 - Support mamory fault cleanup from program testing
+- Dynamic MPU regions in case of thread failure
 
 Everything will be completely bare metal - no libraries - literally
 
