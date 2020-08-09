@@ -5,6 +5,18 @@
 #include "hardware.h"
 #include "print.h"
 
+void p(const char* data) {
+    while (*data) {
+        u8 status;
+        do {
+            status = syscall_print_get_status();
+        } while (!status);
+
+        syscall_print_byte(*data);
+        data++;
+    }
+}
+
 int main(void) {
     
     /* 
@@ -14,7 +26,8 @@ int main(void) {
      * Please read the docmentation before implementing apps. 
      * ====================================================================
      */
-    print("hellsdlfkjsdflksjdflkjf sdflkjsdflksjdf lsdkj sdflkkjsdflskj =n");
+    //p("hellsdlfkjsdflksjdflkjf sdflkjsdflksjdf lsdkj sdflkkjsdflskj =n");
+    print("hellsdlfkjsdflksjdflkjf sdflkjsdflksjdf lsdkj sdflkkjsdflskj =n %4h\n", 0xcafecafe);
     while (1);
     return 1;
  }

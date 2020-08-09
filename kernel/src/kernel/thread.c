@@ -61,7 +61,7 @@ u32* stack_setup(u32* stack_pointer, void(*thread)(void*), void* arg) {
      */
 
     /* Setup the EXC_RETURN with no FPU and PSP usage*/
-    *stack_pointer-- = 0xFFFFFFFD;
+    //*stack_pointer-- = 0xFFFFFFFD;
 
     /* Setup the rest of the processor registers */
     *stack_pointer-- = 0xCAFECAFE;          /* R11 */
@@ -159,8 +159,8 @@ tid_t new_thread(struct thread_info* thread_info) {
     /* Update the code addr field */
     thread->code_addr = thread_info->code_addr;
 
-    icache_invalidate();
-    dcache_clean();        // Clean and invalidate
+    //icache_invalidate();
+    //dcache_clean();        // Clean and invalidate
 
     resume_scheduler();
 

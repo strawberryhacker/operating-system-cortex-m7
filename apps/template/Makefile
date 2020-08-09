@@ -17,7 +17,7 @@ ARM_ASM = arm-none-eabi-as
 CPFLAGS += -I$(TOP)/src
 
 #-ffunction-sections
-CFLAGS += -x c -mthumb -O0  -mlong-calls -g3 -Wall
+CFLAGS += -x c -mthumb -O3  -mlong-calls -g3 -Wall
 CFLAGS += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-main -fpic
 CFLAGS += -nostdlib
 

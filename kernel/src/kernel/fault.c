@@ -6,7 +6,7 @@
 #include "cpu.h"
 
 void exception_fault(void) {
-    panic("Exception fault");
+    panic("Exception not handled - default handler triggered");
 }
 
 static inline __attribute__((always_inline)) void print_bus_fault(void) {

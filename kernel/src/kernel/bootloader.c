@@ -148,8 +148,8 @@ void usart0_exception(void) {
 	if ((data == 0x00) && (bus_state == STATE_IDLE)) {
 
         /* The bootloader does not use cache and is self modifying */
-        dcache_disable();
-	    icache_disable();
+        //dcache_disable();
+	    //icache_disable();
 
 		print_flush();
 		memory_copy("StayInBootloader", boot_signature, 16);

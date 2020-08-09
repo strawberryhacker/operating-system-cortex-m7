@@ -17,6 +17,8 @@
 #include "bootloader.h"
 #include "cache.h"
 #include "fpu.h"
+#include "trand.h"
+#include "prand.h"
 
 void kernel_entry(void) {
     /* Disable the watchdog timer */
@@ -30,7 +32,7 @@ void kernel_entry(void) {
 	cpsie_f();
 	cpsid_i();
 
-	fpu_enable();
+	//fpu_enable();
 
 	/*
 	 * The CPU will run at 300 Mhz so the flash access cycles has to be
@@ -43,16 +45,16 @@ void kernel_entry(void) {
 	main_clock_select(CRYSTAL_OSCILLATOR);
 	plla_init(1, 25, 0xFF);
 	master_clock_select(PLLA_CLOCK, MASTER_PRESC_OFF, MASTER_DIV_2);
+
+	/* Initialize serial communication */
+	print_init();
 	
 	/* Initilalize the DRAM interface */
 	dram_init();
 
 	/* Enable L1 I-cache and L1 D-cache */
-	dcache_enable();
-	icache_enable();
-
-	/* Initialize serial communication */
-	print_init();
+	//dcache_enable();
+	//icache_enable();
 
 	/* Make the kernel listen for firmware upgrade */
 	bootloader_init();
@@ -71,6 +73,9 @@ void kernel_entry(void) {
 	/* Initialize the dynamic memory core */
 	mm_init();
 
+	trand_init();
+	prand_init();
+	
 	/* Reenable interrupts */
 	cpsie_i();
 }

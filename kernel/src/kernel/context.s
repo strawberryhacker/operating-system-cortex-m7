@@ -53,12 +53,12 @@ pendsv_exception:
 	 * this register is stacked twice.
 	 */
 
-	tst lr, #0x10
-	it eq
-	vstmdbeq r0!, {s16-s31}
+	//tst lr, #0x10
+	//it eq
+	//vstmdbeq r0!, {s16-s31}
 
 	/* Store the general purpose register not stacked by the CPU */
-	stmdb r0!, {r4-r11, lr}
+	stmdb r0!, {r4-r11}
 
 	/* Update the stack pointer of  the current running thread */
 	str r0, [r2]
@@ -73,12 +73,12 @@ _new_thread:
 	ldr r1, [r2]
 
 	/* Restore the general purpose registers not unstacked by the CPU */
-	ldmia r1!, {r4-r11, lr}
+	ldmia r1!, {r4-r11}
 
 	/* Check if the new context uses floating point context */
-	tst lr, #0x10
-	it eq
-	vldmiaeq r0!, {s16-s31}
+	//tst lr, #0x10
+	//it eq
+	//vldmiaeq r0!, {s16-s31}
 
 	/* Load the stack pointer into PSP */
 	msr psp, r1
@@ -135,7 +135,7 @@ scheduler_run:
 	isb
 
 	/* Setup the core registers for the first thread */
-	pop {r4-r11, lr}
+	pop {r4-r11}
 	pop {r0-r3}
 	pop {r12}
 	add sp, sp, #4

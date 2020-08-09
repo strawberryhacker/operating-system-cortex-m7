@@ -13,6 +13,58 @@
 /* Pointer to the USB core structure used in the callbacks */
 struct usb_core* usbhc_core = NULL;
 
+/* General USB host core stuff */
+static inline void usbhc_enable_connection_error(void);
+static inline void usbhc_disable_connection_error(void);
+static inline u8   usbhc_check_conenction_error(void);
+static inline enum usb_device_speed usbhc_get_speed_status(void);
+static inline void usbhc_clear_connection_error_flag(void);
+static inline void usbhc_set_connection_error_flag(void);
+static inline void usbhc_vbus_request_enable(void);
+static inline void usbhc_send_resume(void);
+static inline void usbhc_clear_reset(void);
+static inline void usbhc_sof_enable(void);
+static inline void usbhc_sof_disable(void);
+static inline void usbhc_set_host_speed(enum usb_host_speed speed);
+
+/* Core interrupts */
+static inline u32  usbhc_get_global_status(void);
+static inline u32  usbhc_get_global_interrupt_mask(void);
+static inline void usbhc_clear_global_status(u32 mask);
+static inline void usbhc_force_global_status(u32 mask);
+static inline void usbhc_disable_global_interrupt(u32 mask);
+static inline void usbhc_enable_global_interrupt(u32 mask);
+
+/* Pipe interrupts */
+static inline u32  usbhc_pipe_get_status(u8 pipe);
+static inline u32  usbhc_pipe_get_interrupt_mask(u8 pipe);
+static inline void usbhc_pipe_clear_status(u8 pipe, u32 mask);
+static inline void usbhc_pipe_force_status(u8 pipe, u32 mask);
+static inline void usbhc_pipe_enable_interrupt(u8 pipe, u32 mask);
+static inline void usbhc_pipe_disable_interrupt(u8 pipe, u32 mask);
+
+/* Frame */
+static inline u32 usbhc_get_frame_number(void);
+static inline u8  usbhc_get_microframe_number(void);
+static inline void usbhc_clear_frame_number(void);
+
+/* Pipes */
+static void usbhc_set_pipe_addr(u8 pipe, u8 addr);
+static inline void usbhc_pipe_reset_assert(u8 pipe);
+static inline void usbhc_pipe_reset_deassert(u8 pipe);
+static inline void usbhc_pipe_enable(u8 pipe);
+static inline void usbhc_pipe_disable(u8 pipe);
+static inline void usbhc_pipe_in_request_defined(u8 pipe, u8 count);
+static inline void usbhc_pipe_in_request_continous(u8 pipe, u8 count);
+static inline void usbhc_pipe_set_configuration(u8 pipe, u32 cfg);
+static inline void usbhc_pipe_allocate_set(u8 pipe);
+static inline void usbhc_pipe_allocate_clear(u8 pipe);
+static inline u32  usbhc_pipe_get_configuration(u8 pipe);
+static inline u8   usbhc_pipe_check_configuration(u8 pipe);
+static inline void usbhc_pipe_set_token(u8 pipe, enum pipe_token token);
+static inline void usbhc_pipe_set_freq(u8 pipe, u8 irq_freq);
+static inline u32  usbhc_get_fifo_byte_count(u8 pipe);
+
 /*
  * Enables the remote connection error interrupt
  */
@@ -38,8 +90,8 @@ static inline void usbhc_disable_connection_error(void)
 }
 
 /*
- * Checks if a connection error has occured on the USB bus.
- * Returns 1 if an error has occured, 0 if not
+ * Checks if a connection error has occured on the USB bus. Returns 1 if an
+ * error has occured, 0 if not
  */
 static inline u8 usbhc_check_conenction_error(void)
 {
@@ -51,8 +103,9 @@ static inline u8 usbhc_check_conenction_error(void)
 }
 
 /*
- * Returns the speed status. This should be checked at the end 
- * of a reset request.
+ * Returns the speed status. This should be checked at the end of a reset
+ * request. In host mode two pulldowns are connected. The speed status is based
+ * on which line the device pulls up. 
  */
 static inline enum usb_device_speed usbhc_get_speed_status(void)
 {
@@ -78,11 +131,11 @@ static inline void usbhc_set_connection_error_flag(void)
 }
 
 /*
- * Enables the VBUS request. The host includes two weak pulldowns
- * on the D+ and D- lines. When a devices is connected one of
- * the pulldowns os overpowered by one of the devices pullups. 
- * Which line is pulled high determines the speed of the deivce. 
- * To enable this detection VBS request must be enabled.
+ * Enables the VBUS request. The host includes two weak pulldowns on the D+
+ * and D- lines. When a devices is connected one of the host pulldown resistors
+ * is overpowered by one of the devices pullups. Which line is pulled high
+ * determines the speed of the deivce. To enable this detection VBS request
+ * must be enabled.
  */
 static inline void usbhc_vbus_request_enable(void)
 {
@@ -90,16 +143,24 @@ static inline void usbhc_vbus_request_enable(void)
 }
 
 /*
- * Sends a USB resume on the bus
+ * Sends a USB resume on the bus. A downstream USB resume is issued by the host
+ * in order to wake up a suspended device. The USB resume is a K-state for at
+ * least 20ms, followed by a low speed EOP. 
  */
 static inline void usbhc_send_resume(void)
 {
+    /* According to the datasheet SOF must be enabled */
+    if (!(USBHC->HSTCTRL & (1 << 8))) {
+        panic("Attempted resume without SOF enabled");
+    }
+
     USBHC->HSTCTRL |= (1 << 10);
 }
 
 /*
- * Clears the reset bit in the configuration register. This is
- * said to have no effect, but right above it, it is reccomended
+ * Clears the reset bit in the configuration register. This is said to have no
+ * effect, but right above it, they reccomended clearing it. This should be 
+ * done after a device disconnection to avoid any unintentional reset. 
  */
 static inline void usbhc_clear_reset(void)
 {
@@ -107,9 +168,9 @@ static inline void usbhc_clear_reset(void)
 }
 
 /*
- * Starts generating SOFs and uSOFs. This will be automatically 
- * generated after a bus reset if the host was in suspend state
- * (SOF enable zero). This also sets the WAKEUP flag.
+ * Starts generating SOFs and uSOFs. This will be automatically generated after
+ * a bus reset if the host was in suspend state (SOFEN zero). This also
+ * sets the WAKEUP flag.
  */
 static inline void usbhc_sof_enable(void)
 {
@@ -138,15 +199,13 @@ static inline void usbhc_set_host_speed(enum usb_host_speed speed)
 /*
  * Interrupt section
  * 
- * The USB interface has a quite complicated interrupt structure.
- * A overview can be found at page 754 in the datasheet. The 
- * host controller has ONE global status register used when
- * detecting interrupts. This register includes some basic flags
- * used for the root hub. In addition it includes one flag per pipe
- * used to indicate that a pipe interrupt has happended. A pipe 
- * interrupt has an independent status register used to report
- * events. The same thing with DMA. This way, if the pipe flag
- * is cleared not pipe interrupt is generated.  
+ * The USB interface has a quite complicated interrupt structure. A overview
+ * can be found at page 754 in the datasheet. The host controller has ONE global
+ * status register used when detecting interrupts. This register includes some
+ * basic flags used for the root hub. In addition it includes one flag per pipe
+ * used to indicate that a pipe interrupt has happended. A pipe interrupt has an
+ * independent status register used to report events. The same goes for DMA.
+ * If the pipe flag is cleared no pipe interrupt is generated.  
  */
 
 /*
@@ -174,8 +233,8 @@ static inline void usbhc_force_global_status(u32 mask)
 }
 
 /*
- * Returns the global interrupt mask. This indicates which events
- * will trigger an interrupt
+ * Returns the global interrupt mask. This indicates which events will trigger
+ * an interrupt
  */
 static inline u32 usbhc_get_global_interrupt_mask(void)
 {
@@ -207,6 +266,14 @@ static inline u32 usbhc_get_frame_number(void)
 }
 
 /*
+ * Returns the micro-frame number
+ */
+static inline u8  usbhc_get_microframe_number(void)
+{
+    return (u8)(USBHC->HSTFNUM & 0x7);
+}
+
+/*
  * Clears the frame number
  */
 static inline void usbhc_clear_frame_number(void)
@@ -216,10 +283,9 @@ static inline void usbhc_clear_frame_number(void)
 }
 
 /*
- * Sets the pipe endpoint address. It takes in the endpoint
- * number between 0 and 9, and a 7 bit address identifying the 
- * USB device on the bus. Note that pipe 0 should have its address
- * set to one
+ * Sets the pipe endpoint address. It takes in the endpoint number between
+ * 0 and 9, and a 7 bit address identifying the USB device on the bus. Note that
+ * pipe 0 should have its address set to one
  */
 static void usbhc_set_pipe_addr(u8 pipe, u8 addr)
 {
@@ -237,7 +303,7 @@ static void usbhc_set_pipe_addr(u8 pipe, u8 addr)
 }
 
 /*
- * Assert reset on the specified pipe
+ * Assert reset on a pipe
  */
 static inline void usbhc_pipe_reset_assert(u8 pipe)
 {
@@ -248,7 +314,7 @@ static inline void usbhc_pipe_reset_assert(u8 pipe)
 }
 
 /*
- * Deassert reset on the specified pipe
+ * Deassert reset on a pipe
  */
 static inline void usbhc_pipe_reset_deassert(u8 pipe)
 {
@@ -259,7 +325,7 @@ static inline void usbhc_pipe_reset_deassert(u8 pipe)
 }
 
 /*
- * Enables the specifed pipe
+ * Enables a pipe
  */
 static inline void usbhc_pipe_enable(u8 pipe)
 {
@@ -270,7 +336,7 @@ static inline void usbhc_pipe_enable(u8 pipe)
 }
 
 /*
- * Disables the specifed pipe
+ * Disables a pipe
  */
 static inline void usbhc_pipe_disable(u8 pipe)
 {
@@ -281,7 +347,7 @@ static inline void usbhc_pipe_disable(u8 pipe)
 }
 
 /*
- * Returns the specified pipes status register
+ * Returns the pipe status register
  */
 static inline u32 usbhc_pipe_get_status(u8 pipe)
 {
@@ -292,7 +358,7 @@ static inline u32 usbhc_pipe_get_status(u8 pipe)
 }
 
 /*
- * Clears the input mask in the specified pipes status register
+ * Clears the input mask in the pipe status register
  */
 static inline void usbhc_pipe_clear_status(u8 pipe, u32 mask)
 {
@@ -303,7 +369,7 @@ static inline void usbhc_pipe_clear_status(u8 pipe, u32 mask)
 }
 
 /*
- * Sets the input mask in the specified pipes status register
+ * Sets the input mask in the pipe status register
  */
 static inline void usbhc_pipe_force_status(u8 pipe, u32 mask)
 {
@@ -314,7 +380,7 @@ static inline void usbhc_pipe_force_status(u8 pipe, u32 mask)
 }
 
 /*
- * Return the specified pipe interrupt mask
+ * Returns the pipe interrupt mask
  */
 static inline u32 usbhc_pipe_get_interrupt_mask(u8 pipe)
 {
@@ -325,8 +391,7 @@ static inline u32 usbhc_pipe_get_interrupt_mask(u8 pipe)
 }
 
 /*
- * Enables the interrupt corresponding to the specified
- * pipes interrupt mask
+ * Enables the interrupt corresponding to the pipe interrupt mask
  */
 static inline void usbhc_pipe_enable_interrupt(u8 pipe, u32 mask)
 {
@@ -337,8 +402,7 @@ static inline void usbhc_pipe_enable_interrupt(u8 pipe, u32 mask)
 }
 
 /*
- * Disables the interrupt corresponding to the specified
- * pipes interrupt mask
+ * Disables the interrupt corresponding to the pipe interrupt mask
  */
 static inline void usbhc_pipe_disable_interrupt(u8 pipe, u32 mask)
 {
@@ -349,8 +413,8 @@ static inline void usbhc_pipe_disable_interrupt(u8 pipe, u32 mask)
 }
 
 /*
- * Performs a predefined number of IN request before the pipe 
- * is frozen. This makes the device send IN packets. 
+ * Performs a predefined number of IN request before the pipe is frozen. This
+ * makes the device send IN packets. 
  */
 static inline void usbhc_pipe_in_request_defined(u8 pipe, u8 count)
 {
@@ -361,7 +425,7 @@ static inline void usbhc_pipe_in_request_defined(u8 pipe, u8 count)
 }
 
 /*
- * Performs IN requests on the given pipe untill the pipe is frozen
+ * Performs IN requests continously on the given pipe until the pipe is frozen
  */
 static inline void usbhc_pipe_in_request_continous(u8 pipe, u8 count)
 {
@@ -372,7 +436,7 @@ static inline void usbhc_pipe_in_request_continous(u8 pipe, u8 count)
 }
 
 /*
- * Writes the given configuration mask to the given pipe
+ * Sets a pipe configuration
  */
 static inline void usbhc_pipe_set_configuration(u8 pipe, u32 cfg)
 {
@@ -416,9 +480,8 @@ static inline u32 usbhc_pipe_get_configuration(u8 pipe)
 }
 
 /*
- * Checks the given pipe configuration status. This indicates
- * if the configurations fields are set according to the
- * pipe capabilities.
+ * Checks the given pipe configuration status. This indicates if the
+ * configurations fields are set according to the pipe capabilities.
  */
 static inline u8 usbhc_pipe_check_configuration(u8 pipe) 
 {
@@ -464,7 +527,7 @@ static inline void usbhc_pipe_set_freq(u8 pipe, u8 irq_freq)
 }
 
 /*
- * Returns the number of bytes in a pipe FIFO. Takes in the pipe nuber
+ * Returns the number of bytes in a pipe FIFO
  */
 static inline u32 usbhc_get_fifo_byte_count(u8 pipe)
 {
@@ -481,9 +544,8 @@ static inline u32 usbhc_get_fifo_byte_count(u8 pipe)
 }
 
 /*
- * Freezes the USB clock. Only asynchronous interrupt can trigger 
- * an interrupt. The CPU can only read/write FRZCLK and USBE when
- * this but is set
+ * Freezes the USB clock. Only asynchronous interrupt can trigger an interrupt.
+ * The CPU can only read/write FRZCLK and USBE when this bit is set
  */
 void usbhc_freeze_clock(void)
 {
@@ -519,9 +581,9 @@ void usbhc_enable(void)
 }
 
 /*
- * Disables the USB interface. This act as a hardware reset, thus 
- * resetting USB interface, disables the USB tranceiver and disables
- * the USB clock inputs. This does not reset FRZCLK and UIMOD
+ * Disables the USB interface. This act as a hardware reset, thus resetting USB
+ * interface, disables the USB tranceiver and disables the USB clock inputs.
+ * This does not reset FRZCLK and UIMOD
  */
 void usbhc_disable(void)
 {
@@ -550,8 +612,10 @@ void usbhc_set_mode(enum usb_mode mode)
 }
 
 /*
- * Sends a USB reset. It might be useful to write this bit to 
- * zero when a device disconnection is detected.
+ * Sends a USB reset. It might be useful to write this bit to zero when a device
+ * disconnection is detected. This sets any connected device to its default
+ * unconfigured state. It sends the reset by pulling both data lines low for at
+ * least 10 ms (SE0)
  */
 void usbhc_send_reset(void)
 {
@@ -570,8 +634,8 @@ void usbhc_interrupt_disable(void)
 }
 
 /*
- * Checks if the USB UTMI 30MHz clock is usable. Returns 1 if
- * the clock is usable, 0 if not
+ * Checks if the USB UTMI 30MHz clock is usable. Returns 1 if the clock is
+ * usable, 0 if not
  */
 u8 usbhc_clock_usable(void)
 {
@@ -583,10 +647,9 @@ u8 usbhc_clock_usable(void)
 }
 
 /*
- * Configures an allocates a pipe. It takes in a pointer to the
- * USB core object, the pipe number, the pipe configuration register
- * and the pipe traget device address. Returns 1 if the allocation 
- * was successfull
+ * Configures and allocates a pipe. It takes in a pointer to the USB core
+ * object, the pipe number, the pipe configuration register and the pipe target
+ * device address. Returns 1 if the allocation was successfull
  */
 static u8 usbhc_pipe_configure(struct usb_core* core, u8 pipe, u32 cfg, u8 addr)
 {
@@ -609,8 +672,8 @@ static u8 usbhc_pipe_configure(struct usb_core* core, u8 pipe, u32 cfg, u8 addr)
 }
 
 /*
- * Finds the first free pipe starting from the specified index. 
- * Returns the pipe index, -1 if not found
+ * Finds the first free pipe starting from the specified index. Returns the
+ * pipe index, -1 if not found
  */
 static i8 usbhc_find_free_pipe(struct usb_core* core, u8 start_index) 
 {
@@ -644,11 +707,11 @@ static u8 usbhc_pipe_get_index(struct usb_core* core, struct usb_pipe* pipe)
 }
 
 /*
- * Tries to allocate a pipe. This will handle any DPRAM
- * conflicts and reallocate conflicting pipes. Returns the allocated
- * pipe if success, else NULL
+ * Tries to allocate a pipe. This will handle any DPRAM conflicts and reallocate
+ * conflicting pipes. Returns the allocated pipe if success, else NULL
  */
-struct usb_pipe* usbhc_pipe_allocate(struct usb_core* core, u32 cfg, u8 addr, u8 pipe0)
+struct usb_pipe* usbhc_pipe_allocate(struct usb_core* core, u32 cfg,
+                                     u8 addr, u8 pipe0)
 {
     /* Try to find the first free pipe except the control pipe*/
     u8 pipe = usbhc_find_free_pipe(core, 1);
@@ -975,7 +1038,10 @@ static void usbhc_root_hub_handler(struct usb_core* core, u32 global_status)
         usbhc_core->rh_callback(core, RH_EVENT_CONNECT);
     }
 
-    /* Wakeup */
+    /* 
+     * Wakeup. This occurs if the USBHC is in suspend mode and a peripheral 
+     * disconnection or a upstream resume is detected 
+     */
     if (global_status & (1 << 6)) {
         
         usbhc_disable_global_interrupt(1 << 6);
@@ -997,13 +1063,12 @@ static void usbhc_root_hub_handler(struct usb_core* core, u32 global_status)
 }
 
 /*
- * Setup packet sent handler. This is called from the pipe handler
- * when the TXSTPI flag is set. This functions will perform the 
- * next stage in the setup packet. A general setup packet has three
- * stages; the setup packet, the data packet(s) and the handshake
- * pakcet. Typically the first setup packet will not be handled here
- * since this packet acctually will trigger this function when complete.
- * This function takes in the pipe pointer to handle
+ * Setup packet sent handler. This is called from the pipe handler when the
+ * TXSTPI flag is set. This functions will perform the next stage in the setup
+ * packet. A general setup packet has three stages; the setup packet, the data
+ * packet(s) and the handshake pakcet. Typically the first setup packet will not
+ * be handled here since this packet acctually will trigger this function when
+ * complete. This function takes in the pipe pointer to handle
  */
 static void usbhc_setup_sent(struct usb_core* core, struct usb_pipe* pipe)
 {
@@ -1018,8 +1083,8 @@ static void usbhc_setup_sent(struct usb_core* core, struct usb_pipe* pipe)
 }
 
 /*
- * Received packet handler. This is called when either a full or a 
- * partial data has been received
+ * Received packet handler. This is called when either a full or a partial data
+ * has been received
  */
 static void usbhc_received_packet(struct usb_core* core, struct usb_pipe* pipe)
 {
@@ -1028,8 +1093,8 @@ static void usbhc_received_packet(struct usb_core* core, struct usb_pipe* pipe)
 }
 
 /*
- * Transmitted data complete. This is called when the USB has
- * transmitted a new packet.
+ * Transmitted data complete. This is called when the USB has transmitted a new
+ * packet.
  */
 static void usbhc_transmitt_complete(struct usb_core* core, struct usb_pipe* pipe)
 {
@@ -1037,8 +1102,8 @@ static void usbhc_transmitt_complete(struct usb_core* core, struct usb_pipe* pip
 }
 
 /*
- * Pipe handler. This gets called when a pipe interrupt occurs. 
- * This code should clear the corresponding interrupt flag(s)
+ * Pipe handler. This gets called when a pipe interrupt occurs. This code should
+ * clear the corresponding interrupt flag(s)
  */
 static void usbhc_pipe_handler(struct usb_core* core, u32 global_status)
 {
@@ -1104,8 +1169,8 @@ static void usbhc_pipe_handler(struct usb_core* core, u32 global_status)
 }
 
 /*
- * SOF handler. This gets called when a SOF and a  uSOF has
- * been sent on the line. This code should clear the SOF flag.
+ * SOF handler. This gets called when a SOF and a  uSOF has been sent on the
+ * line. This code should clear the SOF flag.
  */
 static void usbhc_sof_handler(struct usb_core* core, u32 global_status)
 {
@@ -1113,10 +1178,10 @@ static void usbhc_sof_handler(struct usb_core* core, u32 global_status)
 }
 
 /*
- * USB core exception handler. This breakes down the USB exception 
- * into three groups; pipe interrupts, SOF interrupts and root hub
- * interrupt. Each of these has its own handler, in which are 
- * responsible for clearing any interrupt flags.
+ * USB core exception handler. This breakes down the USB exception into three
+ * groups; pipe interrupts, SOF interrupts and root hub interrupt. Each of these
+ * has its own handler, in which are responsible for clearing any interrupt
+ * flags.
  */
 void usb_exception(void)
 {

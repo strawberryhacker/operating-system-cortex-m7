@@ -16,7 +16,7 @@ ARM_ASM = arm-none-eabi-as
 #-------------------------------------------------------------------------------
 CPFLAGS += -I$(TOP)/src
 
-CFLAGS   += -x c -mthumb -O3 -ffunction-sections -mlong-calls -g3 -Wall
+CFLAGS   += -x c -mthumb -O1 -ffunction-sections -mlong-calls -g3 -Wall
 CFLAGS   += -std=gnu99 -mcpu=cortex-m7 -c -fdata-sections -Wno-unused-variable
 CFLAGS   += -Wno-unused-function
 
@@ -37,6 +37,7 @@ SRC +=
 
 obj-y += /src/main.c
 
+# Kernel source files
 kernel-y += /src/kernel/kernel_entry.c
 kernel-y += /src/kernel/fault.c
 kernel-y += /src/kernel/scheduler.c
@@ -52,6 +53,7 @@ kernel-y += /src/kernel/dynamic_linker.c
 kernel-y += /src/kernel/run.c
 kernel-y += /src/kernel/bootloader.c
 
+# Driver source files
 driver-y += /src/drivers/systick.c
 driver-y += /src/drivers/clock.c
 driver-y += /src/drivers/watchdog.c
@@ -65,33 +67,47 @@ driver-y += /src/drivers/mmc.c
 driver-y += /src/drivers/gmac.c
 driver-y += /src/drivers/dma.c
 driver-y += /src/drivers/usbhc.c
+driver-y += /src/drivers/trand.c
 
+# Disk source files
 disk-y += /src/disk/sd_protocol.c
 disk-y += /src/disk/disk_io.c
 disk-y += /src/disk/fat32.c
 
+# Board packages source files
 board-y += /src/board/serial.c
 board-y += /src/board/print.c
 board-y += /src/board/sd.c
 board-y += /src/board/ethernet.c
 board-y += /src/board/usb_phy.c
 
+# Generic source files
 generic-y += /src/generic/sprint.c
 generic-y += /src/generic/crc.c
 generic-y += /src/generic/memory.c
 generic-y += /src/generic/panic.c
+generic-y += /src/generic/prand.c
 generic-y += /src/generic/ringbuffer.c
 
+# Misc source files
 misc-y += /src/misc/programming.c
 
+# Network source files
 net-y += /src/net/ip.c
 
+# USB source files
 usb-y += /src/usb/usb.c
 
+# Memory source files
 mm-y += /src/mm/mm.c
 mm-y += /src/mm/mpu.c
 mm-y += /src/mm/cache.c
 
+# Benchmarking source files
+bench-y += /src/benchmark/mm_benchmark.c
+bench-y += /src/benchmark/benchmark_timer.c
+
+# Assembly files
 asm-y += /src/entry/entry.s
 asm-y += /src/kernel/context.s
 asm-y += /src/kernel/svc.s
@@ -108,6 +124,7 @@ DISK_OBJ := $(patsubst %.c, %.o, $(disk-y))
 NET_OBJ := $(patsubst %.c, %.o, $(net-y))
 MISC_OBJ := $(patsubst %.c, %.o, $(misc-y))
 USB_OBJ := $(patsubst %.c, %.o, $(usb-y))
+BENCH_OBJ := $(patsubst %.c, %.o, $(bench-y))
 
 OBJ += $(addprefix $(BUILDDIR), $(KERNEL_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(DRIVER_OBJ))
@@ -120,6 +137,7 @@ OBJ += $(addprefix $(BUILDDIR), $(DISK_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(NET_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(MISC_OBJ))
 OBJ += $(addprefix $(BUILDDIR), $(USB_OBJ))
+OBJ += $(addprefix $(BUILDDIR), $(BENCH_OBJ))
 
 # Add include paths
 CPFLAGS += -I$(TOP)/src/drivers
@@ -132,6 +150,7 @@ CPFLAGS += -I$(TOP)/src/disk
 CPFLAGS += -I$(TOP)/src/net
 CPFLAGS += -I$(TOP)/src/misc
 CPFLAGS += -I$(TOP)/src/usb
+CPFLAGS += -I$(TOP)/src/benchmark
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------

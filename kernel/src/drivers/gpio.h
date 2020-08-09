@@ -24,13 +24,17 @@ enum gpio_pull {
     GPIO_PULL_DOWN
 };
 
+static inline void gpio_set(gpio_reg* port, u8 pin) {
+    port->SODR = (1 << pin);
+}
+
+static inline void gpio_clear(gpio_reg* port, u8 pin) {
+    port->CODR = (1 << pin);
+}
+
 void gpio_set_function(gpio_reg* port, u8 pin, enum gpio_func func);
 
 void gpio_set_direction(gpio_reg* port, u8 pin, enum gpio_dir dir);
-
-void gpio_set(gpio_reg* port, u8 pin);
-
-void gpio_clear(gpio_reg* port, u8 pin);
 
 void gpio_toggle(gpio_reg* port, u8 pin);
 

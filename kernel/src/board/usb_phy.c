@@ -22,8 +22,8 @@ struct usb_pipe usb_pipes[PIPE_COUNT];
 void usb_phy_init(void)
 {
     /*
-     * The reccomended start up sequence can be found in the 
-     * datasheet at page 752
+     * The reccomended start up sequence can be found in the datasheet at
+     * page 752
      */
     peripheral_clock_enable(34);
 

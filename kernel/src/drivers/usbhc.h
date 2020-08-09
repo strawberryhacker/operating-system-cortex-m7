@@ -9,15 +9,14 @@
 /* Defines the maximum number of pipes supported by hardware */
 #define MAX_PIPES 10
 
-#define usbhc_DPRAM_ADDR 0xA0100000
-#define usbhc_DPRAM_EP_SIZE 0x8000
+#define USBHC_DPRAM_ADDR 0xA0100000
+#define USBHC_DPRAM_EP_SIZE 0x8000
 
 /*
- * Returns an 8 bit pointer to the DPRAM base address
- * associated with a pipe
+ * Returns an 8 bit pointer to the DPRAM base address associated with a pipe
  */
 #define usbhc_get_fifo_ptr(pipe) \
-	(volatile u8 *)(usbhc_DPRAM_ADDR + (usbhc_DPRAM_EP_SIZE * pipe))
+	(volatile u8 *)(USBHC_DPRAM_ADDR + (USBHC_DPRAM_EP_SIZE * pipe))
 
 /*
  * Defines the USB mode of operation 
@@ -28,7 +27,7 @@ enum usb_mode {
 };
 
 /*
- * This enum indicates the deivce speed status in host mode
+ * This enum indicates the device speed in host mode
  */
 enum usb_device_speed {
     USB_DEVICE_FS,
@@ -93,10 +92,9 @@ enum usb_x_status {
 };
 
 /*
- * Describes all fields needed for a control transfer. A control
- * transfer consist of three stages; a setup packet, an IN data 
- * packet, and a ZLP OUT acknowledgment packet. Each of these
- * consist of a token, data and a handshake. 
+ * Describes all fields needed for a control transfer. A control transfer
+ * consist of three stages; a setup packet, an IN data packet, and a ZLP OUT
+ * acknowledgment packet. Each of these consist of a token, data and a handshake. 
  */
 struct usb_ctrl_transfer {
     /* Control transfer setup packet is allways 8 bytes long */

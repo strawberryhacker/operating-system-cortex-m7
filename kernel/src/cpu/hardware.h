@@ -739,6 +739,20 @@ typedef struct {
 } utmi_reg;
 
 /*
+ * True random number generator
+ */
+typedef struct {
+	_w  u32 CR;
+	_r  u32 RESERVED1[3];
+	_w  u32 IER;
+	_w  u32 IDR;
+	_r  u32 IMR;
+	_r  u32 ISR;
+	_r  u32 RESERVED2[12];
+	_r  u32 ODATA;
+} trand_reg;
+
+/*
  * Defines the base address of the SOC peripherals
  */
 #define CLOCK    ((clock_reg *)0x400E0600)
@@ -768,6 +782,7 @@ typedef struct {
 #define TIMER3   ((timer_reg *)0x40054000)
 #define USBHC    ((usb_reg *)0x40038000)
 #define UTMI     ((utmi_reg *)0x400E0400)
+#define TRAND    ((trand_reg *)0x40070000)
 
 /*
  * Defines the address of the Cortex-M7 vecotr table offset register

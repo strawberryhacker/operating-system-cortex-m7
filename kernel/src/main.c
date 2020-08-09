@@ -12,6 +12,8 @@
 #include "ringbuffer.h"
 #include "usbhc.h"
 #include "usb_phy.h"
+#include "gpio.h"
+#include "mm_benchmark.h"
 
 #include <stddef.h>
 
@@ -25,6 +27,10 @@ static void p(void* arg) {
 int main(void)
 {
 	kernel_entry();
+
+	run_mm_benchmark(NULL);
+
+	while (1);
 
 	struct thread_info fpi_info = {
 		.name       = "FPI",
@@ -46,6 +52,10 @@ int main(void)
 
 	new_thread(&fpi_info);
 	new_thread(&p_info);
+
+	//usb_phy_init();
+
+	while (1);
 
 	scheduler_start();
 }
