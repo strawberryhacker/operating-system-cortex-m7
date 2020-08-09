@@ -14,6 +14,7 @@
 #include "usb_phy.h"
 #include "gpio.h"
 #include "mm_benchmark.h"
+#include "smalloc.h"
 
 #include <stddef.h>
 
@@ -28,7 +29,16 @@ int main(void)
 {
 	kernel_entry();
 
-	run_mm_benchmark(NULL);
+	struct smalloc_benchmark_conf c = {
+		.min_block_size = 8,
+		.max_block_size = 256,
+		.min_block_count = 0,
+		.max_block_count = 0,
+		.max_mm_usage = 90,
+		.min_mm_usage = 50
+	};
+
+	run_mm_benchmark(&c);
 
 	while (1);
 

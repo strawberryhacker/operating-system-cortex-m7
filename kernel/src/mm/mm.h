@@ -10,8 +10,9 @@
 enum physmem_e {
     SRAM,
     DRAM_BANK_1,
-    DRAM_BANK_2_1k,
-    DRAM_BANK_2_4k
+    DRAM_BANK_2,
+    DRAM_BANK_3,
+    DRAM_BANK_4
 };
 
 struct mm_node {
@@ -56,22 +57,19 @@ struct physmem {
 
 void mm_init(void);
 
-
-void* mm_alloc(u32 size, enum physmem_e region);
-
-void* mm_alloc_4k(u32 count);
-
-void* mm_alloc_1k(u32 count);
+void* mm_alloc(u32 size, enum physmem_e index);
 
 void mm_free(void* memory);
 
 
-u32 mm_get_size(enum physmem_e physmem);
+u32 mm_get_total(enum physmem_e physmem);
 
-u32 mm_get_alloc(enum physmem_e physmem);
+u32 mm_get_used(enum physmem_e physmem);
 
 u32 mm_get_free(enum physmem_e physmem);
 
 u32 mm_get_frag(enum physmem_e physmem);
+
+void mm_check(enum physmem_e physmem);
 
 #endif

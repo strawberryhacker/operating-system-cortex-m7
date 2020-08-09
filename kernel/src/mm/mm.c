@@ -21,15 +21,15 @@ extern u32 _heap_e;
 /*
  * Gets and sets the physical memory encoded in the upper 4 bits
  */
-#define MM_GET_REGION(size) (((size) >> 28) & 0b1111)
-#define MM_SET_REGION(size, physmem) (((size) & ~(0b1111 << 28)) | \
+#define mm_get_region(size) (((size) >> 28) & 0b1111)
+#define mm_set_region(size, physmem) (((size) & ~(0b1111 << 28)) | \
                                      ((physmem) << 28))
 
 /*
  * Gets and sets the block size encoded in the lower 28 bits
  */
-#define MM_GET_SIZE(size) ((size) & 0xFFFFFFF)
-#define MM_SET_SIZE(size, new_size) (((size) & ~0xFFFFFFF) | (new_size))
+#define mm_get_size(size) ((size) & 0xFFFFFFF)
+#define mm_set_size(size, new_size) (((size) & ~0xFFFFFFF) | (new_size))
 
 /*
  * Configure all regions which will be used by the memory alloctor. Only one
@@ -46,22 +46,29 @@ struct physmem sram = {
 
 struct physmem dram_bank_1 = {
     .start_addr = 0x70000000,
-    .end_addr   = 0x700FFFFF,
-    .name       = "DRAM_BANK_1",
+    .end_addr   = 0x7007FFFF,
+    .name       = "DRAM bank 1",
     .min_alloc  = 256
 };
 
-struct physmem dram_bank_2_1k = {
+struct physmem dram_bank_2 = {
+    .start_addr = 0x70080000,
+    .end_addr   = 0x700FFFFF,
+    .name       = "DRAM bank 2",
+    .min_alloc  = 256
+};
+
+struct physmem dram_bank_3 = {
     .start_addr = 0x70100000,
     .end_addr   = 0x7017FFFF,
-    .name       = "DRAM_BANK_2",
+    .name       = "DRAM bank 3",
     .min_alloc  = 256
 };
 
-struct physmem dram_bank_2_4k = {
+struct physmem dram_bank_4 = {
     .start_addr = 0x70180000,
     .end_addr   = 0x701FFFFF,
-    .name       = "DRAM_BANK_2",
+    .name       = "DRAM bank 4",
     .min_alloc  = 256
 };
 
@@ -69,11 +76,12 @@ struct physmem dram_bank_2_4k = {
  * List containing a pointer to all the physical memories. Last entry must
  * be NULL
  */
-struct physmem* physical_memories[5] = {
+struct physmem* physical_memories[6] = {
     &sram,
     &dram_bank_1,
-    &dram_bank_2_1k,
-    &dram_bank_2_4k,
+    &dram_bank_2,
+    &dram_bank_3,
+    &dram_bank_4,
     NULL
 };
 
@@ -84,16 +92,25 @@ struct physmem* physical_memories[5] = {
  */
 void mm_init(void) {
     u8 index = 0;
+
     while (physical_memories[index] != NULL) {
         struct physmem* physmem = physical_memories[index];
 
         /*
          * If the start address and end address is zero we need to update the
-         * pointers with the `_heap_s` and `_heap_e` given from the linker
+         * pointers with the `_heap_s` and `_heap_e` given from the linkerscript
          */
         if ((physmem->start_addr == 0) && (physmem->end_addr == 0)) {
             physmem->start_addr = (u32)&_heap_s;
             physmem->end_addr = (u32)&_heap_e;
+        }
+
+        /* Erase the memory */
+        volatile u8* clear_start = (volatile u8 *)physmem->start_addr;
+        volatile u8* clear_end = (volatile u8 *)physmem->end_addr;
+
+        while (clear_start != clear_end) {
+            *clear_start++ = 0x00;
         }
 
         /* Align the start address upwards */
@@ -107,20 +124,17 @@ void mm_init(void) {
             physmem->end_addr &= ~(MM_ALIGN - 1);
         }
 
-        /* 
-         * Add a `mm_node` at the start and end of the aligned physical
-         * memory
-         */
+        /* Add a `mm_node` at the start and end of the aligned physical memory */
         struct mm_node* node_start = (struct mm_node *)physmem->start_addr;
         struct mm_node* node_end = (struct mm_node *)(physmem->end_addr - 
             sizeof(struct mm_node));
         
         /* 
          * Update the total size of the memory including the first node, but
-         * excluding the last node. All sizes are calculated like this
+         * excluding the last node. All sizes are calculated like this.
          */
-        physmem->size = (physmem->end_addr - physmem->start_addr -
-            sizeof(struct mm_node));
+        physmem->size = (physmem->end_addr - sizeof(struct mm_node) -
+                         physmem->start_addr);
 
         /*
          * The first node will not contain any data hence the size should be
@@ -134,8 +148,8 @@ void mm_init(void) {
         physmem->root_node = &physmem->root_obj;
         
         node_start->next = node_end;
-        node_start->size = MM_SET_SIZE(0, physmem->size);
-        node_start->size = MM_SET_REGION(node_start->size, index);
+        node_start->size = mm_set_size(0, physmem->size);
+        node_start->size = mm_set_region(node_start->size, index);
 
         /*
          * In the `first fit` algorithm the last node is a zero-sized node
@@ -157,45 +171,37 @@ void mm_init(void) {
 void mm_list_insert(struct mm_node* node, struct mm_node* root, 
     struct mm_node* last) {
 
+    if ((node < root ) || (node > last)) {
+        panic("Memory list error");
+    }
+
     struct mm_node* iter = root;
+
     while (iter->next < node) {
         iter = iter->next;
     }
 
-    /*
-     * Now `iter` is pointing to the node right before the block to insert.
-     * Also, `iter->next` point to the node right after the block to insert
-     */
-    u32 iter_size = MM_GET_SIZE(iter->size);
-    u32 insert_size = MM_GET_SIZE(node->size);
+    u32 iter_size = mm_get_size(iter->size);
+    u32 insert_size = mm_get_size(node->size);
 
-    /*
-     * Check if the block to insert overlaps with the previous free block. If 
-     * so, combine the blocks and move the node pointer to the previous block.
-     */
-    if ((u32)iter + iter_size == (u32)node) {
-        iter->size = MM_SET_SIZE(iter->size, iter_size + insert_size);
+    /* Check for backwards block overlap */
+    if (((u8 *)iter + iter_size) == (u8 *)node) {
+        iter->size += insert_size;
         node = iter;
     }
+    
 
-    /* 
-     * Check if the `node` (which may be the node to insert, or the previous 
-     * block; if merged) overlaps with the following block (iter->next)
-     */
-    u32 next_size = MM_GET_SIZE(iter->next->size);
-    u32 node_size = MM_GET_SIZE(node->size);
-    if ((u32)node + node_size == (u32)iter->next) {
-        
-        /*
-         * Check if the `iter->next` is the last block. In this case, the
-         * pointer `iter->next->next` cannot be retreived. The node should
-         * point to the last node
-         */
-        if (iter->next != last) {
-            node->size = MM_SET_SIZE(node->size, node_size + next_size);
-            node->next = iter->next->next;
-        } else {
+    /* Check for forward block overlap */
+    u32 next_size = mm_get_size(iter->next->size);
+    insert_size = mm_get_size(node->size);
+
+    if (((u8 *)node + insert_size) == (u8 *)iter->next) {
+        /* No block can be merged with the last block */
+        if (iter->next == last) {
             node->next = last;
+        } else {
+            node->size += next_size;
+            node->next = iter->next->next;         
         }
     } else {
         node->next = iter->next;
@@ -213,7 +219,7 @@ void mm_list_insert(struct mm_node* node, struct mm_node* root,
 /*
  * Allocates `size` number of bytes from a physical memory
  */
-void* mm_gp_alloc(u32 size, enum physmem_e index) {
+void* mm_alloc(u32 size, enum physmem_e index) {
 
     struct physmem* physmem = physical_memories[index];
     void* return_ptr = NULL;
@@ -222,8 +228,8 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
     size += sizeof(struct mm_node);
 
     /*
-     * Check if the requested size is bigger than the physical memory's
-     * minimum allocation size
+     * Check if the requested size is bigger than the physical memory's minimum
+     * allocation size
      */
     if (size < physmem->min_alloc) {
         size = physmem->min_alloc;
@@ -232,7 +238,12 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
     /* Align the size */
     if (size & (MM_ALIGN - 1)) {
         size += MM_ALIGN;
-        size &= ~MM_ALIGN;
+        size &= ~(MM_ALIGN - 1);
+    }
+
+    if (size > (physmem->size - physmem->allocated)) {
+        print("Not enough memory");
+        return NULL;
     }
 
     struct mm_node* iter = physmem->root_node->next;
@@ -240,14 +251,14 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
 
     /* Try to find a free block which is big enough */
     while (iter->next != NULL) {
-        if (MM_GET_SIZE(iter->size) >= size) {
+        if (mm_get_size(iter->size) >= size) {
             break;
         }
         iter_prev = iter;
         iter = iter->next;
     }
+
     if (iter->next == NULL) {
-        print("Warning");
         return NULL;
     }
 
@@ -255,10 +266,9 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
      * The `iter` is pointing to a memory block which is large enough to
      * contain the requested memory.
      */
-    iter->size = MM_SET_REGION(iter->size, index);
-    u32 curr_block_size = MM_GET_SIZE(iter->size);
+    u32 curr_block_size = mm_get_size(iter->size);
 
-    return_ptr = (void *)((u32)iter + sizeof(struct mm_node));
+    return_ptr = (void *)((u8 *)iter + sizeof(struct mm_node));
 
     /* Remove the current block from the list */
     iter_prev->next = iter->next;
@@ -269,11 +279,13 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
      */
     if (size + physmem->min_alloc <= curr_block_size) {
 
-        struct mm_node* new_node = (struct mm_node *)((u32)iter + size);
-        new_node->size = (index << 28) | ((curr_block_size - size) & 0xFFFFFFF);
+        struct mm_node* new_node = (struct mm_node *)((u8 *)iter + size);
+
+        new_node->size = mm_set_region(new_node->size, index);
+        new_node->size = mm_set_size(new_node->size, curr_block_size - size);
 
         physmem->allocated += size;
-        iter->size = MM_SET_SIZE(iter->size, size);
+        iter->size = mm_set_size(iter->size, size);
 
         mm_list_insert(new_node, physmem->root_node, physmem->last_node);
     } else {
@@ -287,57 +299,16 @@ void* mm_gp_alloc(u32 size, enum physmem_e index) {
 }
 
 /*
- * Allocated `size` number of bytes from a none-reserved region. The size might
- * still be padded according to the physical memory settings
- */
-void* mm_alloc(u32 size, enum physmem_e region) {
-    // The 1k and 4k physical memories are reserved
-    if ((region == DRAM_BANK_2_4k) || (region == DRAM_BANK_2_1k)) {
-        panic("Wrong parameter");
-    }
-
-    void* ret = mm_gp_alloc(size, region);
-
-    if (ret == NULL) {
-        panic("Alloc failed");
-    }
-    return ret;
-}
-
-/*
- * Allocates a number of 4k pages
- */
-void* mm_alloc_4k(u32 count) {
-    void* ret = mm_gp_alloc(count * 4096, DRAM_BANK_2_4k);
-    if (ret == NULL) {
-        panic("4k alloc failed");
-    }
-    return ret;
-}
-
-/*
- * Allocates a number of 1k pages
- */
-void* mm_alloc_1k(u32 count) {
-    void* ret = mm_gp_alloc(count * 1024, DRAM_BANK_2_1k); 
-
-    if (ret == NULL) {
-        panic("1k alloc failed");
-    }
-
-    return ret; 
-}
-
-/*
- * Free the memory pointed to by `memory`
+ * Free memory
  */
 void mm_free(void* memory) {
 
     if (memory == NULL) {
-        panic("Trying to free NULL");
+        panic("Trying to free NULL pointer");
     }
+
     /* Note! Check the desc address. It should be bus-accessible */
-    struct mm_node* node = (struct mm_node *)((u32)memory - 
+    struct mm_node* node = (struct mm_node *)((u8 *)memory - 
         sizeof(struct mm_node));
 
     /* Check if the memory pointer has been allocated by the mm_alloc */
@@ -345,24 +316,24 @@ void mm_free(void* memory) {
         panic("Pointer not made by mm_alloc*");
     }
 
-    u8 physmem = MM_GET_REGION(node->size);
+    u8 physmem = mm_get_region(node->size);
     struct physmem* region = physical_memories[physmem];
+    region->allocated -= mm_get_size(node->size);
     
     mm_list_insert(node, region->root_node, region->last_node);
-    region->allocated -= MM_GET_SIZE(node->size);
 }
 
 /*
  * Returns the total size of the current pytsical memory
  */
-u32 mm_get_size(enum physmem_e physmem) {
+u32 mm_get_total(enum physmem_e physmem) {
     return physical_memories[physmem]->size;
 }
 
 /*
  * Returns the total allocated size of the current pytsical memory
  */
-u32 mm_get_alloc(enum physmem_e physmem) {
+u32 mm_get_used(enum physmem_e physmem) {
     return physical_memories[physmem]->allocated;
 }
 
@@ -380,4 +351,21 @@ u32 mm_get_free(enum physmem_e physmem) {
  */
 u32 mm_get_frag(enum physmem_e physmem) {
     return 0;
+}
+
+void mm_check(enum physmem_e physmem)
+{
+    struct physmem* phys = physical_memories[physmem];
+
+    struct mm_node* start = phys->root_node->next;
+    u32 size = 0;
+    while (start->next != NULL) {
+        u32 tmp = mm_get_size(start->size);
+        print("MEMORY SIZE: %d\n", tmp);
+        start = start->next;
+
+        size += tmp;
+    }
+    print("Size left text: %d\n", phys->size - phys->allocated);
+    print("Size left: %d\n", size);
 }

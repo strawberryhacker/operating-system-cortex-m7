@@ -2,7 +2,7 @@
 #include "memory.h"
 #include "fat32.h"
 #include "panic.h"
-#include "mm.h"
+#include "pmalloc.h"
 #include "dynamic_linker.h"
 
 #include <stddef.h>
@@ -31,11 +31,11 @@ u8 run_binary(const char* path) {
     }
 
     /* Allocate enough memory to hold the entire binary file */
-    u32 size_1k = binary_size / 1024;
-    if (binary_size & 1024) {
-        size_1k++;
+    u32 page_count = binary_size / 512;
+    if (binary_size & 512) {
+        page_count++;
     }
-    u8* binary = (u8 *)mm_alloc_1k(size_1k);
+    u8* binary = (u8 *)pmalloc(page_count, PMALLOC_BANK_1);
 
     /*
      * Jump to the start of the file and read the entire binary into
