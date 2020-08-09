@@ -23,6 +23,6 @@ struct smalloc_benchmark_conf {
     u8 min_mm_usage;
 };
 
-void run_mm_benchmark(struct smalloc_benchmark_conf* conf);
+void run_smalloc_benchmark(struct smalloc_benchmark_conf* conf);
 
 #endif

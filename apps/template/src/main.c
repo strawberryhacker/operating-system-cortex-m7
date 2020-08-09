@@ -26,8 +26,8 @@ int main(void) {
      * Please read the docmentation before implementing apps. 
      * ====================================================================
      */
-    //p("hellsdlfkjsdflksjdflkjf sdflkjsdflksjdf lsdkj sdflkkjsdflskj =n");
-    print("hellsdlfkjsdflksjdflkjf sdflkjsdflksjdf lsdkj sdflkkjsdflskj =n %4h\n", 0xcafecafe);
+    print("This is an example application\n");
+
     while (1);
     return 1;
  }

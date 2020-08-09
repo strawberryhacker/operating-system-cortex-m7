@@ -1,6 +1,6 @@
 /* Copyright (C) StrawberryHacker */
 
-#include "mm_benchmark.h"
+#include "smalloc_benchmark.h"
 #include "benchmark_timer.h"
 #include "clock.h"
 #include "nvic.h"
@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 
-#define SMALLOC_BANK SMALLOC_SRAM
+#define SMALLOC_BANK SMALLOC_DRAM
 
 enum smalloc_benchmark_block_status {
     SMALLOC_BM_USED,
@@ -102,6 +102,8 @@ static u8 smalloc_benchmark_allocate_random(struct smalloc_benchmark_conf* conf,
         size += conf->min_block_size;
     } while (size > free_size);
 
+    size = 512;
+
     u32 index;
     if (!find_block_index(&index, SMALLOC_BM_FREE)) {
         return 0;
@@ -122,7 +124,7 @@ static u8 smalloc_benchmark_allocate_random(struct smalloc_benchmark_conf* conf,
     return 1;
 }
 
-void run_mm_benchmark(struct smalloc_benchmark_conf* conf)
+void run_smalloc_benchmark(struct smalloc_benchmark_conf* conf)
 {
     printl("Starting memory manager benchmark");
     benchmark_timer_init();
@@ -138,13 +140,16 @@ void run_mm_benchmark(struct smalloc_benchmark_conf* conf)
     print("Lower limit: %d\n", lower_limit);
 
     /* Allocation and deallocation cound */
+    u32 total_alloc_count = 0;
+    u32 total_free_count = 0;
+
     i32 alloc_count = 0;
     i32 free_count = 0;
 
     u32 alloc_time = 0;
     u32 free_time = 0;
 
-    for (u32 i = 0; i < 100; i++) {
+    for (u32 i = 0; i < 1000; i++) {
         alloc_count = 0;
         free_count = 0;
 
@@ -164,7 +169,7 @@ void run_mm_benchmark(struct smalloc_benchmark_conf* conf)
                 panic("memory");
             }
             alloc_count++;
-            
+            total_alloc_count++;
         }
         
         while (smalloc_get_used(SMALLOC_BANK) > lower_limit) {
@@ -177,11 +182,12 @@ void run_mm_benchmark(struct smalloc_benchmark_conf* conf)
                 panic("memory");
             }
             free_count++;
+            total_free_count++;
         }
         
         print("Alloc: %d\t - time: %d us\tFree: %d\t - time: %d us\n",
             alloc_count, alloc_time / alloc_count, 
             free_count, free_time / free_count);
     }
-    printl("Done - allocs: %d - free: %d\n", alloc_count, free_count);
+    printl("Done - allocs: %d - free: %d\n", total_alloc_count, total_free_count);
 }

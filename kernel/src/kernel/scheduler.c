@@ -313,7 +313,7 @@ void systick_exception(void) {
 		/* Pend the context switch */
 		pendsv_set_pending();
 	} else {
-		print("x");
+		//print("x");
 	}
 }
 

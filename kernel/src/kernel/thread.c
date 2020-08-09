@@ -2,7 +2,7 @@
 
 #include "thread.h"
 #include "scheduler.h"
-#include "mm.h"
+#include "pmalloc.h"
 #include "print.h"
 #include "cpu.h"
 #include "panic.h"
@@ -89,13 +89,13 @@ tid_t new_thread(struct thread_info* thread_info) {
      * the thread control block
      */
     u32 size = sizeof(struct thread) + thread_info->stack_size * 4;
-    u32 size_1k = size / 1024;
+    u32 page_count = size / 512;
     if (size % 512) {
-        size_1k++;
+        page_count++;
     }
 	
     /* Allocate the stack and thread control block */
-    struct thread* thread = (struct thread *)mm_alloc(size, SRAM);
+    struct thread* thread = (struct thread *)pmalloc(page_count, PMALLOC_BANK_3);
 
     /* Calculate the stack base and the new stack pointer */
     thread->stack_base = (u32 *)((u8 *)thread + sizeof(struct thread));
@@ -191,7 +191,7 @@ void kill_thread(tid_t tid) {
 
     if (th) {
         th->exit_pending = 1;
-        print("Killing %8s\n", th->name);
+        print("Killing %3s\n", th->name);
     } else {
         print("Thread does not exist");
     }

@@ -61,7 +61,6 @@ void* mm_alloc(u32 size, enum physmem_e index);
 
 void mm_free(void* memory);
 
-
 u32 mm_get_total(enum physmem_e physmem);
 
 u32 mm_get_used(enum physmem_e physmem);
@@ -69,7 +68,5 @@ u32 mm_get_used(enum physmem_e physmem);
 u32 mm_get_free(enum physmem_e physmem);
 
 u32 mm_get_frag(enum physmem_e physmem);
-
-void mm_check(enum physmem_e physmem);
 
 #endif

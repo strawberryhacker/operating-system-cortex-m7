@@ -352,20 +352,3 @@ u32 mm_get_free(enum physmem_e physmem) {
 u32 mm_get_frag(enum physmem_e physmem) {
     return 0;
 }
-
-void mm_check(enum physmem_e physmem)
-{
-    struct physmem* phys = physical_memories[physmem];
-
-    struct mm_node* start = phys->root_node->next;
-    u32 size = 0;
-    while (start->next != NULL) {
-        u32 tmp = mm_get_size(start->size);
-        print("MEMORY SIZE: %d\n", tmp);
-        start = start->next;
-
-        size += tmp;
-    }
-    print("Size left text: %d\n", phys->size - phys->allocated);
-    print("Size left: %d\n", size);
-}
