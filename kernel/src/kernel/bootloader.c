@@ -63,7 +63,7 @@ __bootsig__ u8 boot_signature[32];
 
 __image_info__ struct image_info image_info = {
     .major_version    = 1,
-    .minor_version    = 2,
+    .minor_version    = 3,
 
     .bootloader_start = 0x00400000,
     .bootloader_size  = 0x00004000,

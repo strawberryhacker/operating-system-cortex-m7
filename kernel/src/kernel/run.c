@@ -1,3 +1,5 @@
+/* Copyright (C) StrawberryHacker */
+
 #include "run.h"
 #include "memory.h"
 #include "fat32.h"

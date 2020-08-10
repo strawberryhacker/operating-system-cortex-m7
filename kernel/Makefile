@@ -108,6 +108,7 @@ mm-y += /src/mm/bmalloc.c
 
 # Benchmarking source files
 bench-y += /src/benchmark/smalloc_benchmark.c
+bench-y += /src/benchmark/bmalloc_benchmark.c
 bench-y += /src/benchmark/benchmark_timer.c
 
 # Assembly files
