@@ -13,10 +13,6 @@
 #include "usbhc.h"
 #include "usb_phy.h"
 #include "gpio.h"
-#include "smalloc_benchmark.h"
-#include "bmalloc_benchmark.h"
-#include "smalloc.h"
-#include "bmalloc.h"
 
 #include <stddef.h>
 
@@ -51,7 +47,7 @@ int main(void)
 	new_thread(&fpi_info);
 	new_thread(&p_info);
 
-	run_bmalloc_benchmark();
+	usb_phy_init();
 
 	scheduler_start();
 }

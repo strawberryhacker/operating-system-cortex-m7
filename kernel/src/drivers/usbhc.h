@@ -106,8 +106,15 @@ struct usb_ctrl_transfer {
 
     /* Holds the timeout between packages */
     i32 timeout;
+};
 
-
+/*
+ * Main USBHC URB
+ */
+struct urb {
+    u8* data_out;
+    u8* data_in;
+    u8 status;
 };
 
 /*

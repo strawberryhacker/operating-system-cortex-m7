@@ -102,8 +102,6 @@ static u8 smalloc_benchmark_allocate_random(struct smalloc_benchmark_conf* conf,
         size += conf->min_block_size;
     } while (size > free_size);
 
-    size = 512;
-
     u32 index;
     if (!find_block_index(&index, SMALLOC_BM_FREE)) {
         return 0;

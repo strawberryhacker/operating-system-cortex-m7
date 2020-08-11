@@ -1,55 +1,56 @@
 /* Copyright (C) StrawberryHacker */
 
-#include "smalloc_benchmark.h"
-#include "benchmark_timer.h"
-#include "trand.h"
+#include "bmalloc_benchmark.h"
 #include "bmalloc.h"
 #include "pmalloc.h"
-#include "memory.h"
+#include "trand.h"
 #include "panic.h"
+#include "print.h"
+#include "benchmark_timer.h"
 
-#define TEST_SIZE 43
-#define TEST_BANK PMALLOC_BANK_2
-#define BMALLOC_BENCHMARK_BLOCK_COUNT 10000
+#include <stddef.h>
 
-enum bmalloc_benchmark_block_status {
+#define BMALLOC_SIZE 1000
+
+/* Pointer pool for the bmalloc */
+static u32 pointer_pool[BMALLOC_SIZE];
+
+enum bmalloc_block_status {
     BMALLOC_BM_USED,
     BMALLOC_BM_FREE
 };
 
-struct bmalloc_desc test_allocator;
-static volatile u32 bmalloc_benchmark_block_pool[BMALLOC_BENCHMARK_BLOCK_COUNT];
+static struct bmalloc_desc desc;
 
-static void bmalloc_bechmark_init(void)
+static void bmalloc_benchmark_init(void)
 {
-    bmalloc_init(&test_allocator, 64, TEST_SIZE, TEST_BANK);
-    print("Base: %4h\n", test_allocator.arena_base);
-    memory_fill(bmalloc_benchmark_block_pool, 0x00, BMALLOC_BENCHMARK_BLOCK_COUNT * 4);
+    bmalloc_new(&desc, 16, BMALLOC_SIZE - 10, PMALLOC_BANK_2);
+    benchmark_timer_init();
 }
 
 /*
  * Finds a random free memory address in the block pool. Returns 0 if all blocks
  * are allocated i.e. address is zero.
  */
-static u8 find_block_index(u32* index, enum bmalloc_benchmark_block_status status)
+static u8 find_block_index(u32* index, enum bmalloc_block_status status)
 {
-    u32 count = BMALLOC_BENCHMARK_BLOCK_COUNT;
-    u32 pos   = trand() % BMALLOC_BENCHMARK_BLOCK_COUNT;
+    u32 count = BMALLOC_SIZE;
+    u32 pos   = trand() % BMALLOC_SIZE;
 
     while (count--) {
         if (status == BMALLOC_BM_FREE) {
-            if (bmalloc_benchmark_block_pool[pos] == 0x00000000) {
+            if (pointer_pool[pos] == 0x00000000) {
                 *index = pos;
                 return 1;
             }
         } else {
-            if (bmalloc_benchmark_block_pool[pos] != 0x00000000) {
+            if (pointer_pool[pos] != 0x00000000) {
                 *index = pos;
                 return 1;
             }
         }
         if (pos == 0) {
-            pos = BMALLOC_BENCHMARK_BLOCK_COUNT - 1;
+            pos = BMALLOC_SIZE - 1;
         } else {
             pos--;
         }
@@ -57,39 +58,64 @@ static u8 find_block_index(u32* index, enum bmalloc_benchmark_block_status statu
     return 0;
 }
 
-void allocate_random(void)
+static u32 bmalloc_random(void) 
 {
-    u32 index;
+    u32 index = 0;
     if (!find_block_index(&index, BMALLOC_BM_FREE)) {
-        panic("ouf");
+        panic("List full");
     }
-    u32 ptr = (u32)bmalloc(&test_allocator);
-    if (!ptr) {
-        panic("o8f");
+
+    benchmark_start_timer();
+    pointer_pool[index] = (u32)bmalloc(&desc);
+    benchmark_stop_timer();
+    u32 return_value = benchmark_get_us();
+
+    if (pointer_pool[index] == 0) {
+        panic("Memory full");
     }
-    bmalloc_benchmark_block_pool[index] = ptr;
+    return return_value;
 }
 
-void free_random(void)
+static u32 bfree_random(void)
 {
-    u32 index;
+    u32 index = 0;
     if (!find_block_index(&index, BMALLOC_BM_USED)) {
-        panic("ouf");
+        panic("List full");
     }
-    bfree(&test_allocator, (void *)bmalloc_benchmark_block_pool[index]);
 
-    bmalloc_benchmark_block_pool[index] = 0;
+    benchmark_start_timer();
+    bfree(&desc, (u32 *)pointer_pool[index]);
+    benchmark_stop_timer();
+    u32 return_value = benchmark_get_us();
+
+    pointer_pool[index] = 0x00000000;
+
+    return return_value;
 }
 
 void run_bmalloc_benchmark(void)
 {
-    bmalloc_bechmark_init();
-    for (u32 r = 0; r < 500; r++) {
-        for (u32 i = 0; i < 50 + r; i++) {
-            allocate_random();
+    bmalloc_benchmark_init();
+
+    u32 count = 0;
+
+    u32 allocate_count = 16;
+    u32 free_count = 0;
+    while (1) {
+        u32 alloc_time = 0;
+        for (u32 i = 0; i < allocate_count; ++i) {
+            alloc_time += bmalloc_random();
         }
-        for (u32 i = 0; i < 50; i++) {
-            free_random();
+
+        u32 free_time = 0;
+        for (u32 i = 0; i < free_count; ++i) {
+            free_time += bfree_random();
         }
+
+        print("alloc: %d\tfree: %d\n", alloc_time / allocate_count, 
+            free_time / free_count);
+
+        allocate_count += 16;
+        free_count += 16;
     }
 }

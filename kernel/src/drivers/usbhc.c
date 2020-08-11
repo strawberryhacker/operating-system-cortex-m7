@@ -1089,7 +1089,6 @@ static void usbhc_setup_sent(struct usb_core* core, struct usb_pipe* pipe)
 static void usbhc_received_packet(struct usb_core* core, struct usb_pipe* pipe)
 {
     usbhc_read_raw(core, pipe);
-    
 }
 
 /*

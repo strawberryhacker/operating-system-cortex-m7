@@ -6,36 +6,27 @@
 #include "types.h"
 #include "pmalloc.h"
 
-/*
- * The bmalloc is used for constant size memory allocations. An example is USB
- * request blocks which are small and must be allocated very fast. This 
- * allocator is based on the pmalloc  which is used to dynamically allocate
- * bitmap allocators. 
- */
-
 struct bmalloc_desc {
-    u8* arena_base;
-    u8* bitmap_base;
+    u8* arena;
+    u32* bitmap;
 
-    /* Holds the unit size and the number of units in the arena */
+    /* All allocation will return this many bytes */
     u32 block_size;
     u32 block_count;
 
-    /* Allocated size in units */
-    u32 blocks_used;
-
-    /* Specifies where to allocate the memory from */
-    enum pmalloc_bank bank;
+    /* Keeps track of the memory statistics */
+    u32 used_blocks;
 };
 
-/*
- * Initializes a bitmap allocator. `desc` is a blank bmalloc descriptor
- */
-void bmalloc_init(struct bmalloc_desc* desc, u32 block_count, u32 block_size,
+void bmalloc_new(struct bmalloc_desc* desc, u32 block_size, u32 block_count, 
     enum pmalloc_bank bank);
+
+void bmalloc_delete(struct bmalloc_desc* desc);
 
 void* bmalloc(struct bmalloc_desc* desc);
 
 void bfree(struct bmalloc_desc* desc, void* ptr);
+
+u32 bmalloc_get_used(struct bmalloc_desc* desc);
 
 #endif

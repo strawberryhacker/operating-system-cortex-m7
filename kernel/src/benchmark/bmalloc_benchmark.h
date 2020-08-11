@@ -1,7 +1,7 @@
 /* Copyright (C) StrawberryHacker */
 
-#ifndef SMALLOC_BENCHMARK
-#define SMALLOC_BENCHMARK
+#ifndef BMALLOC_BENCHMARK_H
+#define BMALLOC_BENCHMARK_H
 
 #include "types.h"
 
