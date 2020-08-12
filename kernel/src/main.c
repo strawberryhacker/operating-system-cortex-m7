@@ -13,19 +13,31 @@
 #include "usbhc.h"
 #include "usb_phy.h"
 #include "gpio.h"
+#include "memory.h"
 
 #include <stddef.h>
 
-static void p(void* arg) {
-	while (1) {
-		syscall_thread_sleep(500);
-	}
-}
+static char* urb_id[] = {
+	[0x0] = "alpha",
+	[0x1] = "apple",
+	[0x2] = "straw",
+	[0x3] = "berry",
+	[0x4] = "lemon",
+	[0x5] = "lime",
+	[0x6] = "oreo",
+	[0x7] = "c",
+	[0x8] = "tree",
+	[0x9] = "car",
+	[0xA] = "smoke",
+};
+
+extern struct usb_pipe usb_pipes[USB_PIPES];
 
 int main(void)
 {
 	kernel_entry();
 
+	/* Programming interface for dynamic fetching of applications */
 	struct thread_info fpi_info = {
 		.name       = "FPI",
 		.stack_size = 256,
@@ -35,19 +47,27 @@ int main(void)
 		.code_addr  = 0
 	};
 
-	struct thread_info p_info = {
-		.name       = "p",
-		.stack_size = 256,
-		.thread     = p,
-		.class      = REAL_TIME,
-		.arg        = NULL,
-		.code_addr  = 0
-	};
-
 	new_thread(&fpi_info);
-	new_thread(&p_info);
 
 	usb_phy_init();
+
+	struct urb* urb_pointers[10];
+
+	/* Test the URB queue */
+	for (u32 i = 0; i < 0xA; i++) {
+		urb_pointers[i] = usbhc_urb_new();
+
+		/* Fill in the name */
+		string_copy(urb_id[i], urb_pointers[i]->name);
+
+		/* Enqueue it into the right pipe */
+		usbhc_urb_submit(urb_pointers[i], &usb_pipes[3]);
+	}
+	print_urb_list(&usb_pipes[3]);
+
+	usbhc_urb_cancel(urb_pointers[4], &usb_pipes[3]);
+	print("\n");
+	print_urb_list(&usb_pipes[3]);
 
 	scheduler_start();
 }

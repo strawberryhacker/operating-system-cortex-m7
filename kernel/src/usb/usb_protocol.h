@@ -6,14 +6,13 @@
 #include "types.h"
 
 /*
- * This file defines the hardware driver layer for the USB host
- * stack. Note that some coding conventions will not be followed
- * in the USB stack due the USB protocol. This way searching on
- * the internet will become easier.
+ * This file defines the hardware driver layer for the USB host stack. Note that
+ * some coding conventions will not be followed in the USB stack due the USB
+ * protocol. This way searching on the internet will become easier.
  * 
  * Please refer to the USB 2.0 spesification while reading this;
- * http://sdphca.ucsd.edu/lab_equip_manuals/usb_20.pdf references
- * in this USB stack will be related to this document.
+ * http://sdphca.ucsd.edu/lab_equip_manuals/usb_20.pdf
+ * references in this USB stack will be related to this document.
  */
 
 /*

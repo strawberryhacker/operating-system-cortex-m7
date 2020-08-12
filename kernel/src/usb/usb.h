@@ -6,17 +6,6 @@
 #include "types.h"
 #include "usbhc.h"
 
-/*
- * USB core device structure
- */
-struct usb_device {
-    u32 enum_delay;
-    u8 enumerated;
-};
 
-/*
- * Core init
- */
-void usb_init(struct usb_core* core);
 
 #endif

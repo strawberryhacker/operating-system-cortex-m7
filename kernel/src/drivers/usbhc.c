@@ -7,11 +7,15 @@
 #include "gpio.h"
 #include "cpu.h"
 #include "usb_protocol.h"
+#include "bmalloc.h"
+#include "pmalloc.h"
 
 #include <stddef.h>
 
 /* Pointer to the USB core structure used in the callbacks */
 struct usb_core* usbhc_core = NULL;
+
+struct bmalloc_desc urb_allocator;
 
 /* General USB host core stuff */
 static inline void usbhc_enable_connection_error(void);
@@ -646,559 +650,152 @@ u8 usbhc_clock_usable(void)
     }
 }
 
-/*
- * Configures and allocates a pipe. It takes in a pointer to the USB core
- * object, the pipe number, the pipe configuration register and the pipe target
- * device address. Returns 1 if the allocation was successfull
- */
-static u8 usbhc_pipe_configure(struct usb_core* core, u8 pipe, u32 cfg, u8 addr)
+static void usbhc_pipe_reset(struct usb_pipe* pipe) 
 {
-    /* Pipe configuration algorithm is explanied at page 768 */
-    usbhc_pipe_enable(pipe);
+    /* Initialize the URB queue linked to the pipe */
+    dlist_init(&pipe->urb_queue);
 
-    /* Perform deallocation then allocation */
-    usbhc_pipe_set_configuration(pipe, cfg);
-    cfg |= (1 << 1);
-    usbhc_pipe_set_configuration(pipe, cfg);
+    /* Disable the pipe */
+    usbhc_pipe_disable(pipe->number);
 
-    /* Check if the configuration parameters is ok */
-    if (!usbhc_pipe_check_configuration(pipe)) {
-        return 0;
-    }
+    /* Reset the pipe */
+    usbhc_pipe_reset_assert(pipe->number);
+    usbhc_pipe_reset_deassert(pipe->number);
 
-    usbhc_set_pipe_addr(pipe, addr);
-
-    return 1;
+    /* De-allocate all pipes by writing 1 to ALLOC */
+    usbhc_pipe_set_configuration(pipe->number, (1 << 1));
 }
 
 /*
- * Finds the first free pipe starting from the specified index. Returns the
- * pipe index, -1 if not found
+ * Initializes the USB hardware
  */
-static i8 usbhc_find_free_pipe(struct usb_core* core, u8 start_index) 
+void usbhc_init(struct usbhc* hc, struct usb_pipe* pipe, u32 pipe_count)
 {
-    u8 max_pipes = core->hw->pipe_count;
+    /* Disable all interrupts */
+    usbhc_interrupt_disable();
 
-    if (start_index >= max_pipes) {
-        return -1;
-    }
-    for (u8 i = start_index; i < max_pipes; i++) {
-        if (core->hw->pipes[i].status == PIPE_STATUS_FREE) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-/*
- * Returns the index of the specified pipe. Returns -1 if not found
- */
-static u8 usbhc_pipe_get_index(struct usb_core* core, struct usb_pipe* pipe)
-{
-    for (u8 i = 0; i < core->hw->pipe_count; i++) {
-        if (pipe == (core->hw->pipes + i)) {
-            return i;
-        }
-    }
-    
-    panic("Pipe index wrong");
-
-    return 0;
-}
-
-/*
- * Tries to allocate a pipe. This will handle any DPRAM conflicts and reallocate
- * conflicting pipes. Returns the allocated pipe if success, else NULL
- */
-struct usb_pipe* usbhc_pipe_allocate(struct usb_core* core, u32 cfg,
-                                     u8 addr, u8 pipe0)
-{
-    /* Try to find the first free pipe except the control pipe*/
-    u8 pipe = usbhc_find_free_pipe(core, 1);
-    if (pipe < 0) {
-        return NULL;
-    }
-
-    if (pipe0) {
-        pipe = 0;
-    }
-
-    if (!usbhc_pipe_configure(core, pipe, cfg, addr)) {
-        return NULL;
-    }
-
-    /* 
-     * Pipe has been allocated so we must resolve any memory conflics
-     * The pipe above the allocated pipe will be able to move, but
-     * pipe + 2 will allways not move. Check datasheet page 756
-     */
-    for (u8 i = pipe + 2; i < core->hw->pipe_count; i++) {
-        
-        /* Only reallocate allocated pipes */
-        if (usbhc_pipe_get_configuration(i) & (1 << 1)) {
-            usbhc_pipe_allocate_clear(i);
-            usbhc_pipe_allocate_set(i);
-        }
-    }
-
-    /* Enable ERROR, OVERFLOW and STALL interrupts */
-    usbhc_pipe_clear_status(pipe, (1 << 3) | (1 << 5) | (1 << 6));
-    usbhc_pipe_enable_interrupt(pipe, (1 << 3) | (1 << 5) | (1 << 6));
-    usbhc_enable_global_interrupt(1 << (pipe + 8));
-
-    struct usb_pipe* ret_pipe = &core->hw->pipes[pipe];
-    ret_pipe->status = PIPE_STATUS_IDLE;
-
-    print("Pipe allocation on pipe %d - %32b\n", pipe, USBHC->HSTPIPCFG[pipe]);
-
-    return ret_pipe;
-}
-
-/*
- * Performs a hard reset on all pipes. This means deallocating them
- * and updating the status
- */
-void usbhc_pipe_hard_reset(struct usb_core* core)
-{
-    for (u8 i = 0; i < core->hw->pipe_count; i++) {
-
-        /* Clear the alloc flag */
-        usbhc_pipe_set_configuration(i, 0);
-
-        /* Reset the internal pipe state machine */
-        usbhc_pipe_reset_assert(i);
-        usbhc_pipe_reset_deassert(i);
-
-        core->hw->pipes[i].status = PIPE_STATUS_FREE;
-    }
-}
-
-/*
- * Performs a soft reset on all pipes. This means configuring the
- * pipes, allocating them and updating the status
- */
-void usbhc_pipe_soft_reset(struct usb_core* core)
-{
-    struct usb_pipe* pipe;
-    for (u8 i = 0; i < core->hw->pipe_count; i++) {
-        
-        pipe = &core->hw->pipes[i];
-
-        /* Used pipe */
-        if (pipe->status != PIPE_STATUS_FREE) {
-            
-            /* Update the configuration mask and configure the pipe */
-            u32 cfg_mask = 0;
-
-            cfg_mask |= (pipe->type << 12);
-            cfg_mask |= (pipe->token << 8);
-            cfg_mask |= (pipe->auto_bank_switch << 10);
-            cfg_mask |= (pipe->endpoint << 16);
-            cfg_mask |= (pipe->interval << 24);
-            cfg_mask |= (pipe->size << 4);
-            cfg_mask |= (pipe->bank_count << 2);
-            cfg_mask |= (pipe->ping_enable << 20);
-
-            /* Configure the pipe whith interrupt disabled */
-            usbhc_disable_global_interrupt(1 << (i + 8));
-            usbhc_pipe_configure(core, i, cfg_mask, pipe->addr);
-            usbhc_enable_global_interrupt(1 << (i + 8));
-        }
-    }
-}
-
-/*
- * Adds a pipe callback
- */
-void usbhc_add_pipe_callback(struct usb_pipe* pipe,
-                             void (*cb)(struct usb_pipe *))
-{
-    if (cb == NULL) {
-        panic("Callback pointer error");
-    }
-    pipe->callback = cb;
-}
-
-/*
- * Stops a transfer on a pipe
- */
-static void usbhc_stop_transfer(struct usb_core* core, struct usb_pipe* pipe,
-                                enum usb_x_status status)
-{
-    pipe->x_status = status;
-
-    u8 pipe_index = usbhc_pipe_get_index(core, pipe);
-
-    /* Disable transfer interrupts and the STALL flag */
-    usbhc_pipe_disable_interrupt(pipe_index, 0b111 | (1 << 6) | (1 << 7));
-
-    if (pipe_index < 0) {
-        panic("Wrong pipe index");
-    }
-
-    /* Reset pipe to stop all transfers */
-    usbhc_pipe_reset_assert((u8)pipe_index);
-    usbhc_pipe_reset_deassert((u8)pipe_index);
-}
-
-/*
- * Processes raw data from the receive buffer
- */
-static void usbhc_read_raw(struct usb_core* core, struct usb_pipe* pipe)
-{
-    u32 pipe_number = usbhc_pipe_get_index(core, pipe);
-    u32 byte_count = usbhc_get_fifo_byte_count(pipe_number);
-
-    print("Byte count: %d\n", byte_count);
-
-    volatile u8* dest = pipe->x.control.data;
-    volatile u8* src = usbhc_get_fifo_ptr(pipe_number);
-
-    /* Read the raw data */
-    for (u8 i = 0; i < byte_count; i++) {
-        *dest++ = *src++;
-    }
-}
-
-/*
- * Sends a zero length packet out
- */
-static void usb_zpl_out(struct usb_core* core, struct usb_pipe* pipe)
-{
-    u8 pipe_number = usbhc_pipe_get_index(core, pipe);
-
-    if (usbhc_get_fifo_byte_count(pipe_number)) {
-        panic("Fifo contains data");
-    }
-
-    usbhc_pipe_set_token(pipe_number, PIPE_TOKEN_OUT);
-    usbhc_pipe_clear_status(pipe_number, 1 << 1);
-    usbhc_pipe_enable_interrupt(pipe_number, 1 << 1);
-    usbhc_pipe_disable_interrupt(pipe_number, (1 << 14) | (1 << 17));
-}
-
-/*
- * Performs a control IN request
- */
-static void usbhc_control_in(struct usb_core* core, struct usb_pipe* pipe)
-{
-    u8 pipe_number = usbhc_pipe_get_index(core, pipe);
-
-    usbhc_pipe_set_token(pipe_number, PIPE_TOKEN_IN);
-
-    /* Clear SHORTPACKET and RXIN and disable FIFO control and PFREEZE */
-    usbhc_pipe_clear_status(pipe_number, (1 << 7) | (1 << 0));
-    usbhc_pipe_enable_interrupt(pipe_number, 1 << 0);
-    usbhc_pipe_disable_interrupt(pipe_number, (1 << 14) | (1 << 17));
-}
-
-/*
- * Sends a control SETUP packet. Evert SETUP packet has an 8 
- * byte payload. 
- */
-static void usbhc_control_setup_out(struct usb_core* core, struct usb_pipe* pipe)
-{
-    print("Setup out\n");
-    u8 pipe_number = usbhc_pipe_get_index(core, pipe);
-
-    /* Get the pointer to the data and to the FIFO pipe */
-    volatile u8* src = (volatile u8 *)pipe->x.control.setup;
-    volatile u8* dest = usbhc_get_fifo_ptr(pipe_number);
-
-    usbhc_pipe_set_token(pipe_number, PIPE_TOKEN_SETUP);
-    /* Clear the control transmitted flag */
-    usbhc_pipe_clear_status(pipe_number, 1 << 2);
-
-    for (u8 i = 0; i < 8; i++) {
-        print("%1h,", *src);
-        *dest++ = *src++;
-    }
-    
-    print("Bytes: %d\n", usbhc_get_fifo_byte_count(pipe_number));
-    usbhc_pipe_enable_interrupt(pipe_number, 1 << 2);
-    usbhc_pipe_disable_interrupt(pipe_number, (1 << 14) | (1 << 17));
-}
-
-/*
- * Starts a control transfer
- */
-void usbhc_control_transfer(struct usb_core* core, struct usb_pipe* pipe,
-                            u8* data, u8* setup, u8 req_size)
-{
-    pipe->x.control.data = data;
-    pipe->x.control.setup = setup;
-    pipe->x.control.receive_size = req_size;
-
-    usbhc_control_setup_out(core, pipe);
-}
-
-/*
- * Default handler for SOF
- */
-void usbhc_sof_default_handler(struct usb_core* core)
-{
-    (void)core;
-}
-
-/*
- * Default handler for root hub change
- */
-void usbhc_rh_default_handler(struct usb_core* core, enum root_hub_event event)
-{
-    (void)core;
-    (void)event;
-}
-
-/*
- * Default pipe handler
- */
-void usbhc_pipe_default_handler(struct usb_pipe* pipe)
-{
-    (void)pipe;
-}
-
-/*
- * Initializes the USB interface. This takes in the main USB core 
- * structure, a list of pipes and the pipe count
- */
-void usbhc_init(struct usb_core* core, struct usb_hardware* hw,
-                struct usb_pipe* pipes, u8 pipe_count)
-{
-    /* The USB should be enabled because of the clock config */
-    usbhc_unfreeze_clock();
-    usbhc_set_mode(USB_HOST);
-    usbhc_enable();
-
-    /* Disable all interrupts that might have been set */
-    for (u32 i = 0; i < 10; i++) {
-        usbhc_pipe_disable_interrupt(i, 0xFFFFFFFF);
-
-        /* Set the pipe to free */
-        pipes[i].status = PIPE_STATUS_FREE;
-        pipes[i].callback = usbhc_pipe_default_handler;
-    }
-    usbhc_disable_global_interrupt(0xFFFFFFFF);
-
-    /* Configure the hardware layer */
-    hw->pipes = pipes;
-    hw->pipe_count = pipe_count;
-    hw->active_pipes = 0;
-    hw->dpram_used = 0;
-
-    /* Configure the core layer */
-    core->rh_callback = usbhc_rh_default_handler;
-    core->sof_callback = usbhc_sof_default_handler;
-    core->hw = hw;
-
-    usbhc_core = core;
-
-    /* 
-     * The VBUS enable request must be enabled to detect
-     * connection events
-     */
+    /* This must be called in order to detect device connection or dissconnection */
     usbhc_vbus_request_enable();
 
-    /* Enable wakeup and connection interrupt */
-    usbhc_enable_global_interrupt((1 << 6) | (1 << 0));
-}
+    /* Make a new bitmap allocator. This is used for allocating URBs */
+    bmalloc_new(&urb_allocator, sizeof(struct urb), MAX_URBS, PMALLOC_BANK_2);
 
-/*
- * Root hub handler. This is called when a root hub change occurs.
- * This routine must clear the corresponding interrupt flag(s)
- */
-static void usbhc_root_hub_handler(struct usb_core* core, u32 global_status)
-{  
-    usbhc_clear_global_status(0x5F);
+    /* Link the pipes to the USB host controller */
+    hc->pipe_base = pipe;
+    hc->pipe_count = pipe_count;
 
-    /* Decive disconnection */
-    if (global_status & (1 << 1)) {
-        usbhc_clear_global_status((1 << 0) | (1 << 1));
-
-        /* 
-         * According to datasheet page 862 the reset bit should be
-         * cleared to avoid an undefined reset state when no device
-         * is connected to the bus
-         */
-        usbhc_clear_reset();
-
-        /* Enable CONNECT and WAKEUP interrupts */
-        usbhc_clear_global_status((1 << 0) | (1 << 6));
-        usbhc_enable_global_interrupt((1 << 0) | (1 << 6));
-        usbhc_core->rh_callback(core, RH_EVENT_DISCONNECT);
-
-    } else if (global_status & (1 << 0)) {
-
-        /* Enabling the reset sent and disconnect interrupt */
-        usbhc_clear_global_status(1 << 2);
-        usbhc_enable_global_interrupt((1 << 2) | (1 << 1));
-
-        /* After the reset is sent the CPU will start sending SOF */
-        usbhc_enable_global_interrupt(1 << 5);
-        //usbhc_sof_enable();
-        usbhc_core->rh_callback(core, RH_EVENT_CONNECT);
-    }
-
-    /* 
-     * Wakeup. This occurs if the USBHC is in suspend mode and a peripheral 
-     * disconnection or a upstream resume is detected 
+    /*
+     * Initialize the pipes. The pipes are disabled and de-allocated after reset
+     * but their configuration still remains 
      */
-    if (global_status & (1 << 6)) {
-        
-        usbhc_disable_global_interrupt(1 << 6);
-        usbhc_clear_global_status(1 << 6);
+    for (u32 i = 0; i < pipe_count; i++) {
+        /* Set the hardware endpoint targeted by this pipe */
+        pipe[i].number = i;
 
-        /* Check if the clock is usable */
-        while (!usbhc_clock_usable());
-
-        usbhc_unfreeze_clock();
+        usbhc_pipe_reset(&pipe[i]);
     }
 
-    /* Reset sent */
-    if (global_status & (1 << 2)) {
-        /* Disable reset sent interrupt */
-        usbhc_clear_global_status(1 << 2);
-        usbhc_disable_global_interrupt(1 << 2);
-        usbhc_core->rh_callback(core, RH_EVENT_RESET);
-    }
+    /* Listen for wakeup or connection */
+    usbhc_clear_global_status((1 << 0) | (1 << 6));
+    usbhc_enable_global_interrupt((1 << 0) | (1 << 6));
 }
 
 /*
- * Setup packet sent handler. This is called from the pipe handler when the
- * TXSTPI flag is set. This functions will perform the next stage in the setup
- * packet. A general setup packet has three stages; the setup packet, the data
- * packet(s) and the handshake pakcet. Typically the first setup packet will not
- * be handled here since this packet acctually will trigger this function when
- * complete. This function takes in the pipe pointer to handle
+ * Allocates a USB request block
  */
-static void usbhc_setup_sent(struct usb_core* core, struct usb_pipe* pipe)
+struct urb* usbhc_urb_new(void)
 {
-    /* 
-     * The first byte in the setup packet indicates what the next
-     * transaction will be. See USB spesification page 248
-     */
-    if (pipe->x.control.setup[0] & USB_REQ_TYPE_DEVICE_TO_HOST) {
-        pipe->x_status = USB_X_STATUS_DATA_IN;
-        usbhc_control_in(core, pipe);
+    struct urb* urb = (struct urb *)bmalloc(&urb_allocator);
+
+    if (urb == NULL) {
+        panic("URB alloc failed");
+        return NULL;
     }
+    dlist_node_init(&urb->node);
+
+    /* Link the node to this object */
+    urb->node.obj = urb;
+
+    return urb;
 }
 
 /*
- * Received packet handler. This is called when either a full or a partial data
- * has been received
+ * Enqueues a URB into a pipe
  */
-static void usbhc_received_packet(struct usb_core* core, struct usb_pipe* pipe)
+void usbhc_urb_submit(struct urb* urb, struct usb_pipe* pipe)
 {
-    usbhc_read_raw(core, pipe);
+    dlist_insert_first(&urb->node, &pipe->urb_queue);
+}
+
+u8 usbhc_urb_cancel(struct urb* urb, struct usb_pipe* pipe)
+{
+    /* Check the state */
+    /* .... */
+
+    /* Remove the URB from the URB queue */
+    dlist_remove(&urb->node, &pipe->urb_queue);
+}
+
+void print_urb_list(struct usb_pipe* pipe)
+{
+    struct dlist_node* node = pipe->urb_queue.first;
+    struct dlist_node* tmp = node;
+    while (node) {
+        struct urb* urb = (struct urb *)node->obj;
+        print("URB: %6s\n", urb->name);
+
+        node = node->next;
+    }
 }
 
 /*
- * Transmitted data complete. This is called when the USB has transmitted a new
- * packet.
+ * Root hub exception
  */
-static void usbhc_transmitt_complete(struct usb_core* core, struct usb_pipe* pipe)
+static void usbhc_root_hub_exception(u32 isr)
 {
-
+    if (isr & (1 << 0)) {
+        print("Device connection");
+        /* Callback to upper layer i.e. USB host core */
+    }
 }
 
 /*
- * Pipe handler. This gets called when a pipe interrupt occurs. This code should
- * clear the corresponding interrupt flag(s)
+ * Pipe exceptions
  */
-static void usbhc_pipe_handler(struct usb_core* core, u32 global_status)
+static void usbhc_pipe_exception(u32 isr)
 {
-    /* Clear the first pipe interrupt */
-    u8 pipe;
-    for (pipe = 0; pipe < MAX_PIPES; pipe++) {
-        if (global_status & (1 << (pipe + 8))) {
-            usbhc_clear_global_status(1 << (pipe + 8));
-            break;
-        }
-    }
 
-    /* Read the pipe interrupt status register */
-    u32 pipe_isr = usbhc_pipe_get_status(pipe);
-    u32 pipe_imr = usbhc_pipe_get_interrupt_mask(pipe);
-
-    /* Get the pointer to the pipe to handler */
-    struct usb_pipe* pipe_ptr = &core->hw->pipes[pipe];
-
-    /* Check for USB stall */
-    if (pipe_isr & pipe_imr & (1 << 6)) {
-        panic("Stall");
-    }
-
-    /* Check for pipe overflow */
-    if (pipe_isr & pipe_imr & (1 << 5)) {
-        panic("Overflow");
-    }
-
-    /* Check for pipe error */
-    if (pipe_isr & pipe_imr & (1 << 3)) {
-        panic("Pipe error");
-    }
-
-    /* Transmitted setup packet */
-    if (pipe_isr & pipe_imr & (1 << 2)) {
-        /* 
-         * Disable and clear the interrupt flag since two setup
-         * packet will not follow eachother
-         */
-        usbhc_pipe_clear_status(pipe, 1 << 2);
-        usbhc_pipe_disable_interrupt(pipe, 1 << 2);
-
-        /* Call the handler for setup packet */
-        usbhc_setup_sent(core, pipe_ptr);
-    }
-
-    /* Received full packet */
-    if (pipe_isr & pipe_imr & 1) {
-        usbhc_pipe_clear_status(pipe, 1 << 0);
-        usbhc_pipe_disable_interrupt(pipe, 1 << 0);
-
-        usbhc_received_packet(core, pipe_ptr);
-    }
-
-    /* Transmitted data complete */
-    if (pipe_isr & pipe_imr & (1 << 1)) {
-        usbhc_pipe_clear_status(pipe, 1 << 1);
-        usbhc_pipe_disable_interrupt(pipe, 1 << 1);
-
-        usbhc_transmitt_complete(core, pipe_ptr);
-    }
 }
 
 /*
- * SOF handler. This gets called when a SOF and a  uSOF has been sent on the
- * line. This code should clear the SOF flag.
+ * SOF exception
  */
-static void usbhc_sof_handler(struct usb_core* core, u32 global_status)
+static void usbhc_sof_exception(u32 isr)
 {
-    usbhc_clear_global_status(1 << 5);
+
 }
 
 /*
- * USB core exception handler. This breakes down the USB exception into three
- * groups; pipe interrupts, SOF interrupts and root hub interrupt. Each of these
- * has its own handler, in which are responsible for clearing any interrupt
- * flags.
+ * Main USBHC interrupt handler
  */
 void usb_exception(void)
 {
-    u32 global_status = usbhc_get_global_status();
-    
-    if (global_status & 0x3FF00) {
-        usbhc_pipe_handler(usbhc_core, global_status);
-        return;
-    }
-     
-    if (global_status & 0x20) {
-        usbhc_sof_handler(usbhc_core, global_status);
-        return;
+    u32 isr = usbhc_get_global_status();
+
+    /* SOF interrupt */
+    if (isr & 0x20) {
+        usbhc_sof_exception(isr);
     }
 
-    if (global_status & 0x5F) {
-        usbhc_root_hub_handler(usbhc_core, global_status);
-        return;
+    /* Pipe interrupts */
+    if (isr & 0x3FF00) {
+        usbhc_pipe_exception(isr);
     }
+
+    /* Root-hub interrupts */
+    if (isr & 0x5F) {
+        usbhc_root_hub_exception(isr);
+    }
+
+    usbhc_clear_global_status(0xFFFFFFFF);
 }
-

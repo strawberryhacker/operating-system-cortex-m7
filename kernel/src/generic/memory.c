@@ -55,3 +55,10 @@ u32 string_len(const char* src) {
     }
     return ret;
 }
+
+void string_copy(const char* src, char* dest)
+{
+    while (*src) {
+        *dest++ = *src++;
+    }
+}

@@ -13,4 +13,6 @@ void memory_fill(void* dest, u8 fill, u32 size);
 
 u32 string_len(const char* src);
 
+void string_copy(const char* src, char* dest);
+
 #endif

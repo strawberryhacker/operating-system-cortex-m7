@@ -10,39 +10,33 @@
 
 #include <stddef.h>
 
-#define PIPE_COUNT 1
+#define USB_PIPES 10
 
-struct usb_core usb_core;
-struct usb_hardware usb_hw;
-struct usb_pipe usb_pipes[PIPE_COUNT];
+struct usb_pipe usb_pipes[USB_PIPES];
+struct usbhc host_controller;
 
 /*
- * Initializes the USB PHY including the interrupt and clock controller
+ * Initializes the USB physical layer
  */
 void usb_phy_init(void)
 {
-    /*
-     * The reccomended start up sequence can be found in the datasheet at
-     * page 752
-     */
     peripheral_clock_enable(34);
-
+    
     usbhc_unfreeze_clock();
     usbhc_set_mode(USB_HOST);
     usbhc_enable();
 
-    /* Enable the USB UPLL clock at 480 MHz */
+    /* Initialize the USB main clock */
     upll_init(UPLL_x40);
 
-    /* Check if the USB clock is usable */
     if (usbhc_clock_usable() == 0) {
         panic("USB clock not usable");
     }
 
-    usbhc_init(&usb_core, &usb_hw, usb_pipes, PIPE_COUNT);
+    /* Setup the USB physical layer */
+    usbhc_init(&host_controller, usb_pipes, USB_PIPES);
 
+    /* Enable NVIC */
     nvic_enable(34);
     nvic_set_prioriy(34, NVIC_PRI_3);
-
-    usb_init(&usb_core);
 }

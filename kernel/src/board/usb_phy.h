@@ -5,8 +5,10 @@
 
 #include "types.h"
 
+#define USB_PIPES 10
+
 /*
- * Initializes the USB PHY including the interrupt and clock controller
+ * Initializes the USB physical layer
  */
 void usb_phy_init(void);
 
