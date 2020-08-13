@@ -6,6 +6,10 @@
 #include "types.h"
 #include "usbhc.h"
 
+struct usb_core {
+    /* Some other thing in here */
+};
 
+void usb_init(struct usbhc* hc);
 
 #endif

@@ -51,23 +51,5 @@ int main(void)
 
 	usb_phy_init();
 
-	struct urb* urb_pointers[10];
-
-	/* Test the URB queue */
-	for (u32 i = 0; i < 0xA; i++) {
-		urb_pointers[i] = usbhc_urb_new();
-
-		/* Fill in the name */
-		string_copy(urb_id[i], urb_pointers[i]->name);
-
-		/* Enqueue it into the right pipe */
-		usbhc_urb_submit(urb_pointers[i], &usb_pipes[3]);
-	}
-	print_urb_list(&usb_pipes[3]);
-
-	usbhc_urb_cancel(urb_pointers[4], &usb_pipes[3]);
-	print("\n");
-	print_urb_list(&usb_pipes[3]);
-
 	scheduler_start();
 }

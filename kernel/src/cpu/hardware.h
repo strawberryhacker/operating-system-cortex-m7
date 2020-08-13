@@ -708,7 +708,7 @@ typedef struct {
 	_r  u32 RESERVED13[2];
 	_w  u32 HSTPIPIFR[10];
 	_r  u32 RESERVED14[2];
-	_r  u32 HSTPIPIMR[10];
+	_rw u32 HSTPIPIMR[10];
 	_r  u32 RESERVED15[2];
 	_w  u32 HSTPIPIER[10];
 	_r  u32 RESERVED16[2];

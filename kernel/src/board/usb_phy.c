@@ -22,14 +22,14 @@ void usb_phy_init(void)
 {
     peripheral_clock_enable(34);
     
-    usbhc_unfreeze_clock();
-    usbhc_set_mode(USB_HOST);
-    usbhc_enable();
+    usbhw_unfreeze_clock();
+    usbhw_set_mode(USB_HOST);
+    usbhw_enable();
 
     /* Initialize the USB main clock */
     upll_init(UPLL_x40);
 
-    if (usbhc_clock_usable() == 0) {
+    if (usbhw_clock_usable() == 0) {
         panic("USB clock not usable");
     }
 
@@ -39,4 +39,6 @@ void usb_phy_init(void)
     /* Enable NVIC */
     nvic_enable(34);
     nvic_set_prioriy(34, NVIC_PRI_3);
+
+    usb_init(&host_controller);
 }

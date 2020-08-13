@@ -122,6 +122,11 @@ uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 						}
 						dest_ptr++;
 						size++;
+
+						if ((i % 8) == 0) {
+							*dest_ptr++ = ' ';
+							size++;
+						}
 					}
 					break;
 				}

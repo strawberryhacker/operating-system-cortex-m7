@@ -68,7 +68,6 @@ vector_table_set:
 	/* Set vector table offset register */
 	ldr r0, =_vector_table_s
 	ldr r1, vector_table_reg
-	bic.w r0, r0, #128
 	str r0, [r1]
 
 	/* Branch to main */
