@@ -13,65 +13,74 @@
 
 #include <stddef.h>
 
-/* Pointer to the USB core structure used in the callbacks */
+/*
+ * The USB host controller uses one main structure to manage internal state 
+ * and pointers to the pipes. This will be made from the caller the the pointer
+ * will be stored here
+ */
 struct usbhc* usbhc_private = NULL;
 
+/*
+ * All URBs are allocated using a fast bitmap allocator. These will be allocated
+ * for allmost every usb transfer, so the allocater needs to be really quick.
+ */
 struct bmalloc_desc urb_allocator;
 
 /* General USB host core stuff */
-static inline void usbhw_enable_connection_error(void);
-static inline void usbhw_disable_connection_error(void);
-static inline u8   usbhw_check_conenction_error(void);
-static inline u32  usbhw_get_pipe_error(u8 pipe);
-static inline enum usb_device_speed usbhw_get_speed_status(void);
-static inline void usbhw_clear_connection_error_flag(void);
-static inline void usbhw_set_connection_error_flag(void);
+static inline void usbhw_connection_error_enable(void);
+static inline void usbhw_connection_error_disable(void);
+static inline u8   usbhw_connection_error_check(void);
+static inline void usbhw_connection_error_clear(void);
+static inline void usbhw_connection_error_force(void);
+
+static inline u32  usbhw_pipe_get_error_reg(u8 pipe);
 static inline void usbhw_vbus_request_enable(void);
 static inline void usbhw_send_resume(void);
-static inline void usbhw_clear_reset(void);
+static inline void usbhw_reset_clear(void);
 static inline void usbhw_sof_enable(void);
 static inline void usbhw_sof_disable(void);
+static inline enum usb_device_speed usbhw_get_device_speed(void);
 static inline void usbhw_set_host_speed(enum usb_host_speed speed);
 
-/* Core interrupts */
-static inline u32  usbhw_get_global_status(void);
-static inline u32  usbhw_get_global_interrupt_mask(void);
-static inline void usbhw_clear_global_status(u32 mask);
-static inline void usbhw_force_global_status(u32 mask);
-static inline void usbhw_disable_global_interrupt(u32 mask);
-static inline void usbhw_enable_global_interrupt(u32 mask);
+/* Global USB host controller interrupts */
+static inline u32  usbhw_global_get_status(void);
+static inline u32  usbhw_global_get_interrupt_mask(void);
+static inline void usbhw_global_clear_status(u32 mask);
+static inline void usbhw_global_force_status(u32 mask);
+static inline void usbhw_global_disable_interrupt(u32 mask);
+static inline void usbhw_global_enable_interrupt(u32 mask);
 
 /* Pipe interrupts */
 static inline u32  usbhw_pipe_get_status(u8 pipe);
 static inline u32  usbhw_pipe_get_interrupt_mask(u8 pipe);
 static inline void usbhw_pipe_clear_status(u8 pipe, u32 mask);
 static inline void usbhw_pipe_force_status(u8 pipe, u32 mask);
-static inline void usbhw_pipe_enable_interrupt(u8 pipe, u32 mask);
 static inline void usbhw_pipe_disable_interrupt(u8 pipe, u32 mask);
+static inline void usbhw_pipe_enable_interrupt(u8 pipe, u32 mask);
 
-/* Frame */
+/* Frame info */
 static inline u32  usbhw_get_frame_number(void);
-static inline u8   usbhw_get_microframe_number(void);
 static inline void usbhw_clear_frame_number(void);
+static inline u8   usbhw_get_microframe_number(void);
 
-/* Pipes */
-static void usbhw_set_pipe_addr(u8 pipe, u8 addr);
+/* Pipes maintainance */
 static inline void usbhw_pipe_reset_assert(u8 pipe);
 static inline void usbhw_pipe_reset_deassert(u8 pipe);
-static inline void usbhw_pipe_enable(u8 pipe);
-static inline void usbhw_pipe_disable(u8 pipe);
-static inline void usbhw_pipe_in_request_defined(u8 pipe, u8 count);
-static inline void usbhw_pipe_in_request_continous(u8 pipe, u8 count);
-static inline void usbhw_pipe_set_configuration(u8 pipe, u32 cfg);
 static inline void usbhw_pipe_allocate_set(u8 pipe);
 static inline void usbhw_pipe_allocate_clear(u8 pipe);
+static inline void usbhw_pipe_enable(u8 pipe);
+static inline void usbhw_pipe_disable(u8 pipe);
+static inline void usbhw_pipe_set_addr(u8 pipe, u8 addr);
+static inline void usbhw_pipe_in_request_defined(u8 pipe, u8 count);
+static inline void usbhw_pipe_in_request_continous(u8 pipe);
+static inline void usbhw_pipe_set_configuration(u8 pipe, u32 cfg);
 static inline u32  usbhw_pipe_get_configuration(u8 pipe);
 static inline u8   usbhw_pipe_check_configuration(u8 pipe);
 static inline void usbhw_pipe_set_token(u8 pipe, enum pipe_token token);
 static inline void usbhw_pipe_set_freq(u8 pipe, u8 irq_freq);
-static inline u32  usbhw_get_fifo_byte_count(u8 pipe);
+static inline u32  usbhw_pipe_get_byte_count(u8 pipe);
 
-static inline void usbhw_enable_connection_error(void) 
+static inline void usbhw_connection_error_enable(void) 
 {
     u32 reg = USBHC->CTRL;
     reg &= ~(1 << 24);      /* Clear UID */
@@ -80,7 +89,7 @@ static inline void usbhw_enable_connection_error(void)
     USBHC->CTRL = reg;
 }
 
-static inline void usbhw_disable_connection_error(void) 
+static inline void usbhw_connection_error_disable(void) 
 {
     u32 reg = USBHC->CTRL;
     reg &= ~(1 << 24);      /* Clear UID */
@@ -89,7 +98,7 @@ static inline void usbhw_disable_connection_error(void)
     USBHC->CTRL = reg;
 }
 
-static inline u8 usbhw_check_conenction_error(void)
+static inline u8 usbhw_connection_error_check(void)
 {
     if (USBHC->SR & (1 << 4)) {
         return 1;
@@ -98,7 +107,7 @@ static inline u8 usbhw_check_conenction_error(void)
     }
 }
 
-static inline u32 usbhw_get_pipe_error(u8 pipe)
+static inline u32 usbhw_pipe_get_error_reg(u8 pipe)
 {
     return USBHC->HSTPIPERR[pipe];
 }
@@ -108,18 +117,18 @@ static inline u32 usbhw_get_pipe_error(u8 pipe)
  * request. In host mode two pulldowns are connected. The speed status is based
  * on which line the device pulls up. 
  */
-static inline enum usb_device_speed usbhw_get_speed_status(void)
+static inline enum usb_device_speed usbhw_get_device_speed(void)
 {
     u32 reg = (USBHC->SR >> 12) & 0b11;
     return (enum usb_device_speed)reg;
 }
 
-static inline void usbhw_clear_connection_error_flag(void)
+static inline void usbhw_connection_error_clear(void)
 {
     USBHC->SCR = (1 << 4);
 }
 
-static inline void usbhw_set_connection_error_flag(void)
+static inline void usbhw_connection_error_force(void)
 {
     USBHC->SFR = (1 << 4);
 }
@@ -156,7 +165,7 @@ static inline void usbhw_send_resume(void)
  * effect, but right above it, they reccomended clearing it. This should be 
  * done after a device disconnection to avoid any unintentional reset. 
  */
-static inline void usbhw_clear_reset(void)
+static inline void usbhw_reset_clear(void)
 {
     USBHC->HSTCTRL &= ~(1 << 9);
 }
@@ -196,32 +205,32 @@ static inline void usbhw_set_host_speed(enum usb_host_speed speed)
  * If the pipe flag is cleared no pipe interrupt is generated.  
  */
 
-static inline u32 usbhw_get_global_status(void)
+static inline u32 usbhw_global_get_status(void)
 {
     return USBHC->HSTISR;
 }
 
-static inline void usbhw_clear_global_status(u32 mask)
+static inline void usbhw_global_clear_status(u32 mask)
 {
     USBHC->HSTICR = mask;
 }
 
-static inline void usbhw_force_global_status(u32 mask)
+static inline void usbhw_global_force_status(u32 mask)
 {
     USBHC->HSTIFR = mask;
 }
 
-static inline u32 usbhw_get_global_interrupt_mask(void)
+static inline u32 usbhw_global_get_interrupt_mask(void)
 {
     return USBHC->HSTIMR;
 }
 
-static inline void usbhw_disable_global_interrupt(u32 mask)
+static inline void usbhw_global_disable_interrupt(u32 mask)
 {
     USBHC->HSTIDR = mask;
 }
 
-static inline void usbhw_enable_global_interrupt(u32 mask)
+static inline void usbhw_global_enable_interrupt(u32 mask)
 {
     USBHC->HSTIER = mask;
 }
@@ -247,7 +256,7 @@ static inline void usbhw_clear_frame_number(void)
  * 0 and 9, and a 7 bit address identifying the USB device on the bus. Note that
  * pipe 0 should have its address set to one
  */
-static inline void usbhw_set_pipe_addr(u8 pipe, u8 addr)
+static inline void usbhw_pipe_set_addr(u8 pipe, u8 addr)
 {
     /* I don't know if byte or halfword access are allowed */
     u32* reg_ptr = (u32 *)&USBHC->HSTADDR1 + (pipe >> 2);
@@ -357,7 +366,7 @@ static inline void usbhw_pipe_in_request_defined(u8 pipe, u8 count)
 /*
  * Performs IN requests continously on the given pipe until the pipe is frozen
  */
-static inline void usbhw_pipe_in_request_continous(u8 pipe, u8 count)
+static inline void usbhw_pipe_in_request_continous(u8 pipe)
 {
     if (pipe >= 10) {
         panic("Pipe out of bound");
@@ -438,7 +447,7 @@ static inline void usbhw_pipe_set_freq(u8 pipe, u8 irq_freq)
     USBHC->HSTPIPCFG[pipe] = reg;
 }
 
-static inline u32 usbhw_get_fifo_byte_count(u8 pipe)
+static inline u32 usbhw_pipe_get_byte_count(u8 pipe)
 {
     if (pipe >= 10) {
         panic("Pipe out of bound");
@@ -627,7 +636,7 @@ u8 usbhc_pipe_allocate(struct usb_pipe* pipe, struct pipe_cfg* cfg)
     /* Enable pipe interrupts */
     usbhw_pipe_clear_status(pipe->number, (1 << 3) | (1 << 5) | (1 << 6));
     usbhw_pipe_enable_interrupt(pipe->number, (1 << 3) | (1 << 5) | (1 << 6));
-    usbhw_enable_global_interrupt(1 << (pipe->number + 8));
+    usbhw_global_enable_interrupt(1 << (pipe->number + 8));
     return 1;
 }
 
@@ -637,7 +646,7 @@ u8 usbhc_pipe_allocate(struct usb_pipe* pipe, struct pipe_cfg* cfg)
  */
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr)
 {
-    usbhw_set_pipe_addr(pipe->number, addr);
+    usbhw_pipe_set_addr(pipe->number, addr);
 }
 
 /*
@@ -697,8 +706,8 @@ void usbhc_init(struct usbhc* hc, struct usb_pipe* pipe, u32 pipe_count)
     }
 
     /* Listen for wakeup or connection */
-    usbhw_clear_global_status((1 << 0) | (1 << 6));
-    usbhw_enable_global_interrupt((1 << 0) | (1 << 6));
+    usbhw_global_clear_status((1 << 0) | (1 << 6));
+    usbhw_global_enable_interrupt((1 << 0) | (1 << 6));
 }
 
 /*
@@ -709,7 +718,7 @@ void usbhc_init(struct usbhc* hc, struct usb_pipe* pipe, u32 pipe_count)
 u8 usbhc_send_setup_raw(struct usb_pipe* pipe, u8* setup)
 {
     u8 pipe_number = pipe->number;
-    if (usbhw_get_fifo_byte_count(pipe_number)) {
+    if (usbhw_pipe_get_byte_count(pipe_number)) {
         return 0;
     }
     /* Clear the transmitted SETUP packet bit */
@@ -720,7 +729,7 @@ u8 usbhc_send_setup_raw(struct usb_pipe* pipe, u8* setup)
     for (u8 i = 0; i < 8; i++) {
         *fifo_ptr++ = *setup++;
     }
-    u32 fifo_count = usbhw_get_fifo_byte_count(pipe_number);
+    u32 fifo_count = usbhw_pipe_get_byte_count(pipe_number);
 
     /* Enable the interrupt */
     usbhw_pipe_enable_interrupt(pipe_number, (1 << 2));
@@ -791,13 +800,12 @@ static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc)
     if (isr & (1 << 0)) {
         print("Device connection\n");
 
-        if (usbhw_get_global_interrupt_mask() & (1 << 6)) {
-            print("wAKE UP ENABLE");
+        if (usbhw_global_get_interrupt_mask() & (1 << 6)) {
         }
 
         /* Listen for disconnection and reset sent */
-        usbhw_clear_global_status((1 << 1) | (1 << 2) | (1 << 5));
-        usbhw_enable_global_interrupt((1 << 1) | (1 << 2) | (1 << 5));
+        usbhw_global_clear_status((1 << 1) | (1 << 2) | (1 << 5));
+        usbhw_global_enable_interrupt((1 << 1) | (1 << 2) | (1 << 5));
 
         /* Callback to upper layer i.e. USB host core */
         hc->root_hub_callback(hc, RH_EVENT_CONNECTION);
@@ -811,11 +819,11 @@ static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc)
 
     /* Reset has been sent on the port */
     if (isr & (1 << 2)) {
-        usbhw_clear_global_status(1 << 2);
-        usbhw_disable_global_interrupt(1 << 2);
+        usbhw_global_clear_status(1 << 2);
+        usbhw_global_disable_interrupt(1 << 2);
 
         /* Read the device speed status */
-        enum usb_device_speed speed = usbhw_get_speed_status();
+        enum usb_device_speed speed = usbhw_get_device_speed();
 
         if (speed == USB_DEVICE_FS) {
             print("Full speed device connected\n");
@@ -832,7 +840,7 @@ static void usbhc_handle_setup_sent(struct usb_pipe* pipe)
 
     print("Setup is sent");
 
-    
+
 }
 
 /*
@@ -847,7 +855,7 @@ static void usbhc_pipe_exception(u32 isr, struct usbhc* hc)
         }
     }
     /* Clear the global flag on the current pipe */
-    usbhw_clear_global_status(1 << (pipe_number + 8));
+    usbhw_global_clear_status(1 << (pipe_number + 8));
 
     u32 pipe_status = usbhw_pipe_get_status(pipe_number);
     print("pipe status: %32b\n", pipe_status);
@@ -864,7 +872,7 @@ static void usbhc_pipe_exception(u32 isr, struct usbhc* hc)
 static void usbhc_sof_exception(u32 isr, struct usbhc* hc)
 {
     /* Clear the SOF interrupt flag */
-    usbhw_clear_global_status((1 << 5));
+    usbhw_global_clear_status((1 << 5));
 }
 
 /*
@@ -872,7 +880,7 @@ static void usbhc_sof_exception(u32 isr, struct usbhc* hc)
  */
 void usb_exception(void)
 {
-    u32 isr = usbhw_get_global_status();
+    u32 isr = usbhw_global_get_status();
 
     /* SOF interrupt */
     if (isr & 0x20) {
@@ -892,5 +900,5 @@ void usb_exception(void)
         usbhc_root_hub_exception(isr, usbhc_private);
     }  
     /* During development this will make sure that  */
-    usbhw_clear_global_status(0xFFFFFFFF);  
+    usbhw_global_clear_status(0xFFFFFFFF);  
 }
