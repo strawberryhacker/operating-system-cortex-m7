@@ -14,6 +14,7 @@
 #include "usb_phy.h"
 #include "gpio.h"
 #include "memory.h"
+#include "list.h"
 
 #include <stddef.h>
 
@@ -33,6 +34,20 @@ static char* urb_id[] = {
 
 extern struct usb_pipe usb_pipes[USB_PIPES];
 
+struct name {
+	char name[8];
+	struct list_node node;
+};
+
+void p(struct list_node* list)
+{
+	struct list_node* node;
+	list_iterate(node, list) {
+		struct name* name = list_get_entry(node, struct name, node);
+		print("Node: %s\n", name->name);
+	}
+}
+
 int main(void)
 {
 	kernel_entry();
@@ -49,7 +64,19 @@ int main(void)
 
 	new_thread(&fpi_info);
 
-	usb_phy_init();
+	//usb_phy_init();
+	struct list_node list;
+
+	list_init(&list);
+
+	struct name names[10];
+
+	for (u32 i = 0; i < 0xA; i++) {
+		p(&list);
+		print("\n");
+		string_copy(urb_id[i], names[i].name);
+		list_add_first(&names[i].node, &list);
+	}
 
 	scheduler_start();
 }

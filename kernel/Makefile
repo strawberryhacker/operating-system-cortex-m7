@@ -42,7 +42,6 @@ kernel-y += /src/kernel/kernel_entry.c
 kernel-y += /src/kernel/fault.c
 kernel-y += /src/kernel/scheduler.c
 kernel-y += /src/kernel/thread.c
-kernel-y += /src/kernel/list.c
 kernel-y += /src/kernel/dlist.c
 kernel-y += /src/kernel/rt.c
 kernel-y += /src/kernel/app.c

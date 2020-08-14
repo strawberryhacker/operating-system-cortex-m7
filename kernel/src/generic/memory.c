@@ -61,4 +61,5 @@ void string_copy(const char* src, char* dest)
     while (*src) {
         *dest++ = *src++;
     }
+    *dest = *src;
 }
