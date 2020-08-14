@@ -101,12 +101,12 @@ usb-y += /src/usb/usb.c
 mm-y += /src/mm/mm.c
 mm-y += /src/mm/mpu.c
 mm-y += /src/mm/cache.c
-mm-y += /src/mm/smalloc.c
-mm-y += /src/mm/pmalloc.c
 mm-y += /src/mm/bmalloc.c
+mm-y += /src/mm/pmalloc.c
+mm-y += /src/mm/umalloc.c
 
 # Benchmarking source files
-bench-y += /src/benchmark/smalloc_benchmark.c
+bench-y += /src/benchmark/umalloc_benchmark.c
 bench-y += /src/benchmark/bmalloc_benchmark.c
 bench-y += /src/benchmark/benchmark_timer.c
 

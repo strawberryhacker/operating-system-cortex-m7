@@ -1,10 +1,28 @@
 /* Copyright (C) StrawberryHacker */
 
-#ifndef BMALLOC_BENCHMARK_H
-#define BMALLOC_BENCHMARK_H
+#ifndef MM_BENCHMARK_H
+#define MM_BENCHMARK_H
 
 #include "types.h"
 
-void run_bmalloc_benchmark(void);
+/* Defines the number of blocks the mm benchmark can keep track of */
+#define BMALLOC_BENCHMARK_BLOCK_COUNT 10000
+
+/* Benchmarking configuration */
+struct bmalloc_benchmark_conf {
+    /* mm_alloc */
+    u32 min_block_size;
+    u32 max_block_size;
+
+    /* mm_alloc_1k and mm_alloc_4k */
+    u32 min_block_count;
+    u32 max_block_count;
+
+    /* Memory usage in percent */
+    u8 max_mm_usage;
+    u8 min_mm_usage;
+};
+
+void run_bmalloc_benchmark(struct bmalloc_benchmark_conf* conf);
 
 #endif

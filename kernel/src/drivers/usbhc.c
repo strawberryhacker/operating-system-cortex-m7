@@ -7,7 +7,7 @@
 #include "gpio.h"
 #include "cpu.h"
 #include "usb_protocol.h"
-#include "bmalloc.h"
+#include "umalloc.h"
 #include "pmalloc.h"
 #include "memory.h"
 
@@ -24,7 +24,7 @@ struct usbhc* usbhc_private = NULL;
  * All URBs are allocated using a fast bitmap allocator. These will be allocated
  * for allmost every usb transfer, so the allocater needs to be really quick.
  */
-struct bmalloc_desc urb_allocator;
+struct umalloc_desc urb_allocator;
 
 /* General USB host core stuff */
 static inline void usbhw_connection_error_enable(void);
@@ -684,7 +684,7 @@ void usbhc_init(struct usbhc* hc, struct usb_pipe* pipe, u32 pipe_count)
     usbhw_vbus_request_enable();
 
     /* Make a new bitmap allocator. This is used for allocating URBs */
-    bmalloc_new(&urb_allocator, sizeof(struct urb), MAX_URBS, PMALLOC_BANK_2);
+    umalloc_new(&urb_allocator, sizeof(struct urb), MAX_URBS, PMALLOC_BANK_2);
 
     /* Link the pipes to the USB host controller */
     hc->pipe_base = pipe;
@@ -745,7 +745,7 @@ u8 usbhc_send_setup_raw(struct usb_pipe* pipe, u8* setup)
  */
 struct urb* usbhc_urb_new(void)
 {
-    struct urb* urb = (struct urb *)bmalloc(&urb_allocator);
+    struct urb* urb = (struct urb *)umalloc(&urb_allocator);
 
     if (urb == NULL) {
         panic("URB alloc failed");

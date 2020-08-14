@@ -1,32 +1,28 @@
 /* Copyright (C) StrawberryHacker */
 
-#ifndef BMALLOC_H
-#define BMALLOC_H
+/*
+ * bmalloc is the main kernel allocator for allocating small memory units. For
+ * bigger units, the user should try to allocate a number of pages instead. This
+ * uses pmalloc and is much faster
+ */
+
+#ifndef SMALLOC_H
+#define SMALLOC_H
 
 #include "types.h"
-#include "pmalloc.h"
 
-struct bmalloc_desc {
-    u8* arena;
-    u32* bitmap;
-
-    /* All allocation will return this many bytes */
-    u32 block_size;
-    u32 block_count;
-
-    /* Keeps track of the memory statistics */
-    u32 used_blocks;
+enum bmalloc_bank {
+    BMALLOC_SRAM = 0,
+    BMALLOC_DRAM = 4
 };
 
-void bmalloc_new(struct bmalloc_desc* desc, u32 block_size, u32 block_count, 
-    enum pmalloc_bank bank);
+void bfree(void* ptr);
 
-void bmalloc_delete(struct bmalloc_desc* desc);
+void* bmalloc(u32 count, enum bmalloc_bank bank);
+void* bcalloc(u32 size, enum bmalloc_bank bank);
 
-void* bmalloc(struct bmalloc_desc* desc);
-
-void bfree(struct bmalloc_desc* desc, void* ptr);
-
-u32 bmalloc_get_used(struct bmalloc_desc* desc);
+u32 bmalloc_get_used(enum bmalloc_bank bank);
+u32 bmalloc_get_free(enum bmalloc_bank bank);
+u32 bmalloc_get_total(enum bmalloc_bank bank);
 
 #endif
