@@ -121,6 +121,9 @@ static inline void list_delete_last(struct list_node* list)
     list_delete_node(list->prev);
 }
 
+#define list_get_first(list) ((list)->next)
+#define list_get_last(list) ((list)->prev)
+
 /*
  * Defines for iterating lists
  */

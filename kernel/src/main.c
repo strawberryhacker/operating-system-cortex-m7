@@ -20,20 +20,6 @@
 
 #include <stddef.h>
 
-static char* urb_id[] = {
-	[0x0] = "alpha",
-	[0x1] = "apple",
-	[0x2] = "straw",
-	[0x3] = "berry",
-	[0x4] = "lemon",
-	[0x5] = "lime",
-	[0x6] = "oreo",
-	[0x7] = "c",
-	[0x8] = "tree",
-	[0x9] = "car",
-	[0xA] = "smoke",
-};
-
 extern struct usb_pipe usb_pipes[USB_PIPES];
 
 struct name {

@@ -196,6 +196,12 @@ u8 usbhc_send_setup_raw(struct usb_pipe* pipe, u8* setup)
 static void usbhc_start_urb(struct urb* urb, struct usb_pipe* pipe)
 {
     print("Starting URB\n");
+
+    if (urb->flags & URB_FLAGS_SETUP) {
+        print("Setup transaction\n");
+        usbhc_send_setup_raw(pipe, urb->setup_buffer);
+        pipe->state = PIPE_STATE_SETUP;
+    }
 }
 
 /*
@@ -399,6 +405,7 @@ struct urb* usbhc_alloc_urb(void)
         return NULL;
     }
     list_node_init(&urb->node);
+    print("Memory usage => %d\n", umalloc_get_used(&urb_allocator));
     return urb;
 }
 
@@ -434,6 +441,21 @@ u8 usbhc_cancel_urb(struct urb* urb, struct usb_pipe* pipe)
     list_delete_node(&urb->node);
 
     return 1;
+}
+
+/*
+ * Fills a URB with control transfer data
+ */
+void usbhc_fill_control_urb(struct urb* urb, u8* setup, u8* transfer_buffer,
+    u32 buffer_lenght, void (*callback)(struct urb*), const char* name)
+{
+    urb->setup_buffer = setup;
+    urb->transfer_buffer = transfer_buffer;
+    urb->buffer_lenght = buffer_lenght;
+    urb->callback = callback;
+    urb->flags = URB_FLAGS_SETUP;
+
+    string_copy(name, urb->name);
 }
 
 void print_urb_list(struct usb_pipe* pipe)

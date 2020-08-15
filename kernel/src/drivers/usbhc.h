@@ -14,6 +14,11 @@
 #define USBHC_DPRAM_ADDR 0xA0100000
 #define USBHC_DPRAM_EP_SIZE 0x8000
 
+/* USB transfer flags */
+#define URB_FLAGS_SETUP  (u32)(1 << 0)
+#define URB_FLAGS_IN     (u32)(1 << 1)
+#define URB_FLAGS_OUT    (u32)(1 << 2)
+
 /*
  * Returns an 8 bit pointer to the DPRAM base address associated with a pipe
  */
@@ -34,11 +39,6 @@ enum pipe_state {
     PIPE_STATE_OUT,
     PIPE_STATE_STATUS,
     PIPE_STATE_ERROR
-};
-
-enum urb_flags {
-    URB_TX_SETUP_OUT,
-    URB_TX_SETUP_IN
 };
 
 /*
@@ -70,18 +70,21 @@ struct urb {
     char name[16];
 
     /* Transfer flags */
-    enum urb_flags flags;
+    u32 flags;
 
     /* Buffer for setup data */
     u8* setup_buffer;
 
     /* Buffer for IN and OUT requests */
-    u8* data_buffer;
-    u32 data_size;
+    u8* transfer_buffer;
+    u32 buffer_lenght;
 
     /* For error and status reporting */
     u8 status;
     u8 state;
+
+    /* URB complete callback */
+    void (*callback)(struct urb*);
 };
 
 /*
@@ -146,6 +149,10 @@ u8 usbhc_send_setup_raw(struct usb_pipe* pipe, u8* setup);
 struct urb* usbhc_alloc_urb(void);
 u8 usbhc_cancel_urb(struct urb* urb, struct usb_pipe* pipe);
 void usbhc_submit_urb(struct urb* urb, struct usb_pipe* pipe);
+
+void usbhc_fill_control_urb(struct urb* urb, u8* setup, u8* transfer_buffer,
+    u32 buffer_lenght, void (*callback)(struct urb*), const char* name);
+    
 void print_urb_list(struct usb_pipe* pipe);
 
 #endif
