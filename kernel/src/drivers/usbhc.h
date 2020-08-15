@@ -35,10 +35,21 @@ enum pipe_state {
     PIPE_STATE_DISABLED,
     PIPE_STATE_IDLE,
     PIPE_STATE_SETUP,
+    PIPE_STATE_SETUP_IN,
+    PIPE_STATE_SETUP_OUT,
+    PIPE_STATE_ZLP_IN,
+    PIPE_STATE_ZLP_OUT,
     PIPE_STATE_IN,
     PIPE_STATE_OUT,
     PIPE_STATE_STATUS,
     PIPE_STATE_ERROR
+};
+
+enum urb_status {
+    URB_STATUS_OK,
+    URB_STATUS_ERROR,
+    URB_STATUS_STALL,
+    URB_STATUS_NAK
 };
 
 /*
@@ -65,8 +76,6 @@ struct pipe_cfg {
  * to perform any USB transfer and deliver the status back.
  */
 struct urb {
-    /* URB queue node */
-    struct list_node node;
     char name[16];
 
     /* Transfer flags */
@@ -78,13 +87,16 @@ struct urb {
     /* Buffer for IN and OUT requests */
     u8* transfer_buffer;
     u32 buffer_lenght;
+    u32 buffer_count; /* Maybe add the current recieved size */
 
     /* For error and status reporting */
-    u8 status;
-    u8 state;
+    enum urb_status status;
 
     /* URB complete callback */
     void (*callback)(struct urb*);
+
+    /* URB queue node */
+    struct list_node node;
 };
 
 /*
@@ -119,6 +131,23 @@ struct usbhc {
 };
 
 /*
+ * Bit endian load and store
+ */
+static inline void usb_store_be16(u16 value, u8* addr)
+{
+    *addr++ = (u8)(value >> 8);
+    *addr = (u8)value;
+}
+
+static inline u16 usb_load_be16(u8* addr)
+{
+    u16 value = 0;
+    value |= (*addr << 8);
+    value |= *addr;
+    return value;
+}
+
+/*
  * Initialization of the USB host controller. The early init function should be
  * called before any USB clocks are enabled. If not the result is unpredictable. 
  * The normal intit functions will setup the host controller 
@@ -137,7 +166,6 @@ void usbhc_add_sof_callback(struct usbhc* hc, void (*callback)(struct usbhc*));
 
 u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_cfg* cfg);
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr);
-u8 usbhc_send_setup_raw(struct usb_pipe* pipe, u8* setup);
 
 /*
  * URB (USB request blocks) is the main communication channel between the 

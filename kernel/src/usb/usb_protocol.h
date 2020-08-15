@@ -33,23 +33,34 @@
 /*
  * Defines the different setup requests
  */
-#define USB_REQ_CLEAR_FEATURE     1
-#define USB_REQ_GET_CONFIGURATION 8
-#define USB_REQ_GET_DESCRIPTOR    6
-#define USB_REQ_GET_INTERFACE     10
-#define USB_REQ_GET_STATUS        0
-#define USB_REQ_SET_ADDRESS       5
-#define USB_REQ_SET_CONFIGURATION 9
-#define USB_REQ_SET_DESCRIPTOR    7
-#define USB_REQ_SET_FEATURE       3
-#define USB_REQ_SET_INTERFACE     11
-#define USB_REQ_SYNC_FRAME        12
+#define USB_REQ_CLEAR_FEATURE     0x01
+#define USB_REQ_GET_CONFIGURATION 0x08
+#define USB_REQ_GET_DESCRIPTOR    0x06
+#define USB_REQ_GET_INTERFACE     0x10
+#define USB_REQ_GET_STATUS        0x00
+#define USB_REQ_SET_ADDRESS       0x05
+#define USB_REQ_SET_CONFIGURATION 0x09
+#define USB_REQ_SET_DESCRIPTOR    0x07
+#define USB_REQ_SET_FEATURE       0x03
+#define USB_REQ_SET_INTERFACE     0x11
+#define USB_REQ_SYNC_FRAME        0x12
+
+/* Descriptor type */
+#define USB_DESC_DEVICE           0x0001
+#define USB_DESC_CONFIGURATION    0x0002
+#define USB_DESC_STRING           0x0003
+#define USB_DESC_INTERFACE        0x0004
+#define USB_DESC_ENDPOINT         0x0005
+#define USB_DESC_DEVICE_QUALIFIER 0x0006
+#define USB_DESC_SPEED_CONFIG     0x0007
+#define USB_DESC_INTERFACE_POWER  0x0008
+
 
 /*
  * Structure describing the SETUP packet sent first in ALL control
  * transfers. This takes up eigth bytes.
  */
-struct usb_setup {
+struct __attribute__((__packed__)) usb_setup {
     u8 bmRequestType;
     u8 bRequest;
     u16 wValue;
@@ -60,7 +71,7 @@ struct usb_setup {
 /*
  * Device descriptor. USB 2.0 specification page 262 
  */
-struct usb_dev_desc {
+struct __attribute__((__packed__)) usb_dev_desc {
     u8  bLength;
     u8  bDescriptorType;
     u16 bcdUSB;
@@ -80,7 +91,7 @@ struct usb_dev_desc {
 /*
  * Device qualifier descriptor. USB 2.0 specification page 264
  */
-struct usb_qualifier_desc {
+struct __attribute__((__packed__)) usb_qualifier_desc {
     u8  bLength;
     u8  bDescriptorType;
     u16 bcdUSB;
@@ -95,7 +106,7 @@ struct usb_qualifier_desc {
 /*
  * Configuration descriptor. USB 2.0 specification page 265
  */
-struct usb_config_desc {
+struct __attribute__((__packed__)) usb_config_desc {
     u8  bLength;
     u8  bDescriptorType;
     u16 wTotalLength;
@@ -109,7 +120,7 @@ struct usb_config_desc {
 /*
  * Interface descriptor. USB 2.0 specification page 268
  */
-struct usb_interface_desc {
+struct __attribute__((__packed__)) usb_interface_desc {
     u8  bLength;
     u8  bDescriptorType;
     u8  bInterfaceNumber;
@@ -124,7 +135,7 @@ struct usb_interface_desc {
 /*
  * Endpoint descriptor. USB 2.0 specification page 269
  */
-struct usb_ep_desc {
+struct __attribute__((__packed__)) usb_ep_desc {
     u8  bLength;
     u8  bDescriptorType;
     u8  bEndpointAddress;
@@ -139,7 +150,7 @@ struct usb_ep_desc {
  * string descriptor zero or the normal string descriptor. This
  * is because the size is varying
  */
-struct usb_string_desc {
+struct __attribute__((__packed__)) usb_string_desc {
     u8  bLength;
     u8  bDescriptorType;
 };

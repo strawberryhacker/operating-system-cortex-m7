@@ -14,6 +14,7 @@
 
 struct usb_pipe usb_pipes[USB_PIPES];
 struct usbhc host_controller;
+struct usb_core usb_core;
 
 /*
  * Initializes the USB physical layer
@@ -37,5 +38,7 @@ void usb_phy_init(void)
     nvic_enable(34);
     nvic_set_prioriy(34, NVIC_PRI_3);
 
-    usb_init(&host_controller);
+    print("Start => %4h\n", usb_pipes);
+
+    usb_init(&usb_core, &host_controller);
 }

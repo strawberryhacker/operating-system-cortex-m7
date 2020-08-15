@@ -499,7 +499,10 @@ static inline void usbhw_pipe_in_request_defined(u8 pipe, u8 count)
     if (pipe >= 10) {
         panic("Pipe out of bound");
     }
-    USBHC->HSTPIPINRQ[pipe] = count;
+    if (count == 0) {
+        panic("Cannot perform zero INs");
+    }
+    USBHC->HSTPIPINRQ[pipe] = count - 1;
 }
 
 /*

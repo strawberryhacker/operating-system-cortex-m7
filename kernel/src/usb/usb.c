@@ -3,23 +3,82 @@
 #include "usb.h"
 #include "print.h"
 #include "list.h"
+#include "usb_protocol.h"
 #include "memory.h"
+#include "bmalloc.h"
+#include "thread.h"
 
-static u8 setup_buffer[64];
+static struct usb_setup setup;
 static u8 transfer_buffer[512];
 
-void usb_start_enumeration(void) 
+struct usb_core* private_core;
+
+static void complete_callback(struct urb* urb);
+
+void enumeration_callback(struct urb* urb) 
 {
+    /* Get info */
+
+    /* Delete URB */
+
+    switch(private_core->enum_state) {
+        case USB_ENUM_GET_DEV_DESC:
+
+            break;
+    }
     /* Read the device descriptor */
+
 
     /* Host assigns a new address and set the device address */
 
     /* Configiurationm desc, interface descriptor, end point descriptor */
 }
 
+static void usb_get_dev_desc(struct usbhc* hc) 
+{
+    struct urb* urb = usbhc_alloc_urb();
+
+    setup.bmRequestType = USB_REQ_TYPE_DEVICE_TO_HOST;
+    setup.bRequest = USB_REQ_GET_DESCRIPTOR;
+    setup.wIndex = 0;
+    setup.wLength = 18;
+    setup.wValue = 1; /* Device is number 1 */
+
+    usbhc_fill_control_urb(urb, (u8 *)&setup, transfer_buffer, 512, 
+        &complete_callback, "Hello");
+
+    usbhc_submit_urb(urb, &hc->pipe_base[0]);
+}
+
+static void usc_enumerate(void* args)
+{
+    struct usbhc* hc = (struct usbhc *)args;
+    while (1) {
+        switch(private_core->enum_state) {
+            case USB_ENUM_GET_DEV_DESC:
+                usb_get_dev_desc(hc);
+                break;
+            case USB_ENUM_SET_ADDRESS:
+                print("Setting address\n");
+                while (1);
+                break;
+        }
+        thread_sleep(10);
+    }
+}
+
 static void complete_callback(struct urb* urb)
 {
-    printl("URB callback");
+    printl("URB control tranfer complete");
+    struct usb_setup* setup = (struct usb_setup *)urb->setup_buffer;
+
+    print("Size: %d\n", setup->wLength);
+
+    struct usb_dev_desc* dev = (struct usb_dev_desc *)urb->transfer_buffer;
+    print("bLength: %d\n", dev->bLength);
+    print("Max packet size: %d\n", dev->bMaxPacketSize);
+
+    private_core->enum_state++;
 }
 
 void root_hub_event(struct usbhc* hc, enum root_hub_event event)
@@ -47,23 +106,27 @@ void root_hub_event(struct usbhc* hc, enum root_hub_event event)
         };
         usbhc_alloc_pipe(&hc->pipe_base[0], &cfg);
         usbhc_set_address(&hc->pipe_base[0], 0);
-        /* Start enumeration */        
-        struct urb* urb = usbhc_alloc_urb();
-        setup_buffer[0] = 0x80;
-        setup_buffer[1] = 0x06;
-        setup_buffer[2] = 0x00;
-        setup_buffer[3] = 0x01;
-        setup_buffer[4] = 0x00;
-        setup_buffer[5] = 0x00;
-        setup_buffer[6] = 0x12;
-        setup_buffer[7] = 0x00;
-        usbhc_fill_control_urb(urb, setup_buffer, transfer_buffer, 512, 
-            complete_callback, "Notte");
-        usbhc_submit_urb(urb, &hc->pipe_base[0]);
+
+        private_core->enum_state = USB_ENUM_GET_DEV_DESC;
     }
 }
 
-void usb_init(struct usbhc* hc)
+void usb_init(struct usb_core* core, struct usbhc* hc)
 {
+    private_core = core;
+    private_core->enum_state = USB_ENUM_IDLE;
+
     usbhc_add_root_hub_callback(hc, &root_hub_event);
+
+    /* Start the enumeration thread */
+    struct thread_info enum_info = {
+        .name = "USB enumerate",
+        .class = REAL_TIME,
+        .code_addr = 0,
+        .stack_size = 512,
+        .arg = hc,
+        .thread = usc_enumerate
+    };
+
+    new_thread(&enum_info);
 }
