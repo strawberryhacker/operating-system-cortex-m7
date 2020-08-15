@@ -54,15 +54,6 @@ int main(void)
 {
 	kernel_entry();
 
-	struct bmalloc_benchmark_conf conf = {
-		/* mm_alloc */
-		.min_block_size = 8,
-		.max_block_size = 1024,
-		.max_mm_usage = 90,
-		.min_mm_usage = 30
-	};
-
-
 	/* Programming interface for dynamic fetching of applications */
 	struct thread_info fpi_info = {
 		.name       = "FPI",
@@ -75,19 +66,7 @@ int main(void)
 
 	new_thread(&fpi_info);
 	
-	//usb_phy_init();
-	struct list_node list;
-
-	list_init(&list);
-
-	struct name names[10];
-
-	for (u32 i = 0; i < 0xA; i++) {
-		p(&list);
-		print("\n");
-		string_copy(urb_id[i], names[i].name);
-		list_add_first(&names[i].node, &list);
-	}
+	usb_phy_init();
 
 	scheduler_start();
 }

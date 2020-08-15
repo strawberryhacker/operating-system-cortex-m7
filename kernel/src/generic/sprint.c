@@ -106,11 +106,7 @@ uint16_t print_to_buffer_va(char* buffer, const char* data, va_list obj) {
 					break;
 				}
 				/* Binary formatting */
-				case 'b' : {
-					*dest_ptr++ = '0';
-					*dest_ptr++ = 'b';
-					size += 2;
-					
+				case 'b' : {					
 					uint32_t fmt_bin = (uint32_t)va_arg(obj, int);
 					for (uint8_t i = opt_fmt; i --> 0;) {
 						/* Check if the bit is set */

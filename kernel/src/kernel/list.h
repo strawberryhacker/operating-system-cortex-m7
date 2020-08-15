@@ -43,6 +43,13 @@ static inline void list_init(struct list_node* list)
     list->next = list;
 }
 
+static inline void list_node_init(struct list_node* list)
+{
+    /* TODO: add MPU protected address, issue #50 */
+    list->next = NULL;
+    list->prev = NULL;
+}
+
 /*
  * Inserts a list node between two consecutive entries
  */
@@ -87,6 +94,7 @@ static inline void list_delete_node(struct list_node* node)
 {
     _list_delete(node->prev, node->next);
 
+    /* TODO: add MPU protected address, issue #50 */
     node->next = NULL;
     node->prev = NULL;
 }
@@ -96,7 +104,7 @@ static inline void list_delete_node(struct list_node* node)
  */
 static inline void list_delete_first(struct list_node* list)
 {
-    if (list->next == list->prev) {
+    if (list->next == list) {
         return;
     }
     list_delete_node(list->next);
@@ -107,7 +115,7 @@ static inline void list_delete_first(struct list_node* list)
  */
 static inline void list_delete_last(struct list_node* list)
 {
-    if (list->next == list->prev) {
+    if (list->next == list) {
         return;
     }
     list_delete_node(list->prev);

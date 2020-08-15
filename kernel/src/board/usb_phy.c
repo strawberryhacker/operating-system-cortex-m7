@@ -21,15 +21,12 @@ struct usbhc host_controller;
 void usb_phy_init(void)
 {
     peripheral_clock_enable(34);
-    
-    usbhw_unfreeze_clock();
-    usbhw_set_mode(USB_HOST);
-    usbhw_enable();
+    usbhc_early_init();
 
     /* Initialize the USB main clock */
     upll_init(UPLL_x40);
 
-    if (usbhw_clock_usable() == 0) {
+    if (usbhc_clock_usable() == 0) {
         panic("USB clock not usable");
     }
 

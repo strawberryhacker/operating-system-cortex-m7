@@ -17,7 +17,7 @@ void root_hub_event(struct usbhc* hc, enum root_hub_event event)
 {
     if (event == RH_EVENT_CONNECTION) {
         printl("USB core - connection");
-        usbhw_send_reset(); // change this
+        usbhc_send_reset(); // change this
 
     } else if (event == RH_EVENT_DISCONNECTION) {
         printl("USB core - disconnection");
@@ -36,7 +36,7 @@ void root_hub_event(struct usbhc* hc, enum root_hub_event event)
             .token = PIPE_TOKEN_SETUP,
             .type = PIPE_TYPE_CTRL
         };
-        usbhc_pipe_allocate(&hc->pipe_base[0], &cfg);
+        usbhc_alloc_pipe(&hc->pipe_base[0], &cfg);
         usbhc_set_address(&hc->pipe_base[0], 0);
         /* Start enumeration */
         u8 setup[8] = {
