@@ -49,6 +49,7 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - Add thread safety
 - Support mamory fault cleanup from program testing
 - Dynamic MPU regions in case of thread failure
+- C (my own language) compiler
 
 Everything will be completely bare metal - no libraries - literally
 
