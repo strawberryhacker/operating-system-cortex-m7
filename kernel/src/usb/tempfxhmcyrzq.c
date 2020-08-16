@@ -1,1 +1,0 @@
- print("Size: %d\n", setup->wLength);

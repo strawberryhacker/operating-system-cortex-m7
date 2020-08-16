@@ -96,6 +96,7 @@ net-y += /src/net/ip.c
 
 # USB source files
 usb-y += /src/usb/usb.c
+usb-y += /src/usb/usb_debug.c
 
 # Memory source files
 mm-y += /src/mm/mm.c

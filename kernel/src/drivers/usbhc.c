@@ -31,6 +31,8 @@ static void usbhc_end_urb(struct urb* urb, struct usb_pipe* pipe,
     enum urb_status status);
 
 /* Root-hub event handlers */
+static void usbhc_handle_root_hub_connect(u32 isr, struct usbhc* hc);
+static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* hc);
 
 /* Pipe event handlers */
 static void usbhc_handle_setup_sent(struct usb_pipe* pipe);
@@ -257,12 +259,15 @@ static void usbhc_start_urb(struct urb* urb, struct usb_pipe* pipe)
 static void usbhc_end_urb(struct urb* urb, struct usb_pipe* pipe,
     enum urb_status status)
 {
+    /*
+     * Delting the URB from the URB queue must happend before the callback, in
+     * case the caller is using the same URB to enqueue a new request
+     */
+    list_delete_node(&urb->node);
+
     /* Update status and perform callback */
     urb->status = status;
     urb->callback(urb);
-
-    /* Delete the URB from the list */
-    list_delete_node(&urb->node);
 
     /* Check if we can start another transfer directly */
     if (pipe->urb_list.next != &pipe->urb_list) {
@@ -307,7 +312,7 @@ static void usbhc_handle_setup_sent(struct usb_pipe* pipe)
     }
     /* Clear the SETUP sent interrupt flag */
     usbhw_pipe_clear_status(pipe->number, USBHW_TXSETUP);
-    print("Setup is sent");
+    printl("Setup is sent");
 
     /* Firgure out whether to perform an SETUP IN or a SETUP OUT traansaction */   
     struct urb* curr_urb = list_get_entry(pipe->urb_list.next, struct urb, node);
@@ -336,7 +341,7 @@ static void usbhc_handle_receive_in(struct usb_pipe* pipe, u32 isr)
     
     if (isr & USBHW_SHORTPKT) {
         /* This is a short packet and marks the end of the data stage */
-        print("Short packet\n");
+        printl("(short packet)");
         if (urb->setup_buffer[0] & USB_REQ_TYPE_HOST_TO_DEVICE) {
             pipe->state = PIPE_STATE_ZLP_IN;
         } else {
@@ -359,6 +364,35 @@ static void usbhc_handle_transmit_out(struct usb_pipe* pipe)
     }
 }
 
+static void usbhc_handle_root_hub_connect(u32 isr, struct usbhc* hc)
+{
+    /* Clear flags and disable interrupt on connect*/
+    usbhw_global_clear_status(USBHW_CONN);
+    usbhw_global_disable_interrupt(USBHW_CONN);
+
+    /* Listen for disconnection, reset sent and SOF */
+    usbhw_global_clear_status(USBHW_RST | USBHW_DCONN | USBHW_SOF);
+    usbhw_global_enable_interrupt(USBHW_RST | USBHW_DCONN | USBHW_SOF);
+
+    /* Callback to upper layer i.e. USB host core */
+    hc->root_hub_callback(hc, RH_EVENT_CONNECTION);
+}
+
+static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* hc)
+{
+    usbhw_global_clear_status(USBHW_RST);
+    usbhw_global_disable_interrupt(USBHW_RST);
+
+    /* Read the device speed status */
+    enum usb_device_speed speed = usbhw_get_device_speed();
+
+    if (speed == USB_DEVICE_FS) {
+        print("Full speed device connected\n");
+    }
+
+    hc->root_hub_callback(hc, RH_EVENT_RESET_SENT);
+}
+
 /*
  * This functions handles all root-hub changes, including connection, dis-
  * connection, wakeup etc. This will perform the necessary changes to the 
@@ -370,16 +404,7 @@ static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc)
     print("Root hub ISR => %32b\n", isr);
     /* Check for device connection */
     if (isr & USBHW_CONN) {
-        /* Clear flags and disable interrupt on connect*/
-        usbhw_global_clear_status(USBHW_CONN);
-        usbhw_global_disable_interrupt(USBHW_CONN);
-
-        /* Listen for disconnection, reset sent and SOF */
-        usbhw_global_clear_status(USBHW_RST | USBHW_DCONN | USBHW_SOF);
-        usbhw_global_enable_interrupt(USBHW_RST | USBHW_DCONN | USBHW_SOF);
-
-        /* Callback to upper layer i.e. USB host core */
-        hc->root_hub_callback(hc, RH_EVENT_CONNECTION);
+        usbhc_handle_root_hub_connect(isr, hc);
     }
 
     /* Check for a wakeup interrupt */
@@ -390,17 +415,7 @@ static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc)
 
     /* Reset has been sent on the port */
     if (isr & USBHW_RST) {
-        usbhw_global_clear_status(USBHW_RST);
-        usbhw_global_disable_interrupt(USBHW_RST);
-
-        /* Read the device speed status */
-        enum usb_device_speed speed = usbhw_get_device_speed();
-
-        if (speed == USB_DEVICE_FS) {
-            print("Full speed device connected\n");
-        }
-
-        hc->root_hub_callback(hc, RH_EVENT_RESET_SENT);
+        usbhc_handle_root_hub_reset(isr, hc);
     }
 }
 
@@ -420,7 +435,7 @@ static void usbhc_pipe_exception(u32 isr, struct usbhc* hc)
 
     u32 pipe_isr = usbhw_pipe_get_status(pipe_number);
     u32 pipe_imr = usbhw_pipe_get_interrupt_mask(pipe_number);
-    print("Pipe status => %32b\n", pipe_isr);
+    //print("Pipe status => %32b\n", pipe_isr);
 
     struct usb_pipe* pipe = &hc->pipe_base[pipe_number];
     

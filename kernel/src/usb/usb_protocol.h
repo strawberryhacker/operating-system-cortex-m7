@@ -46,24 +46,30 @@
 #define USB_REQ_SYNC_FRAME        0x12
 
 /* Descriptor type */
-#define USB_DESC_DEVICE           0x0001
-#define USB_DESC_CONFIGURATION    0x0002
-#define USB_DESC_STRING           0x0003
-#define USB_DESC_INTERFACE        0x0004
-#define USB_DESC_ENDPOINT         0x0005
-#define USB_DESC_DEVICE_QUALIFIER 0x0006
-#define USB_DESC_SPEED_CONFIG     0x0007
-#define USB_DESC_INTERFACE_POWER  0x0008
+#define USB_DESC_DEVICE           0x01
+#define USB_DESC_CONFIGURATION    0x02
+#define USB_DESC_STRING           0x03
+#define USB_DESC_INTERFACE        0x04
+#define USB_DESC_ENDPOINT         0x05
+#define USB_DESC_DEVICE_QUALIFIER 0x06
+#define USB_DESC_SPEED_CONFIG     0x07
+#define USB_DESC_INTERFACE_POWER  0x08
 
 
 /*
  * Structure describing the SETUP packet sent first in ALL control
  * transfers. This takes up eigth bytes.
  */
-struct __attribute__((__packed__)) usb_setup {
+struct __attribute__((__packed__)) usb_setup_desc {
     u8 bmRequestType;
     u8 bRequest;
-    u16 wValue;
+    union __attribute__((packed)) {
+        u16 wValue;
+        struct __attribute__((packed)) {
+            u8 bDescriptorIndex;
+            u8 bDescriptorType;
+        };
+    };
     u16 wIndex;
     u16 wLength;
 };

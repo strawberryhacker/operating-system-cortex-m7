@@ -2,7 +2,10 @@
 
 #include "usart.h"
 
-void usart_init(usart_reg* reg, const struct usart_desc* desc) {
+void 
+
+
+usart_init(usart_reg* reg, const struct usart_desc* desc) {
     /* Disable and reset transmitter and receiver */
     reg->CR = (1 << 5) | (1 << 7) | (1 << 2) | (1 << 3);
 
@@ -12,7 +15,7 @@ void usart_init(usart_reg* reg, const struct usart_desc* desc) {
     reg->MR = (1 << 20) | (desc->data_bits << 6) | (desc->stop_bits << 12) |
         (desc->parity << 9);
     
-    /* Update the buad rate */
+    /* Update the baud rate */
     reg->BRGR = (u16)(150000000/(16 * desc->buad_rate));
 
     /* Enable transmitter and receiver */

@@ -92,8 +92,13 @@ struct urb {
     /* For error and status reporting */
     enum urb_status status;
 
-    /* URB complete callback */
+    /* 
+     * URB complete callback. The context field allows the user to add in a 
+     * context for the callback. This has nothing to do with the callback, but
+     * can be read directly from the struct
+     */
     void (*callback)(struct urb*);
+    void* context;
 
     /* URB queue node */
     struct list_node node;

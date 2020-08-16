@@ -7,8 +7,11 @@
 #include "memory.h"
 #include "bmalloc.h"
 #include "thread.h"
+#include "usb_debug.h"
 
-static struct usb_setup setup;
+/*  */
+
+static struct usb_setup_desc setup;
 static u8 transfer_buffer[512];
 
 struct usb_core* private_core;
@@ -38,11 +41,14 @@ static void usb_get_dev_desc(struct usbhc* hc)
 {
     struct urb* urb = usbhc_alloc_urb();
 
-    setup.bmRequestType = USB_REQ_TYPE_DEVICE_TO_HOST;
-    setup.bRequest = USB_REQ_GET_DESCRIPTOR;
-    setup.wIndex = 0;
-    setup.wLength = 18;
-    setup.wValue = 1; /* Device is number 1 */
+    setup.bmRequestType    = USB_REQ_TYPE_DEVICE_TO_HOST;
+    setup.bRequest         = USB_REQ_GET_DESCRIPTOR;
+    setup.wIndex           = 0;
+    setup.wLength          = 8;
+    setup.bDescriptorIndex = 0;
+    setup.bDescriptorType  = USB_DESC_DEVICE;
+
+    usb_debug_print_setup(&setup);
 
     usbhc_fill_control_urb(urb, (u8 *)&setup, transfer_buffer, 512, 
         &complete_callback, "Hello");
@@ -62,6 +68,8 @@ static void usc_enumerate(void* args)
                 print("Setting address\n");
                 while (1);
                 break;
+            default:
+                break;
         }
         thread_sleep(10);
     }
@@ -70,9 +78,13 @@ static void usc_enumerate(void* args)
 static void complete_callback(struct urb* urb)
 {
     printl("URB control tranfer complete");
-    struct usb_setup* setup = (struct usb_setup *)urb->setup_buffer;
+    struct usb_setup_desc* setup = (struct usb_setup_desc *)urb->setup_buffer;
 
     print("Size: %d\n", setup->wLength);
+
+    for (u8 i = 0; i < 8; i++) {
+        print("Desc: %1h\n", urb->transfer_buffer[i]);
+    }
 
     struct usb_dev_desc* dev = (struct usb_dev_desc *)urb->transfer_buffer;
     print("bLength: %d\n", dev->bLength);
