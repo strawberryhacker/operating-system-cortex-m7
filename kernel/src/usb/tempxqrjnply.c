@@ -104,7 +104,7 @@ void usb_debug_print_setup(struct usb_setup_desc* desc)
 void usb_debug_print_ep_desc(struct usb_ep_desc* desc)
 {
     print("Endpoint descriptor => ");
-    print("address:       %8b\n", desc->bEndpointAddress);
+    print("address:   %d\n", desc->bEndpointAddress);
     print("\t\t\tattributes:   %8b\n", desc->bmAttributes);
     print("\t\t\tmax pkt size: %d\n", desc->wMaxPacketSize);
     print("\t\t\tinterval:     %d\n", desc->bInterval);

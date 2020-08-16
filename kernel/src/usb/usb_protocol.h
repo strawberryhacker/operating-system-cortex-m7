@@ -18,8 +18,8 @@
 /*
  * Defines the bitmask fields in the SETUP packet request type
  */
-#define USB_REQ_TYPE_HOST_TO_DEVICE 0x00
-#define USB_REQ_TYPE_DEVICE_TO_HOST 0x80
+#define USB_HOST_TO_DEVICE 0x00
+#define USB_DEVICE_TO_HOST 0x80
 
 #define USB_REQ_TYPE_STANDARD       0x00
 #define USB_REQ_TYPE_CLASS          0x20

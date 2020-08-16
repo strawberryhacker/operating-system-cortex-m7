@@ -8,4 +8,6 @@
 
 void usb_debug_print_setup(struct usb_setup_desc* desc);
 
+void usb_debug_print_ep_desc(struct usb_ep_desc* desc);
+
 #endif

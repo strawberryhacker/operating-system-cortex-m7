@@ -33,12 +33,10 @@ void usb_phy_init(void)
 
     /* Setup the USB physical layer */
     usbhc_init(&host_controller, usb_pipes, USB_PIPES);
-
+    
     /* Enable NVIC */
     nvic_enable(34);
     nvic_set_prioriy(34, NVIC_PRI_3);
-
-    print("Start => %4h\n", usb_pipes);
 
     usb_init(&usb_core, &host_controller);
 }

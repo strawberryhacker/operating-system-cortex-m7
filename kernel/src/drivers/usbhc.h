@@ -86,8 +86,14 @@ struct urb {
 
     /* Buffer for IN and OUT requests */
     u8* transfer_buffer;
+
+    /* Contains the maxmum size of the buffer */
     u32 buffer_lenght;
-    u32 buffer_count; /* Maybe add the current recieved size */
+
+    u32 block_count;
+    u32 transfer_length;
+
+    u32 receive_length;
 
     /* For error and status reporting */
     enum urb_status status;
@@ -184,7 +190,8 @@ u8 usbhc_cancel_urb(struct urb* urb, struct usb_pipe* pipe);
 void usbhc_submit_urb(struct urb* urb, struct usb_pipe* pipe);
 
 void usbhc_fill_control_urb(struct urb* urb, u8* setup, u8* transfer_buffer,
-    u32 buffer_lenght, void (*callback)(struct urb*), const char* name);
+    u32 buffer_lenght, void (*callback)(struct urb*), u32 transfer_length,
+    const char* name);
     
 void print_urb_list(struct usb_pipe* pipe);
 
