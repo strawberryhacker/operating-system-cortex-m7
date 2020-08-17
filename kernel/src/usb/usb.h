@@ -7,6 +7,10 @@
 #include "usbhc.h"
 #include "usb_protocol.h"
 
+/*
+ * This will hold all the states the USB host can have during enumeration. Some
+ * states is deviced up into substates, even though they do the same thing
+ */
 enum usb_enum_state {
     USB_ENUM_IDLE,
     USB_ENUM_GET_EP0_SIZE,
@@ -16,12 +20,9 @@ enum usb_enum_state {
     USB_ENUM_GET_DESCRIPTORS
 };
 
-/*
- * This 
- */
 struct usb_endpoint {
     struct usb_ep_desc desc;
-    struct usbhc* hc;
+    struct usbhc* usbhc;
     struct usb_device* device; 
 };
 
@@ -70,8 +71,8 @@ struct usb_device {
 /*
  * A USB driver is linked to an interface, NOT a device. This will contain
  * fields which all drivers must implement. Note that only callbacks for root
- * hub and bus changes are defined. The drivers has to monitor all the transfers
- * using dynamic URB callbacks
+ * hub changes and bus changes are defined. The drivers has to monitor the
+ * transfers separately using dynamic URB callbacks
  */
 struct usb_driver {
     const char* name;
@@ -90,7 +91,7 @@ struct usb_core {
     struct usb_device* enum_device;
 
     /* Pointer to the USB host controller */
-    struct usbhc* hc;
+    struct usbhc* usbhc;
 
     /* Pointer to the control pipe */
     struct usb_pipe* pipe0;
@@ -100,6 +101,6 @@ struct usb_core {
     u16 device_addr_bm;
 };
 
-void usb_init(struct usb_core* core, struct usbhc* hc);
+void usb_init(struct usb_core* usbc, struct usbhc* usbhc);
 
 #endif

@@ -19,6 +19,7 @@
 #include "fpu.h"
 #include "trand.h"
 #include "prand.h"
+#include "usb_host.h"
 
 void kernel_entry(void) {
     /* Disable the watchdog timer */
@@ -73,9 +74,13 @@ void kernel_entry(void) {
 	/* Initialize the dynamic memory core */
 	mm_init();
 
+	/* Setup true random and psudo random */
 	trand_init();
 	prand_init();
 	
 	/* Reenable interrupts */
 	cpsie_i();
+
+	/* Start up the USB host core */
+	usb_host_init();
 }

@@ -6,33 +6,16 @@
 #include "thread.h"
 #include "print.h"
 #include "syscall.h"
-#include "fat32.h"
-#include "programming.h"
-#include "panic.h"
-#include "ringbuffer.h"
-#include "usbhc.h"
-#include "usb_phy.h"
-#include "gpio.h"
-#include "memory.h"
-#include "list.h"
-#include "umalloc_benchmark.h"
-#include "bmalloc_benchmark.h"
+#include "fpi.h"
+
 
 #include <stddef.h>
 
-extern struct usb_pipe usb_pipes[USB_PIPES];
-
-struct name {
-	char name[8];
-	struct list_node node;
-};
-
-void p(struct list_node* list)
+static void print_thread(void* args)
 {
-	struct list_node* node;
-	list_iterate(node, list) {
-		struct name* name = list_get_entry(node, struct name, node);
-		print("Node: %s\n", name->name);
+	while (1) {
+		//print("SOF\n");
+		syscall_thread_sleep(500);
 	}
 }
 
@@ -50,9 +33,17 @@ int main(void)
 		.code_addr  = 0
 	};
 
-	new_thread(&fpi_info);
-	
-	usb_phy_init();
+	struct thread_info print_info = {
+		.name       = "Info",
+		.stack_size = 256,
+		.thread     = print_thread,
+		.class      = REAL_TIME,
+		.arg        = NULL,
+		.code_addr  = 0
+	};
 
+	new_thread(&fpi_info);
+	new_thread(&print_info);
+	
 	scheduler_start();
 }

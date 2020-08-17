@@ -34,7 +34,7 @@ enum root_hub_event {
 enum pipe_state {
     PIPE_STATE_DISABLED,
     PIPE_STATE_IDLE,
-    PIPE_STATE_SETUP,
+    PIPE_STATE_CTRL_OUT,
     PIPE_STATE_SETUP_IN,
     PIPE_STATE_SETUP_OUT,
     PIPE_STATE_ZLP_IN,
@@ -71,27 +71,32 @@ struct pipe_cfg {
 };
 
 /*
- * USB request block. The entire data stream from the upper layers to the USB 
- * ohost controller happends trough URBs. A URB will contain all nessecary dat
- * to perform any USB transfer and deliver the status back.
+ * Main USB request block (URB) structure. A URB will contain all nessecary data
+ * to perform any USB transfer and deliver the status back. Every transfer on
+ * the USB bus will be done through these blocks. They are exposed both to the 
+ * USB host core (enumeration) as well as the USB drivers. 
  */
 struct urb {
+    /* URB queue node */
+    struct list_node node;
+
     char name[16];
 
-    /* Transfer flags */
+    /* Transfer flags indicating what transfer to perform */
     u32 flags;
 
     /* Buffer for setup data */
     u8* setup_buffer;
 
-    /* Buffer for IN and OUT requests */
+    /* Buffer and transfer length for IN and OUT requests */
     u8* transfer_buffer;
+    u32 transfer_length;
 
     /* Contains the maxmum size of the buffer */
     u32 buffer_lenght;
 
     u32 block_count;
-    u32 transfer_length;
+    
 
     u32 receive_length;
 
@@ -101,13 +106,10 @@ struct urb {
     /* 
      * URB complete callback. The context field allows the user to add in a 
      * context for the callback. This has nothing to do with the callback, but
-     * can be read directly from the struct
+     * can be read directly from the structure in the 
      */
     void (*callback)(struct urb*);
     void* context;
-
-    /* URB queue node */
-    struct list_node node;
 };
 
 /*
@@ -164,16 +166,16 @@ static inline u16 usb_load_be16(u8* addr)
  * The normal intit functions will setup the host controller 
  */
 void usbhc_early_init(void);
-void usbhc_init(struct usbhc* hc, struct usb_pipe* pipe, u32 pipe_count);
+void usbhc_init(struct usbhc* usbhc, struct usb_pipe* pipe, u32 pipe_count);
 
 /* Control */
 u8 usbhc_clock_usable(void);
 void usbhc_send_reset(void);
 
-void usbhc_add_root_hub_callback(struct usbhc* hc,
+void usbhc_add_root_hub_callback(struct usbhc* usbhc,
     void (*callback)(struct usbhc* , enum root_hub_event));
 
-void usbhc_add_sof_callback(struct usbhc* hc, void (*callback)(struct usbhc*));
+void usbhc_add_sof_callback(struct usbhc* usbhc, void (*callback)(struct usbhc*));
 
 u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_cfg* cfg);
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr);

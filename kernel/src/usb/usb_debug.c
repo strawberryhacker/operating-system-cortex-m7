@@ -1,6 +1,7 @@
 /* Copyright (C) StrawberryHacker */
 
 #include "usb_debug.h"
+#include "print.h"
 
 /* String representation of the different recipient fields */
 static const char* usb_debug_direction[] = {

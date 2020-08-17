@@ -1,7 +1,7 @@
 /* Copyright (C) StrawberryHacker */
 
-#ifndef PROGRAMMING_H
-#define PROGRAMMING_H
+#ifndef FPI_H
+#define FPI_H
 
 #include "types.h"
 

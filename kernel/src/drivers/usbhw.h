@@ -608,4 +608,9 @@ static inline u32 usbhw_pipe_get_error_reg(u8 pipe)
     return USBHC->HSTPIPERR[pipe];
 }
 
+static inline void usbhw_pipe_set_error_reg(u8 pipe, u32 reg)
+{
+    USBHC->HSTPIPERR[pipe] = reg;
+}
+
 #endif

@@ -10,6 +10,6 @@
 /*
  * Initializes the USB physical layer
  */
-void usb_phy_init(void);
+void usb_host_init(void);
 
 #endif

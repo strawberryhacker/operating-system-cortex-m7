@@ -1,6 +1,6 @@
 /* Copyright (C) StrawberryHacker */
 
-#include "usb_phy.h"
+#include "usb_host.h"
 #include "usbhc.h"
 #include "nvic.h"
 #include "clock.h"
@@ -19,7 +19,7 @@ struct usb_core usb_core;
 /*
  * Initializes the USB physical layer
  */
-void usb_phy_init(void)
+void usb_host_init(void)
 {
     peripheral_clock_enable(34);
     usbhc_early_init();

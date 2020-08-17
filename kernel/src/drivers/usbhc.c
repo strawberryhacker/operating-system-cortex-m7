@@ -14,8 +14,8 @@
 #include <stddef.h>
 
 static void usbhc_setup_in(struct usb_pipe* pipe);
-static u8 usbhc_send_setup(struct usb_pipe* pipe, u8* setup);
-static void usbhc_send_zlp(struct usb_pipe* pipe);
+static u8 usbhc_setup_out(struct usb_pipe* pipe, u8* setup);
+static void usbhc_control_status_out(struct usb_pipe* pipe);
 
 /* Read and write packages from the FIFO */
 static void usbhc_in(struct usb_pipe* pipe, struct urb* urb);
@@ -31,8 +31,8 @@ static void usbhc_end_urb(struct urb* urb, struct usb_pipe* pipe,
     enum urb_status status);
 
 /* Root-hub event handlers */
-static void usbhc_handle_root_hub_connect(u32 isr, struct usbhc* hc);
-static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* hc);
+static void usbhc_handle_root_hub_connect(u32 isr, struct usbhc* usbhc);
+static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* usbhc);
 
 /* Pipe event handlers */
 static void usbhc_handle_setup_sent(struct usb_pipe* pipe);
@@ -40,9 +40,24 @@ static void usbhc_handle_receive_in(struct usb_pipe* pipe, u32 isr);
 static void usbhc_handle_transmit_out(struct usb_pipe* pipe);
 
 /* Common interrupt handlers derived form the main interrupt handler */
-static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc);
-static void usbhc_pipe_exception(u32 isr, struct usbhc* hc);
-static void usbhc_sof_exception(u32 isr, struct usbhc* hc);
+static inline void usbhc_root_hub_exception(u32 isr, struct usbhc* usbhc);
+static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc);
+static inline void usbhc_sof_exception(u32 isr, struct usbhc* usbhc);
+
+/* String representation of the different pipe states */
+static const char* pipe_states[] = {
+    [0x00] = "DISABLED",
+    [0x01] = "IDLE",
+    [0x02] = "SETUP",
+    [0x03] = "SETUP IN",
+    [0x04] = "SETUP OUT",
+    [0x05] = "ZLP IN",
+    [0x06] = "ZLP OUT",
+    [0x07] = "IN",
+    [0x08] = "OUT",
+    [0x09] = "STATUS",
+    [0x0A] = "ERROR"
+};
 
 /*
  * The USB host controller uses one main structure to manage internal state 
@@ -93,18 +108,18 @@ static void usbhc_pipe_soft_reset(struct usb_pipe* pipe)
  * Default callback for root hub changes passed to USB host core. If no 
  * callback is assigned, this function will run. 
  */
-void default_root_hub_callback(struct usbhc* hc, enum root_hub_event event)
+void default_root_hub_callback(struct usbhc* usbhc, enum root_hub_event event)
 {
-    (void)hc;
+    (void)usbhc;
     (void)event;
 }
 
 /*
  * Default callback for SOF
  */
-void default_sof_callback(struct usbhc* hc)
+void default_sof_callback(struct usbhc* usbhc)
 {
-    (void)hc;
+    (void)usbhc;
 }
 
 /*
@@ -122,7 +137,7 @@ void usbhc_early_init(void)
 /*
  * Initializes the USB hardware
  */
-void usbhc_init(struct usbhc* hc, struct usb_pipe* pipe, u32 pipe_count)
+void usbhc_init(struct usbhc* usbhc, struct usb_pipe* pipe, u32 pipe_count)
 {
     /* Disable all global interrupts */
     usbhw_global_disable_interrupt(0xFFFFFFFF);
@@ -140,12 +155,12 @@ void usbhc_init(struct usbhc* hc, struct usb_pipe* pipe, u32 pipe_count)
         URB_MAX_COUNT, URB_ALLOCATOR_BANK);
 
     /* Link the pipes to the USB host controller */
-    hc->pipe_base = pipe;
-    hc->pipe_count = pipe_count;
-    hc->root_hub_callback = &default_root_hub_callback;
+    usbhc->pipe_base = pipe;
+    usbhc->pipe_count = pipe_count;
+    usbhc->root_hub_callback = &default_root_hub_callback;
 
     /* Assign the private USBHC pointer */
-    usbhc_private = hc;
+    usbhc_private = usbhc;
 
     /*
      * Initialize the pipes. The pipes are disabled and de-allocated after reset
@@ -197,12 +212,13 @@ static void usbhc_out(struct usb_pipe* pipe, struct urb* urb)
  * is 8 bytes. This function will not return eny status. This will 
  * entirly be handled by the interrupt.
  */
-static u8 usbhc_send_setup(struct usb_pipe* pipe, u8* setup)
+static u8 usbhc_setup_out(struct usb_pipe* pipe, u8* setup)
 {
     u8 pipe_number = pipe->number;
     if (usbhw_pipe_get_byte_count(pipe_number)) {
         return 0;
     }
+    print("=> => pipe status => %32b\n", usbhw_pipe_get_status(pipe_number));
     /* Clear the transmitted SETUP packet bit */
     usbhw_pipe_clear_status(pipe_number, USBHW_TXSETUP);
     usbhw_pipe_set_token(pipe_number, PIPE_TOKEN_SETUP);
@@ -221,7 +237,7 @@ static u8 usbhc_send_setup(struct usb_pipe* pipe, u8* setup)
     return 1;
 }
 
-static void usbhc_send_zlp(struct usb_pipe* pipe)
+static void usbhc_control_status_out(struct usb_pipe* pipe)
 {
     print("Sending ZLP out\n");
     u32 fifo_count = usbhw_pipe_get_byte_count(pipe->number);
@@ -239,7 +255,7 @@ static void usbhc_setup_in(struct usb_pipe* pipe)
     usbhw_pipe_clear_status(pipe->number, USBHW_RXIN | USBHW_SHORTPKT);
     usbhw_pipe_in_request_defined(pipe->number, 1);
     usbhw_pipe_set_token(pipe->number, PIPE_TOKEN_IN);
-    usbhw_pipe_enable_interrupt(pipe->number, USBHW_RXIN | USBHW_SHORTPKT);
+    usbhw_pipe_enable_interrupt(pipe->number, USBHW_RXIN);
     usbhw_pipe_disable_interrupt(pipe->number, USBHW_FIFO_CTRL | USBHW_PFREEZE);
 }
 
@@ -248,17 +264,19 @@ static void usbhc_setup_in(struct usb_pipe* pipe)
  */
 static void usbhc_start_urb(struct urb* urb, struct usb_pipe* pipe)
 {
-    print("Starting URB\n");
+    print("\n\nStarting URB => %s => pipe state: %s\n", urb->name, pipe_states[pipe->state]);
     if (urb->flags & URB_FLAGS_SETUP) {
-        print("Setup transaction\n");
-        usbhc_send_setup(pipe, urb->setup_buffer);
-        pipe->state = PIPE_STATE_SETUP;
+        pipe->state = PIPE_STATE_CTRL_OUT;
+        usbhc_setup_out(pipe, urb->setup_buffer);
     }
 }
 
 static void usbhc_end_urb(struct urb* urb, struct usb_pipe* pipe,
     enum urb_status status)
 {
+    /* Reset the state of the pipe */
+    pipe->state = PIPE_STATE_IDLE;
+
     /*
      * Delting the URB from the URB queue must happend before the callback, in
      * case the caller is using the same URB to enqueue a new request
@@ -270,10 +288,11 @@ static void usbhc_end_urb(struct urb* urb, struct usb_pipe* pipe,
     urb->callback(urb);
 
     /* Check if we can start another transfer directly */
-    if (pipe->urb_list.next != &pipe->urb_list) {
-        print_urb_list(pipe);
+    if ((pipe->urb_list.next != &pipe->urb_list) && pipe->state == PIPE_STATE_IDLE) {
         struct urb* urb = list_get_entry(pipe->urb_list.next, struct urb, node);
-        usbhc_start_urb(urb, pipe); 
+        usbhc_start_urb(urb, pipe);
+    } else {
+        print("Cannot start next trasfer directly\n");
     }
 }
 
@@ -307,24 +326,24 @@ static inline u32 usbhc_pick_interrupted_pipe(u32 pipe_mask)
 
 static void usbhc_handle_setup_sent(struct usb_pipe* pipe)
 {
-    if (pipe->state != PIPE_STATE_SETUP) {
+    if (pipe->state != PIPE_STATE_CTRL_OUT) {
         panic("State error");
     }
     /* Clear the SETUP sent interrupt flag */
     usbhw_pipe_clear_status(pipe->number, USBHW_TXSETUP);
     printl("Setup is sent");
 
-    /* Firgure out whether to perform an SETUP IN or a SETUP OUT traansaction */   
-    struct urb* curr_urb = list_get_entry(pipe->urb_list.next, struct urb, node);
-    u8 req_type = curr_urb->setup_buffer[0];
-    if (curr_urb->transfer_length) {
+    /* Firgure out wether to perform an SETUP IN or a SETUP OUT traansaction */   
+    struct urb* urb = list_get_entry(pipe->urb_list.next, struct urb, node);
+    u8 req_type = urb->setup_buffer[0];
+
+    if (urb->transfer_length) {
         if ((req_type & USB_DEVICE_TO_HOST) == USB_DEVICE_TO_HOST) {
-            printl("Device to host");
             pipe->state = PIPE_STATE_SETUP_IN;
             usbhc_setup_in(pipe);
         } else {
             pipe->state = PIPE_STATE_SETUP_OUT;
-            usbhc_out(pipe, curr_urb);
+            usbhc_out(pipe, urb);
         }
     } else {
         /* No data stage */
@@ -332,7 +351,7 @@ static void usbhc_handle_setup_sent(struct usb_pipe* pipe)
             /* ZLP OUT stage */
             pipe->state = PIPE_STATE_ZLP_OUT;
             usbhw_pipe_disable_interrupt(pipe->number, USBHW_RXIN);
-            usbhc_send_zlp(pipe);
+            usbhc_control_status_out(pipe);
         } else {
             /* ZLP in stage */
             pipe->state = PIPE_STATE_ZLP_IN;
@@ -350,7 +369,11 @@ static void usbhc_handle_receive_in(struct usb_pipe* pipe, u32 isr)
     /* Read the data recieved using the URB only */
     usbhc_in(pipe, urb);
 
-    
+    if (pipe->state == PIPE_STATE_ZLP_IN) {
+        usbhc_end_urb(urb, pipe, URB_STATUS_OK);
+        return;
+    }
+
     if (isr & USBHW_SHORTPKT) {
         /* This is a short packet and marks the end of the data stage */
         printl("(short packet)");
@@ -360,7 +383,7 @@ static void usbhc_handle_receive_in(struct usb_pipe* pipe, u32 isr)
             /* ZLP OUT stage */
             pipe->state = PIPE_STATE_ZLP_OUT;
             usbhw_pipe_disable_interrupt(pipe->number, USBHW_RXIN);
-            usbhc_send_zlp(pipe);
+            usbhc_control_status_out(pipe);
         }
     }
 }
@@ -372,11 +395,14 @@ static void usbhc_handle_transmit_out(struct usb_pipe* pipe)
     if (pipe->state == PIPE_STATE_ZLP_OUT) {
         /* Setup transfer is done */
         struct urb* urb = list_get_entry(pipe->urb_list.next, struct urb, node);
+        printl("ZLP out done => status: %32b\n", usbhw_pipe_get_status(pipe->number));
+        usbhw_pipe_enable_interrupt(pipe->number, USBHW_PFREEZE | USBHW_FIFO_CTRL);
+        usbhw_pipe_in_request_defined(pipe->number, 1);
         usbhc_end_urb(urb, pipe, URB_STATUS_OK);
     }
 }
 
-static void usbhc_handle_root_hub_connect(u32 isr, struct usbhc* hc)
+static void usbhc_handle_root_hub_connect(u32 isr, struct usbhc* usbhc)
 {
     /* Clear flags and disable interrupt on connect*/
     usbhw_global_clear_status(USBHW_CONN);
@@ -387,10 +413,10 @@ static void usbhc_handle_root_hub_connect(u32 isr, struct usbhc* hc)
     usbhw_global_enable_interrupt(USBHW_RST | USBHW_DCONN | USBHW_SOF);
 
     /* Callback to upper layer i.e. USB host core */
-    hc->root_hub_callback(hc, RH_EVENT_CONNECTION);
+    usbhc->root_hub_callback(usbhc, RH_EVENT_CONNECTION);
 }
 
-static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* hc)
+static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* usbhc)
 {
     usbhw_global_clear_status(USBHW_RST);
     usbhw_global_disable_interrupt(USBHW_RST);
@@ -402,7 +428,7 @@ static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* hc)
         print("Full speed device connected\n");
     }
 
-    hc->root_hub_callback(hc, RH_EVENT_RESET_SENT);
+    usbhc->root_hub_callback(usbhc, RH_EVENT_RESET_SENT);
 }
 
 /*
@@ -411,12 +437,12 @@ static void usbhc_handle_root_hub_reset(u32 isr, struct usbhc* hc)
  * USB host controller interrup registers and perform callbacks to the upper
  * USB layers
  */
-static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc)
+static inline void usbhc_root_hub_exception(u32 isr, struct usbhc* usbhc)
 {
     print("Root hub ISR => %32b\n", isr);
     /* Check for device connection */
     if (isr & USBHW_CONN) {
-        usbhc_handle_root_hub_connect(isr, hc);
+        usbhc_handle_root_hub_connect(isr, usbhc);
     }
 
     /* Check for a wakeup interrupt */
@@ -427,8 +453,7 @@ static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc)
 
     /* Reset has been sent on the port */
     if (isr & USBHW_RST) {
-        print("PIPE NUMBER => %d\n", hc->pipe_base[0].number);
-        usbhc_handle_root_hub_reset(isr, hc);
+        usbhc_handle_root_hub_reset(isr, usbhc);
     }
 }
 
@@ -439,18 +464,33 @@ static void usbhc_root_hub_exception(u32 isr, struct usbhc* hc)
  * between two consecutive pipe interrupts. If not other interrupt must wait 
  * for this to complete
  */
-static void usbhc_pipe_exception(u32 isr, struct usbhc* hc)
+static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc)
 {
-    u32 pipe_mask = 0b1111111111 & (isr >> USBHW_PIPE_OFFSET);
+    /* We only handle one pipe at a time */
+    u32 pipe_mask = 0x3FF & (isr >> USBHW_PIPE_OFFSET);
     u32 pipe_number = usbhc_pick_interrupted_pipe(pipe_mask);
+
     /* Clear the global flag on the current pipe */
     usbhw_global_clear_status(1 << (pipe_number + USBHW_PIPE_OFFSET));
 
     u32 pipe_isr = usbhw_pipe_get_status(pipe_number);
     u32 pipe_imr = usbhw_pipe_get_interrupt_mask(pipe_number);
-    //print("Pipe status => %32b\n", pipe_isr);
 
-    struct usb_pipe* pipe = &hc->pipe_base[pipe_number];
+    //print("Pipe status => %32b\n", pipe_isr);
+    struct usb_pipe* pipe = &usbhc->pipe_base[pipe_number];
+
+    /* Check for any errors */
+    if (pipe_isr & USBHW_PERROR) {
+        print("Error on pipe %d => %32b\n", pipe_number, usbhw_pipe_get_error_reg(pipe_number));
+        panic("");
+        usbhw_pipe_clear_status(pipe_number, USBHW_PERROR);
+        usbhw_pipe_set_error_reg(pipe_number, 0);
+    }
+
+    /* NAKed by device */
+    if (pipe_isr & USBHW_NAKED) {
+        print("NAKed\n");
+    }
     
     /* Check for transmittet setup */
     if (pipe_isr & USBHW_TXSETUP) {
@@ -459,6 +499,11 @@ static void usbhc_pipe_exception(u32 isr, struct usbhc* hc)
     /* Check for receive IN interrupt */
     if (pipe_isr & pipe_imr & USBHW_RXIN) {
         print("Pipe excpetion => RX IN\n");
+
+        /* 
+         * The receive IN has to take in the interrupt status since its
+         * operation depends on the short packet flag
+         */
         usbhc_handle_receive_in(pipe, pipe_isr);
     }
     /* Check for transmitted out */
@@ -472,16 +517,16 @@ static void usbhc_pipe_exception(u32 isr, struct usbhc* hc)
  * This functions handles the SOF exception, manages all SOF events, and 
  * performs a callback to the upper USB layers if necessary (not micro-frame)
  */
-static void usbhc_sof_exception(u32 isr, struct usbhc* hc)
+static inline void usbhc_sof_exception(u32 isr, struct usbhc* usbhc)
 {
     /* Clear the SOF interrupt flag */
     usbhw_global_clear_status(USBHW_SOF);
 }
 
 /*
- * Main USBHC interrupt handler. This handles every interrupt related to the USB
- * on the system. This will not clear the interrupt status flags, so this has
- * to be done in the sub-routines
+ * Main USB host controller interrupt handler. This handles every interrupt
+ * related to the USB on the system. This will not clear the interrupt status
+ * flags, so this has to be done in the sub-routines
  */
 void usb_exception(void)
 {
@@ -489,7 +534,6 @@ void usb_exception(void)
 
     /* SOF interrupt */
     if (isr & 0x20) {
-        //printl("Interrupt - SOF");
         usbhc_sof_exception(isr, usbhc_private);
     }
 
@@ -506,9 +550,6 @@ void usb_exception(void)
     usbhw_global_clear_status(0xFFFFFFFF);  
 }
 
-/******************************************************************************/
-/* Public */
-
 /*
  * Allocates a pipe
  */
@@ -516,7 +557,7 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_cfg* cfg)
 {
     memory_copy(cfg, &pipe->cfg, sizeof(struct pipe_cfg));
 
-    /* Configure and allocate the pipe */
+    /* Resetting the pipe ends the eny previous transfers */
     usbhw_pipe_reset_assert(pipe->number);
     usbhw_pipe_reset_deassert(pipe->number);
 
@@ -531,13 +572,9 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_cfg* cfg)
     cfg_reg |= (cfg->token << 8);
     cfg_reg |= (cfg->size << 4);
     cfg_reg |= (cfg->banks << 2);
+    cfg_reg |= (1 << 1);
     
     usbhw_pipe_set_configuration(pipe->number, cfg_reg);
-    cfg_reg |= (1 << 1);            /* Allocate bit */
-    usbhw_pipe_set_configuration(pipe->number, cfg_reg);
-
-    print("Pipe number: %d\n", pipe->number);
-
     if (!(usbhw_pipe_get_status(pipe->number) & (1 << 18))) {
         return 0;
     }
@@ -549,6 +586,9 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_cfg* cfg)
         USBHW_PERROR | USBHW_OVERFLOW | USBHW_STALL);
 
     usbhw_global_enable_interrupt(1 << (pipe->number + USBHW_PIPE_OFFSET));
+    print("Pipe allocated => pipe %d\n", pipe->number);
+
+    pipe->state = PIPE_STATE_IDLE;
     return 1;
 }
 
@@ -564,7 +604,6 @@ struct urb* usbhc_alloc_urb(void)
         return NULL;
     }
     list_node_init(&urb->node);
-    print("Memory usage => %d\n", umalloc_get_used(&urb_allocator));
     return urb;
 }
 
@@ -580,11 +619,7 @@ void usbhc_submit_urb(struct urb* urb, struct usb_pipe* pipe)
         urb_start = 1;
     }
     list_add_last(&urb->node, &pipe->urb_list);
-
-    print_urb_list(pipe);
-
     if (urb_start) {
-        print("URB list empty. Starting new transfer\n");
         usbhc_start_urb(urb, pipe);
     }
 }
@@ -644,10 +679,10 @@ void usbhc_set_address(struct usb_pipe* pipe, u8 addr)
 /*
  * Assigns a new root hub callback to the USB host controler
  */
-void usbhc_add_root_hub_callback(struct usbhc* hc,
+void usbhc_add_root_hub_callback(struct usbhc* usbhc,
     void (*callback)(struct usbhc* , enum root_hub_event))
 {
-    hc->root_hub_callback = callback;
+    usbhc->root_hub_callback = callback;
 }
 
 /*
@@ -655,7 +690,7 @@ void usbhc_add_root_hub_callback(struct usbhc* hc,
  * be called on normal frames and not micro-frames. This is due to the overhead
  * in high-speed mode
  */
-void usbhc_add_sof_callback(struct usbhc* hc, void (*callback)(struct usbhc*))
+void usbhc_add_sof_callback(struct usbhc* usbhc, void (*callback)(struct usbhc*))
 {
-    hc->sof_callback = callback;
+    usbhc->sof_callback = callback;
 }

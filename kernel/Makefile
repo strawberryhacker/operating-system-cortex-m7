@@ -78,7 +78,7 @@ board-y += /src/board/serial.c
 board-y += /src/board/print.c
 board-y += /src/board/sd.c
 board-y += /src/board/ethernet.c
-board-y += /src/board/usb_phy.c
+board-y += /src/board/usb_host.c
 
 # Generic source files
 generic-y += /src/generic/sprint.c
@@ -89,7 +89,7 @@ generic-y += /src/generic/prand.c
 generic-y += /src/generic/ringbuffer.c
 
 # Misc source files
-misc-y += /src/misc/programming.c
+misc-y += /src/misc/fpi.c
 
 # Network source files
 net-y += /src/net/ip.c
