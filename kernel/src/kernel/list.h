@@ -121,6 +121,11 @@ static inline void list_delete_last(struct list_node* list)
     list_delete_node(list->prev);
 }
 
+static inline u8 list_is_empty(struct list_node* list)
+{
+    return (list->next == list) ? 1 : 0;
+}
+
 #define list_get_first(list) ((list)->next)
 #define list_get_last(list) ((list)->prev)
 

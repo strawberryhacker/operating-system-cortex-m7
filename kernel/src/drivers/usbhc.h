@@ -35,8 +35,6 @@ enum pipe_state {
     PIPE_STATE_DISABLED,
     PIPE_STATE_IDLE,
     PIPE_STATE_CTRL_OUT,
-    PIPE_STATE_SETUP_IN,
-    PIPE_STATE_SETUP_OUT,
     PIPE_STATE_ZLP_IN,
     PIPE_STATE_ZLP_OUT,
     PIPE_STATE_IN,
@@ -91,14 +89,10 @@ struct urb {
     /* Buffer and transfer length for IN and OUT requests */
     u8* transfer_buffer;
     u32 transfer_length;
+    u32 acctual_length;
 
-    /* Contains the maxmum size of the buffer */
-    u32 buffer_lenght;
-
-    u32 block_count;
-    
-
-    u32 receive_length;
+    /* This is the max packet size of each transfer */
+    u32 packet_size;
 
     /* For error and status reporting */
     enum urb_status status;
@@ -118,13 +112,14 @@ struct urb {
  * the transfer state. 
  */
 struct usb_pipe {
-    u8* dpram;
+    volatile u8* dpram;
     u32 number;
     struct list_node urb_list;
 
     /* The pipe state applies to any transaction */
     struct spinlock lock;
     enum pipe_state state;
+    enum pipe_type type;
 
     /* Hold the current pipe configuration */
     struct pipe_cfg cfg;
@@ -144,32 +139,16 @@ struct usbhc {
 };
 
 /*
- * Bit endian load and store
- */
-static inline void usb_store_be16(u16 value, u8* addr)
-{
-    *addr++ = (u8)(value >> 8);
-    *addr = (u8)value;
-}
-
-static inline u16 usb_load_be16(u8* addr)
-{
-    u16 value = 0;
-    value |= (*addr << 8);
-    value |= *addr;
-    return value;
-}
-
-/*
  * Initialization of the USB host controller. The early init function should be
  * called before any USB clocks are enabled. If not the result is unpredictable. 
  * The normal intit functions will setup the host controller 
  */
 void usbhc_early_init(void);
+
 void usbhc_init(struct usbhc* usbhc, struct usb_pipe* pipe, u32 pipe_count);
 
-/* Control */
 u8 usbhc_clock_usable(void);
+
 void usbhc_send_reset(void);
 
 void usbhc_add_root_hub_callback(struct usbhc* usbhc,
@@ -178,6 +157,7 @@ void usbhc_add_root_hub_callback(struct usbhc* usbhc,
 void usbhc_add_sof_callback(struct usbhc* usbhc, void (*callback)(struct usbhc*));
 
 u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_cfg* cfg);
+
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr);
 
 /*
@@ -188,12 +168,13 @@ void usbhc_set_address(struct usb_pipe* pipe, u8 addr);
  * retport back the status.
  */
 struct urb* usbhc_alloc_urb(void);
+
 u8 usbhc_cancel_urb(struct urb* urb, struct usb_pipe* pipe);
+
 void usbhc_submit_urb(struct urb* urb, struct usb_pipe* pipe);
 
 void usbhc_fill_control_urb(struct urb* urb, u8* setup, u8* transfer_buffer,
-    u32 buffer_lenght, void (*callback)(struct urb*), u32 transfer_length,
-    const char* name);
+                            void (*callback)(struct urb*), const char* name);
     
 void print_urb_list(struct usb_pipe* pipe);
 

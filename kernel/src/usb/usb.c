@@ -77,8 +77,8 @@ static void usb_enum_get_dev_desc(struct urb* urb, struct usb_core* usbc, u8 ful
     } else {
         setup.wLength = 8;
     }
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, ENUM_BUFFER_SIZE, 
-        &usb_enumerate, setup.wLength, "GET DEV");
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usb_enumerate,
+        "GET DEV");
 
     usbhc_submit_urb(urb, usbc->pipe0);
 }
@@ -91,8 +91,8 @@ static void usb_enum_set_dev_addr(struct urb* urb, struct usb_core* usbc)
     setup.wIndex        = 0;
     setup.wLength       = 0;
 
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, ENUM_BUFFER_SIZE, 
-        &usb_enumerate, 0, "SET ADDR");
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usb_enumerate,
+        "SET ADDR");
     
     usbhc_submit_urb(urb, usbc->pipe0);
 }
@@ -106,8 +106,8 @@ static void usb_enum_get_cfg_desc(struct urb* urb, struct usb_core* usbc)
     setup.wIndex           = 0;
     setup.wLength          = 9;
 
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, ENUM_BUFFER_SIZE, 
-        &usb_enumerate, 9, "GET CFG");
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usb_enumerate,
+        "GET CFG");
     
     usbhc_submit_urb(urb, usbc->pipe0);
 }
@@ -122,8 +122,8 @@ static void usb_enum_get_all_desc(struct urb* urb, struct usb_core* usbc)
     setup.wLength          = usbc->enum_device->desc_total_size;
 
     usb_debug_print_setup(&setup);
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, ENUM_BUFFER_SIZE, 
-        &usb_enumerate, setup.wLength, "GET ALL");
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usb_enumerate,
+        "GET ALL");
     
     usbhc_submit_urb(urb, usbc->pipe0);
 }
@@ -139,6 +139,8 @@ static void usb_ep0_size_done(struct urb* urb, struct usb_device* device)
     device->ep0_size = dev_desc->bMaxPacketSize;
 
     print("Max packet => %d\n", device->ep0_size);
+
+    urb->packet_size = device->ep0_size;
 
     /* Send the full device descriptor request */
     struct usb_core* usbc = (struct usb_core *)urb->context;
@@ -183,7 +185,8 @@ static void usb_address_done(struct urb* urb, struct usb_device* device)
 static void usb_desc_length_done(struct urb* urb, struct usb_device* device)
 {
     struct usb_config_desc* cfg_desc = (struct usb_config_desc *)urb->transfer_buffer;
-    if (urb->receive_length != 9) {
+    print("Bytes recieved => %d\n", urb->acctual_length);
+    if (urb->acctual_length != 9) {
         panic("Error");
     }
     device->desc_total_size = cfg_desc->wTotalLength;
@@ -331,6 +334,15 @@ void root_hub_event(struct usbhc* usbhc, enum root_hub_event event)
     }
 }
 
+static void sof_event(struct usbhc* usbhc)
+{
+    static i = 0;
+    if (++i >= 1000) {
+        i = 0;
+        print("ok\n");
+    }
+}
+
 void usb_init(struct usb_core* usbc, struct usbhc* usbhc)
 {
     usbc_priv = usbc;
@@ -344,4 +356,5 @@ void usb_init(struct usb_core* usbc, struct usbhc* usbhc)
     usbc->device_addr_bm = 1;
 
     usbhc_add_root_hub_callback(usbhc, &root_hub_event);
+    usbhc_add_sof_callback(usbhc, &sof_event);
 }
