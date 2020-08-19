@@ -599,7 +599,6 @@ static inline u32 usbhw_pipe_get_byte_count(u8 pipe)
     for (volatile u8 i = 0; i < 2; i++) {
         asm volatile ("nop");
     }
-
     return (USBHC->HSTPIPISR[pipe] >> 20) & 0x7FF;
 }
 

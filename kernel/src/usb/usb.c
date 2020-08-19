@@ -15,7 +15,7 @@ static struct usb_setup_desc setup;
 static u8 enum_buffer[ENUM_BUFFER_SIZE];
 
 /* Private USB core instance */
-struct usb_core* usbc_priv;
+struct usb_core* usbc_private;
 
 static void usb_enumerate(struct urb* urb);
 static void usb_add_device(struct usb_core* usbc);
@@ -36,28 +36,6 @@ static void usb_ep0_size_done(struct urb* urb, struct usb_device* device);
 static void usb_address_done(struct urb* urb, struct usb_device* device);
 static void usb_desc_length_done(struct urb* urb, struct usb_device* device);
 static void usb_get_all_desc_done(struct urb* urb, struct usb_device* device);
-
-/*
- * This returns a new free address. An address is dynamically assigned to a 
- * device during enumeration. If the SET_ADDRESS fails the address should still
- * be set. Only after a disconnection should the address be deleted!
- */
-static u8 usb_new_address(struct usb_core* usbc)
-{
-    u16 bitmask = usbc->device_addr_bm;
-    for (u8 i = 1; i < MAX_PIPES; i++) {
-        if ((bitmask & (1 << i)) == 0) {
-            usbc->device_addr_bm |= (1 << i);
-            return i;
-        }
-    }
-    return 0;
-}
-
-static void usb_delete_address(struct usb_core* usbc, u8 address)
-{
-    usbc->device_addr_bm &= ~(1 << address);
-}
 
 /*
  * This will take in a URB an perform a get device descriptor request. Full 
@@ -121,7 +99,6 @@ static void usb_enum_get_all_desc(struct urb* urb, struct usb_core* usbc)
     setup.wIndex           = 0;
     setup.wLength          = usbc->enum_device->desc_total_size;
 
-    usb_debug_print_setup(&setup);
     usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usb_enumerate,
         "GET ALL");
     
@@ -141,11 +118,6 @@ static void usb_ep0_size_done(struct urb* urb, struct usb_device* device)
     print("Max packet => %d\n", device->ep0_size);
 
     urb->packet_size = device->ep0_size;
-
-    /* Send the full device descriptor request */
-    struct usb_core* usbc = (struct usb_core *)urb->context;
-    usbc->enum_state = USB_ENUM_GET_DEV_DESC;
-    usb_enum_get_dev_desc(urb, usbc, 1);
 }
 
 static void usb_device_desc_done(struct urb* urb, struct usb_device* device)
@@ -158,13 +130,6 @@ static void usb_device_desc_done(struct urb* urb, struct usb_device* device)
     u8* dest = (u8 *)&device->desc;
 
     memory_copy(src, dest, size);
-
-    struct usb_core* usbc = (struct usb_core *)urb->context;
-    print("Vendor ID: %2h\n", usbc->enum_device->desc.idVendor);
-    print("Configuration: %d\n", usbc->enum_device->desc.bNumConfigurations);
-
-    usbc->enum_state = USB_ENUM_SET_ADDRESS;
-    usb_enum_set_dev_addr(urb, usbc);
 }
 
 static void usb_address_done(struct urb* urb, struct usb_device* device)
@@ -176,10 +141,6 @@ static void usb_address_done(struct urb* urb, struct usb_device* device)
     /* Update the pipe address */
     struct usb_core* usbc = (struct usb_core *)urb->context;
     usbhc_set_address(usbc->pipe0, device->address);
-
-    /* Get the entire device descriptor */
-    usbc->enum_state = USB_ENUM_GET_DESC_LENGTH;
-    usb_enum_get_cfg_desc(urb, usbc);
 }
 
 static void usb_desc_length_done(struct urb* urb, struct usb_device* device)
@@ -191,33 +152,16 @@ static void usb_desc_length_done(struct urb* urb, struct usb_device* device)
     }
     device->desc_total_size = cfg_desc->wTotalLength;
     print("Total length => %d\n", device->desc_total_size);
-
-    /* Get every descriptor */
-    struct usb_core* usbc = (struct usb_core *)urb->context;
-    usbc->enum_state = USB_ENUM_GET_DESCRIPTORS;
-    usb_enum_get_all_desc(urb, usbc);
 }
 
 static void usb_get_all_desc_done(struct urb* urb, struct usb_device* device)
 {
-    u8* desc_ptr = urb->transfer_buffer;
-    struct usb_config_desc* desc = (struct usb_config_desc *)desc_ptr;
-    desc_ptr += sizeof(struct usb_config_desc);
-
-    print("Number of interfaces => %d\n", desc->bNumInterfaces);
-    struct usb_interface_desc* if_desc = (struct usb_interface_desc *)desc_ptr;
-    desc_ptr += sizeof(struct usb_interface_desc);
-
-    print("Number of endpoints => %d\n", if_desc->bNumEndpoints);
-    print("Interface class => %1h\n", if_desc->bInterfaceClass);
-
-    struct usb_ep_desc* ep1 = (struct usb_ep_desc *)desc_ptr;
-    desc_ptr += sizeof(struct usb_ep_desc);
-    struct usb_ep_desc* ep2 = (struct usb_ep_desc *)desc_ptr;
-    desc_ptr += sizeof(struct usb_ep_desc);
-
-    usb_debug_print_ep_desc(ep1);
-    usb_debug_print_ep_desc(ep2);
+    for (u32 i = 0; i < urb->acctual_length;) {
+        print("%1h ", urb->transfer_buffer[i]);
+        if ((++i % 10) == 0) {
+            print("\n");
+        }
+    }
 }
 
 /*
@@ -238,21 +182,29 @@ static void usb_enumerate(struct urb* urb)
         case USB_ENUM_GET_EP0_SIZE : {
             printl("EP0 size done");
             usb_ep0_size_done(urb, usbc->enum_device);
+            usbc->enum_state = USB_ENUM_GET_DEV_DESC;
+            usb_enum_get_dev_desc(urb, usbc, 1);
             break;
         }
         case USB_ENUM_GET_DEV_DESC : {
             printl("Device descriptor done");
             usb_device_desc_done(urb, usbc->enum_device);
+            usbc->enum_state = USB_ENUM_SET_ADDRESS;
+            usb_enum_set_dev_addr(urb, usbc);
             break;
         }
         case USB_ENUM_SET_ADDRESS : {
             printl("Address setup done");
             usb_address_done(urb, usbc->enum_device);
+            usbc->enum_state = USB_ENUM_GET_DESC_LENGTH;
+            usb_enum_get_cfg_desc(urb, usbc);
             break;
         }
         case USB_ENUM_GET_DESC_LENGTH : {
             print("Configuration decriptor done");
             usb_desc_length_done(urb, usbc->enum_device);
+            usbc->enum_state = USB_ENUM_GET_DESCRIPTORS;
+            usb_enum_get_all_desc(urb, usbc);
             break;
         }
         case USB_ENUM_GET_DESCRIPTORS : {
@@ -261,6 +213,28 @@ static void usb_enumerate(struct urb* urb)
             break;
         }
     }
+}
+
+/*
+ * This returns a new free address. An address is dynamically assigned to a 
+ * device during enumeration. If the SET_ADDRESS command fails the address should
+ * still be set. Only after a disconnection should the address be deleted!
+ */
+static u8 usb_new_address(struct usb_core* usbc)
+{
+    u16 bitmask = usbc->device_addr_bm;
+    for (u8 i = 1; i < MAX_PIPES; i++) {
+        if ((bitmask & (1 << i)) == 0) {
+            usbc->device_addr_bm |= (1 << i);
+            return i;
+        }
+    }
+    return 0;
+}
+
+static void usb_delete_address(struct usb_core* usbc, u8 address)
+{
+    usbc->device_addr_bm &= ~(1 << address);
 }
 
 /*
@@ -274,7 +248,7 @@ static void usb_add_device(struct usb_core* usbc)
         bmalloc(sizeof(struct usb_device), BMALLOC_SRAM);
 
     /* Insert it into the list of devices */
-    list_add_first(&device->node, &usbc_priv->device_list);
+    list_add_first(&device->node, &usbc_private->device_list);
     usbc->enum_device = device;
 
     /* Add a name for debugging */
@@ -320,33 +294,29 @@ void root_hub_event(struct usbhc* usbhc, enum root_hub_event event)
         usbhc_alloc_pipe(&usbhc->pipe_base[0], &cfg);
         usbhc_set_address(&usbhc->pipe_base[0], 0);
 
-        usb_add_device(usbc_priv);
+        usb_add_device(usbc_private);
 
         struct urb* urb = usbhc_alloc_urb();
 
         /* Context for callback routine */
-        urb->context = usbc_priv;
+        urb->context = usbc_private;
 
         /* Start the enumeration */
-        usbc_priv->enum_state = USB_ENUM_GET_EP0_SIZE;
-        usb_enum_get_dev_desc(urb, usbc_priv, 0);
+        usbc_private->enum_state = USB_ENUM_GET_EP0_SIZE;
+        usb_enum_get_dev_desc(urb, usbc_private, 0);
         printl("Enumeration has started");
     }
 }
 
 static void sof_event(struct usbhc* usbhc)
 {
-    static i = 0;
-    if (++i >= 1000) {
-        i = 0;
-        print("ok\n");
-    }
+
 }
 
 void usb_init(struct usb_core* usbc, struct usbhc* usbhc)
 {
-    usbc_priv = usbc;
-    usbc_priv->enum_state = USB_ENUM_IDLE;
+    usbc_private = usbc;
+    usbc_private->enum_state = USB_ENUM_IDLE;
 
     usbc->usbhc = usbhc;
     usbc->pipe0 = &usbhc->pipe_base[0];

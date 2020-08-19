@@ -80,8 +80,8 @@ struct usbhc* usbhc_private = NULL;
 struct umalloc_desc urb_allocator;
 
 /* 
- * After reset the datasheet says that all pipes are reset, but it s still
- * recomended to perform a manual reset after this
+ * This resets the specified pipe. After reset the datasheet says that all pipes
+ * are reset, but it is still recomended to perform a manual reset after this
  */
 static void usbhc_pipe_reset(struct usb_pipe* pipe) 
 {
@@ -146,13 +146,13 @@ void usbhc_early_init(void)
  */
 void usbhc_init(struct usbhc* usbhc, struct usb_pipe* pipe, u32 pipe_count)
 {
-    /* Disable all global interrupts */
-    usbhw_global_disable_interrupt(0xFFFFFFFF);
-    usbhw_global_clear_status(0xFFFFFFFF);
-
     usbhw_unfreeze_clock();
     usbhw_set_mode(USB_HOST);
     usbhw_enable();
+
+    /* Disable all global interrupts */
+    usbhw_global_disable_interrupt(0xFFFFFFFF);
+    usbhw_global_clear_status(0xFFFFFFFF);
     
     /* This must be called in order to detect device connection or dissconnection */
     usbhw_vbus_request_enable();
@@ -249,7 +249,7 @@ static u8 usbhc_setup_out(struct usb_pipe* pipe, u8* setup)
     usbhw_pipe_set_token(pipe_number, PIPE_TOKEN_SETUP);
     
     volatile u8* fifo_ptr = usbhc_get_fifo_ptr(pipe_number);
-    for (u8 i = 0; i < 8; i++) {
+    for (volatile u8 i = 0; i < 8; i++) {
         *fifo_ptr++ = *setup++;
     }
     usbhw_pipe_enable_interrupt(pipe_number, USBHW_TXSETUP);
@@ -382,6 +382,7 @@ static void usbhc_pipe_setup_sent(struct usb_pipe* pipe)
         } else {
             panic("");
         }
+        
     }
 }
 
@@ -401,9 +402,10 @@ static void usbhc_pipe_receive_in(struct usb_pipe* pipe, u32 isr)
     /* PIPE0 => 64   EP0 => 8 */
     /* Short packet received */
     if (short_pkt) {
+        printl("DISABLING");
+        usbhw_pipe_disable_interrupt(pipe->number, USBHW_RXIN);
         if (pipe->type == PIPE_TYPE_CTRL) {
             pipe->state = PIPE_STATE_ZLP_OUT;
-            usbhw_pipe_disable_interrupt(pipe->number, USBHW_RXIN);
             usbhc_control_status_out(pipe);
             return;
         }
@@ -530,6 +532,7 @@ static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc)
     if (pipe_isr & USBHW_NAKED) {
         print("NAKed\n");
     }
+
     
     /* Check for transmittet setup */
     if (pipe_isr & USBHW_TXSETUP) {
