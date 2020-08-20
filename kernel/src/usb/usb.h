@@ -23,28 +23,34 @@ enum usb_enum_state {
 struct usb_endpoint {
     struct usb_ep_desc desc;
     struct usbhc* usbhc;
-    struct usb_device* device; 
+    struct usb_device* device;
 };
 
-struct usb_interface {
+/* Forward declaration */
+struct usb_driver;
+
+struct usb_iface {
     /* Points to the acctual interface descriptor */
-    struct usb_interface_desc desc;
+    struct usb_iface_desc desc;
 
     /* Contains a list of all endpoint descriptors */
     struct usb_endpoint* endpoints;
     u32 num_endpoints;
+
+    /* Pointer to the assigned driver */
+    struct usb_driver* driver;
 };
 
-struct usb_configuration {
+struct usb_config {
     /* Device configuration descriptor */
     struct usb_config_desc desc;
 
     /* Pointer to an array of all the interfaces on the given configuration */
-    struct usb_host_interface* interfaces;
+    struct usb_iface* interfaces;
     u32 num_interfaces;
 
     /* Only one interface can be active at a time */
-    struct usb_host_interface* curr_interface;
+    struct usb_iface* curr_interface;
 };
 
 /*
@@ -59,7 +65,7 @@ struct usb_device {
     u32 desc_total_size;
 
     /* Contains all subconfigurations */
-    struct usb_configuration* configurations;
+    struct usb_config* configurations;
     u32 num_configurations;
 
     struct list_node node;
@@ -77,10 +83,15 @@ struct usb_device {
 struct usb_driver {
     const char* name;
 
-    u8 (*connect)(struct usb_interface* iface);
-    u8 (*disconnect)(struct usb_interface* iface);
-    u8 (*suspend)(struct usb_interface* iface);
-    u8 (*resume)(struct usb_interface* iface);
+    /* Driver callbacks */
+    u8 (*probe)(struct usb_iface* iface);
+    u8 (*start)(struct usb_iface* iface);
+    u8 (*connect)(struct usb_iface* iface);
+    u8 (*disconnect)(struct usb_iface* iface);
+    u8 (*suspend)(struct usb_iface* iface);
+    u8 (*resume)(struct usb_iface* iface);
+
+    struct list_node node;
 };
 
 struct usb_core {
@@ -99,8 +110,13 @@ struct usb_core {
     /* Contains a list of all the devices */
     struct list_node device_list;
     u16 device_addr_bm;
+
+    /* Contains a list of all possible drivers */
+    struct list_node driver_list;
 };
 
 void usb_init(struct usb_core* usbc, struct usbhc* usbhc);
+
+void usb_add_driver(struct usb_driver* driver, struct usb_core* usbc);
 
 #endif

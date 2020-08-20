@@ -36,6 +36,7 @@ static void usbhc_root_hub_disconnect(u32 isr, struct usbhc* usbhc);
 static void usbhc_root_hub_reset(u32 isr, struct usbhc* usbhc);
 
 /* Pipe event handlers */
+static void usbhc_naked(struct usb_pipe* pipe);
 static void usbhc_pipe_setup_sent(struct usb_pipe* pipe);
 static void usbhc_pipe_receive_in(struct usb_pipe* pipe, u32 isr);
 static void usbhc_transmit_out(struct usb_pipe* pipe);
@@ -353,6 +354,13 @@ static inline u32 usbhc_pick_interrupted_pipe(u32 pipe_mask)
     return pipe_number;
 }
 
+static void usbhc_naked(struct usb_pipe* pipe)
+{
+    print("NAKed");
+    /* Reset the pipe */
+    //usbhc_end_urb(&pipe->urb_list.next, pipe, URB_STATUS_NAK);
+}
+
 static void usbhc_pipe_setup_sent(struct usb_pipe* pipe)
 {
     if (pipe->state != PIPE_STATE_CTRL_OUT) {
@@ -531,7 +539,7 @@ static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc)
 
     /* NAKed by device */
     if (pipe_isr & USBHW_NAKED) {
-        print("NAKed\n");
+        usbhc_naked(pipe);
     }
 
     

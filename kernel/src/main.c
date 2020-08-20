@@ -7,6 +7,7 @@
 #include "print.h"
 #include "syscall.h"
 #include "fpi.h"
+#include "usb_hid.h"
 
 
 #include <stddef.h>

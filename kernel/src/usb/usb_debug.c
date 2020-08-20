@@ -105,8 +105,30 @@ void usb_debug_print_setup(struct usb_setup_desc* desc)
 void usb_debug_print_ep_desc(struct usb_ep_desc* desc)
 {
     print("Endpoint descriptor => ");
-    print("address:       %8b\n", desc->bEndpointAddress);
+    print("\taddress:      %8b\n", desc->bEndpointAddress);
     print("\t\t\tattributes:   %8b\n", desc->bmAttributes);
     print("\t\t\tmax pkt size: %d\n", desc->wMaxPacketSize);
     print("\t\t\tinterval:     %d\n", desc->bInterval);
+}
+
+void usb_debug_print_iface_desc(struct usb_iface_desc* desc)
+{
+    print("Interface descriptor => ");
+    print("iface number: %8b\n", desc->bInterfaceNumber);
+    print("\t\t\talternate:    %8b\n", desc->bAlternateSetting);
+    print("\t\t\tnum eps:      %d\n", desc->bNumEndpoints);
+    print("\t\t\tiface class:  %1h\n", desc->bInterfaceClass);
+    print("\t\t\tsubclass:     %d\n", desc->bInterfaceSubClass);
+    print("\t\t\tprotocol:     %1h\n", desc->bInterfaceProtocol);
+    print("\t\t\tinnterface:   %d\n", desc->iInterface);
+}
+
+void usb_debug_print_config_desc(struct usb_config_desc* desc)
+{
+    print("Config descriptor => ");
+    print("\tnum ifaces:  %8b\n", desc->bNumInterfaces);
+    print("\t\t\tcfg value:   %8b\n", desc->bConfigurationValue);
+    print("\t\t\tcfg:         %d\n", desc->iConfiguration);
+    print("\t\t\tattrib:      %d\n", desc->bmAttributes);
+    print("\t\t\tmax power:   %d\n", desc->bMaxPower);
 }

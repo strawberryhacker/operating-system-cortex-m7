@@ -97,6 +97,9 @@ net-y += /src/net/ip.c
 # USB source files
 usb-y += /src/usb/usb.c
 usb-y += /src/usb/usb_debug.c
+usb-y += /src/usb/drivers/usb_hid.c
+usb-y += /src/usb/drivers/usb_msc.c
+usb-y += /src/usb/drivers/usb_audio.c
 
 # Memory source files
 mm-y += /src/mm/mm.c
@@ -155,6 +158,7 @@ CPFLAGS += -I$(TOP)/src/net
 CPFLAGS += -I$(TOP)/src/misc
 CPFLAGS += -I$(TOP)/src/usb
 CPFLAGS += -I$(TOP)/src/benchmark
+CPFLAGS += -I$(TOP)/src/usb/drivers
 CPFLAGS += -I$(TOP)
 
 #-------------------------------------------------------------------------------

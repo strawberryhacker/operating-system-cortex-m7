@@ -126,7 +126,7 @@ struct __attribute__((__packed__)) usb_config_desc {
 /*
  * Interface descriptor. USB 2.0 specification page 268
  */
-struct __attribute__((__packed__)) usb_interface_desc {
+struct __attribute__((__packed__)) usb_iface_desc {
     u8  bLength;
     u8  bDescriptorType;
     u8  bInterfaceNumber;

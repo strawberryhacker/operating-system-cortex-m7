@@ -20,6 +20,7 @@
 #include "trand.h"
 #include "prand.h"
 #include "usb_host.h"
+#include "usb_hid.h"
 
 void kernel_entry(void) {
     /* Disable the watchdog timer */
