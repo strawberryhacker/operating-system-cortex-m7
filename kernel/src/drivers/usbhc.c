@@ -220,6 +220,7 @@ static u8 usbhc_in(struct usb_pipe* pipe, struct urb* urb)
         }
         fifo_count--;
     }
+    usbhw_pipe_disable_interrupt(pipe->number, USBHW_FIFO_CTRL);
     if (fifo_count != 0) {
         printl("WARNING");
     }
