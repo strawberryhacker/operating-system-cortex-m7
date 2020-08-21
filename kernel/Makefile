@@ -97,9 +97,11 @@ net-y += /src/net/ip.c
 # USB source files
 usb-y += /src/usb/usb.c
 usb-y += /src/usb/usb_debug.c
+usb-y += /src/usb/usb_strings.c
 usb-y += /src/usb/drivers/usb_hid.c
 usb-y += /src/usb/drivers/usb_msc.c
 usb-y += /src/usb/drivers/usb_audio.c
+usb-y += /src/usb/drivers/usb_hub.c
 
 # Memory source files
 mm-y += /src/mm/mm.c
@@ -205,3 +207,4 @@ $(BUILDDIR)/%.o: %.s
 
 clean:
 	@rm -r -f $(BUILDDIR)
+

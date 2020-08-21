@@ -102,7 +102,7 @@ void usb_debug_print_setup(struct usb_setup_desc* desc)
     print("\n");
 }
 
-void usb_debug_print_ep_desc(struct usb_ep_desc* desc)
+void usb_print_ep_desc(struct usb_ep_desc* desc)
 {
     print("Endpoint descriptor => ");
     print("\taddress:      %8b\n", desc->bEndpointAddress);
@@ -111,7 +111,7 @@ void usb_debug_print_ep_desc(struct usb_ep_desc* desc)
     print("\t\t\tinterval:     %d\n", desc->bInterval);
 }
 
-void usb_debug_print_iface_desc(struct usb_iface_desc* desc)
+void usb_print_iface_desc(struct usb_iface_desc* desc)
 {
     print("Interface descriptor => ");
     print("iface number: %8b\n", desc->bInterfaceNumber);
@@ -123,7 +123,7 @@ void usb_debug_print_iface_desc(struct usb_iface_desc* desc)
     print("\t\t\tinnterface:   %d\n", desc->iInterface);
 }
 
-void usb_debug_print_config_desc(struct usb_config_desc* desc)
+void usb_print_config_desc(struct usb_config_desc* desc)
 {
     print("Config descriptor => ");
     print("\tnum ifaces:  %8b\n", desc->bNumInterfaces);

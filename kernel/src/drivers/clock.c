@@ -194,7 +194,7 @@ void peripheral_clock_enable(u8 per_id) {
         per_id -= 32;
         CLOCK->PCER1 = (1 << per_id);
     } else {
-        /* Can not use fast access. */
+        /* Can not use fast access */
         CLOCK->PCR = (per_id & 0b1111111) | (1 << 12) | (1 << 28);
     }
 }

@@ -9,7 +9,8 @@
 
 /*
  * This will hold all the states the USB host can have during enumeration. Some
- * states is deviced up into substates, even though they do the same thing
+ * states is deviced up into substates, even though they essentially do the same
+ * thing
  */
 enum usb_enum_state {
     USB_ENUM_IDLE,
@@ -20,37 +21,42 @@ enum usb_enum_state {
     USB_ENUM_GET_DESCRIPTORS
 };
 
-struct usb_endpoint {
+/*
+ * Contains the enpo
+ */
+struct usb_ep {
     struct usb_ep_desc desc;
+
+    /* Corresponding physical pipe */
+    struct usb_pipe* pipe;
+
     struct usbhc* usbhc;
     struct usb_device* device;
 };
 
-/* Forward declaration */
+
 struct usb_driver;
 
 struct usb_iface {
-    /* Points to the acctual interface descriptor */
     struct usb_iface_desc desc;
 
     /* Contains a list of all endpoint descriptors */
-    struct usb_endpoint* endpoints;
-    u32 num_endpoints;
+    struct usb_ep* eps;
+    u32 num_eps;
 
     /* Pointer to the assigned driver */
     struct usb_driver* driver;
 };
 
 struct usb_config {
-    /* Device configuration descriptor */
     struct usb_config_desc desc;
 
     /* Pointer to an array of all the interfaces on the given configuration */
-    struct usb_iface* interfaces;
-    u32 num_interfaces;
+    struct usb_iface* ifaces;
+    u32 num_ifaces;
 
     /* Only one interface can be active at a time */
-    struct usb_iface* curr_interface;
+    struct usb_iface* curr_iface;
 };
 
 /*
@@ -65,8 +71,10 @@ struct usb_device {
     u32 desc_total_size;
 
     /* Contains all subconfigurations */
-    struct usb_config* configurations;
-    u32 num_configurations;
+    struct usb_config* configs;
+    u32 num_configs;
+
+    struct usb_config* curr_config;
 
     struct list_node node;
 

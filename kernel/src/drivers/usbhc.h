@@ -31,6 +31,14 @@ enum root_hub_event {
     RH_EVENT_RESET_SENT
 };
 
+/*
+ * Active
+ * Halted
+ * Aborting
+ * Resetting
+ * Clearing a halted
+ * Halting
+ */
 enum pipe_state {
     PIPE_STATE_DISABLED,
     PIPE_STATE_IDLE,
@@ -53,13 +61,13 @@ enum urb_status {
 /*
  * Holds all neccesary fields needed to configure a pipe
  */
-struct pipe_cfg {
+struct pipe_config {
     u8 frequency;
     /* Sets the address and pipe */
     u8 device;
     u8 pipe : 4;
 
-    u8 autosw;
+    u8 autoswitch;
 
     enum pipe_type type;
     enum pipe_token token;
@@ -112,8 +120,13 @@ struct urb {
  * the transfer state. 
  */
 struct usb_pipe {
-    volatile u8* dpram;
-    u32 number;
+    /*
+     * Each USB pipe has assigned a fixed number. This corresponds to the pipe
+     * number in the USB hardware. Threrefore the FIFO access address is fixed
+     */
+    u32 num;
+    volatile u8* fifo;
+    
     struct list_node urb_list;
 
     /* The pipe state applies to any transaction */
@@ -122,7 +135,7 @@ struct usb_pipe {
     enum pipe_type type;
 
     /* Hold the current pipe configuration */
-    struct pipe_cfg cfg;
+    struct pipe_config config;
 };
 
 /*
@@ -130,8 +143,8 @@ struct usb_pipe {
  * therefore all the URB trnasations in the system, pending or not. 
  */
 struct usbhc {
-    struct usb_pipe* pipe_base;
-    u32 pipe_count;
+    struct usb_pipe* pipes;
+    u32 num_pipes;
 
     /* Callback for the root-hub */
     void (*root_hub_callback)(struct usbhc*, enum root_hub_event);
@@ -156,7 +169,7 @@ void usbhc_add_root_hub_callback(struct usbhc* usbhc,
 
 void usbhc_add_sof_callback(struct usbhc* usbhc, void (*callback)(struct usbhc*));
 
-u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_cfg* cfg);
+u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg);
 
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr);
 
