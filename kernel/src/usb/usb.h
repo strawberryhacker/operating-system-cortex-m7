@@ -40,6 +40,13 @@ struct usb_ep {
 
 struct usb_driver;
 
+/*
+ * Holds all information about a interface. The pointer to the device and to
+ * the driver is necessary in the process of assigning a driver. Drivers will
+ * be assigned and connected to this structure. In case of composite devices
+ * the driver will connect to the fist interface it supports and then claim 
+ * other interfaces it feel it need
+ */
 struct usb_iface {
     struct usb_iface_desc desc;
 
@@ -49,8 +56,22 @@ struct usb_iface {
 
     /* Pointer to the assigned driver */
     struct usb_driver* driver;
+    struct usb_dev* parent_dev;
+    
+    u8 assigned : 1;
+
+    /* Pipes controlled by this interface driver */
+    struct usb_pipe* pipes[MAX_PIPES];
+    u32 pipe_bm;
+
+    /* Link the interfaces together */
+    struct list_node node;
 };
 
+/*
+ * Holds the configuration descriptor together with a list of interfaces 
+ * corresponding with that configuration
+ */
 struct usb_config {
     struct usb_config_desc desc;
 
@@ -76,15 +97,49 @@ struct usb_dev {
     struct usb_config* configs;
     u32 num_configs;
 
+    /* Points to an IAD is available */
+    struct usb_iad_desc* iad;
+
+
     struct usb_config* curr_config;
 
     struct list_node node;
+
+    /* Contains a list with all the interfaces */
+    struct list_node iface_list;
 
     u8 address;
     u16 ep0_size;
 
     char product[USB_DEV_NAME_MAX_SIZE];
     char manufacturer[USB_DEV_NAME_MAX_SIZE];
+};
+
+/* Definitions of the different check flags */
+#define USB_DEV_ID_VENDOR_MASK         (1 << 0)
+#define USB_DEV_ID_PRODUCT_MASK        (1 << 1)
+#define USB_DEV_ID_DEV_CLASS_MASK      (1 << 2)
+#define USB_DEV_ID_DEV_SUBCLASS_MASK   (1 << 3)
+#define USB_DEV_ID_DEV_PROTOCOL_MASK   (1 << 4)
+#define USB_DEV_ID_IFACE_CLASS_MASK    (1 << 5)
+#define USB_DEV_ID_IFACE_SUBCLASS_MASK (1 << 6)
+#define USB_DEV_ID_IFACE_PROTOCOL_MASK (1 << 7)
+
+/* Device ID structure used for matching drivers */
+struct usb_dev_id {
+    u32 flags;
+
+    /* Matching device */
+    u16 vendor_id;
+    u16 product_id;
+    u8 dev_class;
+    u8 dev_sub_class;
+    u8 dev_protocol;
+
+    /* Matching interface */
+    u8 iface_class;
+    u8 iface_sub_class;
+    u8 iface_protocol;
 };
 
 /*
@@ -97,16 +152,22 @@ struct usb_driver {
     const char* name;
 
     /* Driver callbacks */
-    u8 (*probe)(struct usb_iface* iface);
-    u8 (*start)(struct usb_iface* iface);
     u8 (*connect)(struct usb_iface* iface);
     u8 (*disconnect)(struct usb_iface* iface);
     u8 (*suspend)(struct usb_iface* iface);
     u8 (*resume)(struct usb_iface* iface);
 
     struct list_node node;
+
+    /* Pointer to a list with devices IDs used for matching driver */
+    const struct usb_dev_id* dev_ids;
+    const u32 num_dev_ids;
 };
 
+/*
+ * Definition of the core structure which will hold all necessary information
+ * about driver, enumeration, the host controller and the hardware. 
+ */
 struct usb_core {
     /* Enumeration state */
     enum usb_enum_state enum_state;
@@ -131,5 +192,9 @@ struct usb_core {
 void usbc_init(struct usb_core* usbc, struct usbhc* usbhc);
 
 void usbc_add_driver(struct usb_driver* driver, struct usb_core* usbc);
+
+u8 usbc_iface_add_pipe(struct usb_pipe* pipe, struct usb_iface* iface);
+
+u8 usbc_iface_remove_pipe(struct usb_pipe* pipe, struct usb_iface* iface);
 
 #endif

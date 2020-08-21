@@ -14,6 +14,6 @@ struct usb_hid_device {
     u8 is_enabled : 1;
 };
 
-void usb_hid_init(struct usb_driver* hid_driver);
+void usb_hid_init(struct usb_core* usbc);
 
 #endif

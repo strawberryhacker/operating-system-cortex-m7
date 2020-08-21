@@ -54,6 +54,7 @@
 #define USB_DESC_DEVICE_QUALIFIER 0x06
 #define USB_DESC_SPEED_CONFIG     0x07
 #define USB_DESC_INTERFACE_POWER  0x08
+#define USB_DESC_IAD              0x0B
 
 
 /*
@@ -162,5 +163,31 @@ struct __attribute__((__packed__)) usb_string_desc {
     u8  bLength;
     u8  bDescriptorType;
 };
+
+/* Interface association descriptor */
+struct __attribute__((__packed__)) usb_iad_desc {
+    u8 bLength;
+    u8 bDescriptorType;
+    u8 bFirstInterface;
+    u8 bInterfaceCount;
+    u8 bFunctionClass;
+    u8 bFunctionsSubClass;
+    u8 bFunctionProtocol;
+    u8 iFunction;
+};
+
+/* Definition of USB device and interface classes */
+#define USB_CLASS_AUDIO       0x01
+#define USB_CLASS_CDC_CONTROL 0x02
+#define USB_CLASS_HID         0x03
+#define USB_CLASS_PHYSICAL    0x05
+#define USB_CLASS_IMAGE       0x06
+#define USB_CLASS_PRINTER     0x07
+#define USB_CLASS_MSC         0x08
+#define USB_CLASS_HUB         0x09
+#define USB_CLASS_CDC_DATA    0x0A
+
+/* Deg the endpoint number and direction based onthe address */
+#define usb_get_ep_number(addr) ((addr) & 0xF)
 
 #endif

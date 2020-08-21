@@ -40,7 +40,8 @@ enum root_hub_event {
  * Halting
  */
 enum pipe_state {
-    PIPE_STATE_DISABLED,
+    PIPE_STATE_FREE,
+    PIPE_STATE_CLAIMED,
     PIPE_STATE_IDLE,
     PIPE_STATE_CTRL_OUT,
     PIPE_STATE_ZLP_IN,
@@ -65,7 +66,7 @@ struct pipe_config {
     u8 frequency;
     /* Sets the address and pipe */
     u8 device;
-    u8 pipe : 4;
+    u8 endpoint : 4;
 
     u8 autoswitch;
 
@@ -133,6 +134,8 @@ struct usb_pipe {
 
     /* Hold the current pipe configuration */
     struct pipe_config config;
+
+    void (*interrupt_callback)()
 };
 
 /*
@@ -167,6 +170,8 @@ void usbhc_add_root_hub_callback(struct usbhc* usbhc,
 void usbhc_add_sof_callback(struct usbhc* usbhc, void (*callback)(struct usbhc*));
 
 u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg);
+
+struct usb_pipe* usbhc_request_pipe(void);
 
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr);
 

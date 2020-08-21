@@ -101,7 +101,7 @@ static void usbhc_pipe_init(struct usb_pipe* pipe)
     /* Disable the pipe */
     usbhw_pipe_disable(pipe->num);
 
-    pipe->state = PIPE_STATE_DISABLED;
+    pipe->state = PIPE_STATE_FREE;
 }
 
 /*
@@ -111,7 +111,7 @@ static void usbhc_pipe_init(struct usb_pipe* pipe)
 static void usbhc_pipe_soft_reset(struct usb_pipe* pipe)
 {
     spinlock_aquire(&pipe->lock);
-    pipe->state = PIPE_STATE_DISABLED;
+    pipe->state = PIPE_STATE_FREE;
     spinlock_release(&pipe->lock);
 }
 
@@ -630,7 +630,7 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg)
 
     u32 cfg_reg = 0;
     cfg_reg |= (cfg->frequency << 24);
-    cfg_reg |= (cfg->pipe << 16);
+    cfg_reg |= (cfg->endpoint << 16);
     cfg_reg |= (cfg->autoswitch << 10);
     cfg_reg |= (cfg->type << 12);
     cfg_reg |= (cfg->token << 8);
@@ -653,6 +653,23 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg)
     print("Status reg => %32b\n", usbhw_pipe_get_status(pipe->num));
     pipe->state = PIPE_STATE_IDLE;
     return 1;
+}
+
+/*
+ * Tries to allocate a free pipe and returns it
+ */
+struct usb_pipe* usbhc_request_pipe(void)
+{
+    for (u8 i = 0; i < usbhc_private->num_pipes; i++) {
+        struct usb_pipe* pipe = &usbhc_private->pipes[i];
+
+        if (pipe->state == PIPE_STATE_FREE) {
+            pipe->state == PIPE_STATE_CLAIMED;
+            return pipe;
+        }
+    }
+    printl("Shit, no more pipes");
+    return NULL;
 }
 
 /*

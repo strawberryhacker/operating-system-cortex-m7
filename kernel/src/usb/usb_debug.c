@@ -140,5 +140,6 @@ void usb_print_dev_desc(struct usb_dev_desc* desc)
     printl("iManufacturer: %d", desc->iManufacturer);
     printl("iProduct: %d", desc->iProduct);
     printl("iSerialNumber: %d", desc->iSerialNumber);
+    printl("bDeviceClass: %d", desc->bDeviceClass);
     printl("-------------------------------");
 }

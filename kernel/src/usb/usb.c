@@ -9,6 +9,7 @@
 #include "thread.h"
 #include "usb_debug.h"
 #include "config.h"
+#include "usb_strings.h"
 
 /* Private valiables used for device enumeration */
 static struct usb_setup_desc setup;
@@ -38,8 +39,17 @@ static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev);
 static void usbc_get_product_name_done(struct urb* urb, struct usb_dev* dev);
 static void usbc_get_manufacturer_name_done(struct urb* urb, struct usb_dev* dev);
 
-static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces, u32* eps);
+static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
+    u32* eps);
 static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size);
+
+static u8 usbc_check_dev_match(const struct usb_dev_id* id, struct usb_dev* dev);
+
+static u8 usbc_check_iface_match(const struct usb_dev_id* id, struct usb_iface* iface);
+
+static u8 usbc_check_driver_match(struct usb_driver* driver, struct usb_iface* iface);
+
+static struct usb_driver* usbc_find_driver(struct usb_iface* iface, struct usb_core* usbc);
 
 /*
  * This will take in a URB an perform a get device descriptor request. Full 
@@ -172,6 +182,10 @@ static void usbc_desc_length_done(struct urb* urb, struct usb_dev* dev)
 
 static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev)
 {
+    for (u32 i = 0; i < urb->transfer_length; i++) {
+        print("0x%1h ", urb->transfer_buffer[i]);
+    }
+
     printl("All descriptors received");
     if (!usbc_parse_descriptors(dev, urb->transfer_buffer, urb->acctual_length)) {
         panic("Cannot parse descriptors");
@@ -193,6 +207,7 @@ static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev)
             }
         }
     }
+
 }
 
 /*
@@ -315,6 +330,21 @@ static void usbc_enumerate(struct urb* urb)
 
             print("Product name => %s\n", usbc->enum_dev->product);
             print("Manufacturer name => %s\n", usbc->enum_dev->manufacturer);
+
+            usb_print_dev_desc(&usbc->enum_dev->desc);
+
+            /* Enumeration is complete and we can try to assign a driver */
+            struct list_node* node;
+            list_iterate(node, &usbc->enum_dev->iface_list) {
+                struct usb_iface* iface = list_get_entry(node, struct usb_iface, node);
+                struct usb_driver* driver = usbc_find_driver(iface, usbc);
+
+                if (driver) {
+                    printl("Found a suitable driver");
+                } else {
+                    printl("No driver support");
+                }
+            }
             break;
         }
     }
@@ -348,15 +378,15 @@ static void usbc_delete_address(struct usb_core* usbc, u8 address)
  */
 static void usbc_add_device(struct usb_core* usbc)
 {
-    /* Allocate a new device */
     struct usb_dev* dev = (struct usb_dev *)
         bmalloc(sizeof(struct usb_dev), BMALLOC_SRAM);
 
-    /* Insert it into the list of devices */
     list_add_first(&dev->node, &usbc_private->dev_list);
     usbc->enum_dev = dev;
 
-    /* Initialize the name buffers */
+    /* Make sure we can contain a list of all the interfaces */
+    list_init(&dev->iface_list);
+
     string_copy("None", dev->product);
     string_copy("None", dev->manufacturer);
 }
@@ -386,6 +416,7 @@ static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
             }
             *ifaces += 1;
         } else if (type == USB_DESC_EP) {
+            print("EP size => %d\n", size);
             usb_print_ep_desc((struct usb_ep_desc *)(data + pos));
             if (size != sizeof(struct usb_ep_desc)) {
                 return 0;
@@ -500,6 +531,17 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
                 return 0;
             }
 
+            /* Link the interface into the interface list from the device */
+            list_add_first(&iface->node, &dev->iface_list);
+
+            /* Add the parent device to the interface */
+            iface->parent_dev = dev;
+            iface->assigned = 0;
+            iface->pipe_bm = 0;
+            for (u8 i = 0; i < MAX_PIPES; i++) {
+                iface->pipes[i] = NULL;
+            }
+
             /* First interface in configuration */
             if (last_cfg->num_ifaces == 0) {
                 last_cfg->ifaces = iface;
@@ -530,6 +572,136 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
     return 1;
 }
 
+/*
+ * Checks if the given usb_dev_id matches the given USB device. It returns 1
+ * if the match and 0 if they do not
+ */
+static u8 usbc_check_dev_match(const struct usb_dev_id* id, struct usb_dev* dev)
+{
+    u32 flags = id->flags;
+    if (flags & USB_DEV_ID_VENDOR_MASK) {
+        if (id->vendor_id != dev->desc.idVendor) {
+            return 0;
+        }
+    }
+    if (flags & USB_DEV_ID_PRODUCT_MASK) {
+        if (id->product_id != dev->desc.idProduct) {
+            return 0;
+        }
+    }
+    if (flags & USB_DEV_ID_DEV_CLASS_MASK) {
+        if (id->dev_class != dev->desc.bDeviceClass) {
+            return 0;
+        }
+    }
+    if (flags & USB_DEV_ID_DEV_SUBCLASS_MASK) {
+        if (id->dev_sub_class != dev->desc.bDeviceSubClass) {
+            return 0;
+        }
+    }
+    if (flags & USB_DEV_ID_DEV_PROTOCOL_MASK) {
+        if (id->dev_protocol != dev->desc.bDeviceProtocol) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*
+ * Checks if the given usb_dev_id matches the given USB interface. It returns 1
+ * if the match and 0 if they do not
+ */
+static u8 usbc_check_iface_match(const struct usb_dev_id* id, struct usb_iface* iface)
+{
+    u32 flags = id->flags;
+    if (flags & USB_DEV_ID_IFACE_CLASS_MASK) {
+        if (id->iface_class != iface->desc.bInterfaceClass) {
+            return 0;
+        }
+    }
+    if (flags & USB_DEV_ID_IFACE_SUBCLASS_MASK) {
+        if (id->iface_sub_class != iface->desc.bInterfaceSubClass) {
+            return 0;
+        }
+    }
+    if (flags & USB_DEV_ID_IFACE_PROTOCOL_MASK) {
+        if (id->iface_protocol != iface->desc.bInterfaceProtocol) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*
+ * Checks is a device is supported by the given driver. Returns 1 if it thinks
+ * it can support it and zero otherwise. 
+ */
+static u8 usbc_check_driver_match(struct usb_driver* driver, struct usb_iface* iface)
+{
+    u32 count = driver->num_dev_ids;
+    const struct usb_dev_id* dev_ids = driver->dev_ids;
+
+    /* Go through and check for a valid driver */
+    for (u32 i = 0; i < count; i++) {
+        /* Check device fields */
+        if (usbc_check_dev_match(dev_ids + i, iface->parent_dev))
+        {
+            if (usbc_check_iface_match(dev_ids + i, iface)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+static struct usb_driver* usbc_find_driver(struct usb_iface* iface, struct usb_core* usbc)
+{
+    /* Check if the interface is free */
+    if (iface->assigned == 1) {
+        return NULL;
+    }
+
+    struct list_node* node;
+    list_iterate(node, &usbc->driver_list) {
+        struct usb_driver* driver = list_get_entry(node, struct usb_driver, node);
+
+        u8 status = usbc_check_driver_match(driver, iface);
+
+        if (status) {
+            /* The driver can support the device */
+            if (!driver->connect(iface)) {
+                return NULL;
+            }
+            return driver;
+        }
+    }
+    return NULL;
+}
+
+u8 usbc_iface_add_pipe(struct usb_pipe* pipe, struct usb_iface* iface)
+{
+    for (u8 i = 0; i < MAX_PIPES; i++) {
+        if (!(iface->pipe_bm & (1 << i))) {
+            iface->pipes[i] = pipe;
+            iface->pipe_bm |= (1 << i);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+u8 usbc_iface_remove_pipe(struct usb_pipe* pipe, struct usb_iface* iface)
+{
+    for (u8 i = 0; i < MAX_PIPES; i++) {
+        if (iface->pipes[i] == pipe) {
+            iface->pipes[i] = NULL;
+            iface->pipe_bm &= ~(1 << i);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void root_hub_event(struct usbhc* usbhc, enum root_hub_event event)
 {
     if (event == RH_EVENT_CONNECTION) {
@@ -548,7 +720,7 @@ void root_hub_event(struct usbhc* usbhc, enum root_hub_event event)
             .autoswitch = 0,
             .device = 0,
             .frequency = 0,
-            .pipe = 0,
+            .endpoint = 0,
             .size = PIPE_SIZE_64,
             .token = PIPE_TOKEN_SETUP,
             .type = PIPE_TYPE_CTRL
@@ -595,6 +767,9 @@ void usbc_init(struct usb_core* usbc, struct usbhc* usbhc)
     usbhc_add_sof_callback(usbhc, &sof_event);
 }
 
+/*
+ * Adds a driver to the system
+ */
 void usbc_add_driver(struct usb_driver* driver, struct usb_core* usbc)
 {
     list_add_first(&driver->node, &usbc->driver_list);
