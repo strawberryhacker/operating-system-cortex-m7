@@ -173,7 +173,9 @@ static void usbc_desc_length_done(struct urb* urb, struct usb_dev* dev)
 static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev)
 {
     printl("All descriptors received");
-    usbc_parse_descriptors(dev, urb->transfer_buffer, urb->acctual_length);
+    if (!usbc_parse_descriptors(dev, urb->transfer_buffer, urb->acctual_length)) {
+        panic("Cannot parse descriptors");
+    }
 
     print("CFGS => %d\n", dev->num_configs);
     print("IFACE => %d\n", dev->configs[0].num_ifaces);

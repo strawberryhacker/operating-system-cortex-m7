@@ -22,7 +22,7 @@ static u8 usbhc_in(struct usb_pipe* pipe, struct urb* urb);
 static void usbhc_out(struct usb_pipe* pipe, struct urb* urb);
 
 /* Reset */
-static void usbhc_pipe_reset(struct usb_pipe* pipe);
+static void usbhc_pipe_init(struct usb_pipe* pipe);
 static void usbhc_pipe_soft_reset(struct usb_pipe* pipe);
 
 static inline u32 usbhc_pick_interrupted_pipe(u32 pipe_mask);
@@ -46,7 +46,7 @@ static inline void usbhc_root_hub_exception(u32 isr, struct usbhc* usbhc);
 static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc);
 static inline void usbhc_sof_exception(u32 isr, struct usbhc* usbhc);
 
-/* String representation of the different pipe states */
+/* String representation of the different pipe states, defined in usbhc.h */
 static const char* pipe_states[] = {
     [0x00] = "DISABLED",
     [0x01] = "IDLE",
@@ -82,28 +82,31 @@ struct umalloc_desc urb_allocator;
 
 /* 
  * This resets the specified pipe. After reset the datasheet says that all pipes
- * are reset, but it is still recomended to perform a manual reset after this
+ * are reset, but it is still recomended to perform a manual reset after this. 
+ * This must ONLY be called on initialization, since it initializes the URB
+ * list
  */
-static void usbhc_pipe_reset(struct usb_pipe* pipe) 
+static void usbhc_pipe_init(struct usb_pipe* pipe) 
 {
     /* Initialize the URB queue linked to the pipe */
     list_init(&pipe->urb_list);
 
-    /* Disable the pipe */
-    usbhw_pipe_disable(pipe->num);
+    /* De-allocate all pipes by writing 1 to ALLOC */
+    usbhw_pipe_set_configuration(pipe->num, 0);
 
     /* Reset the pipe */
     usbhw_pipe_reset_assert(pipe->num);
     usbhw_pipe_reset_deassert(pipe->num);
 
-    /* De-allocate all pipes by writing 1 to ALLOC */
-    usbhw_pipe_set_configuration(pipe->num, 0);
+    /* Disable the pipe */
+    usbhw_pipe_disable(pipe->num);
 
     pipe->state = PIPE_STATE_DISABLED;
 }
 
 /*
- * Performs a soft reset of a pipe. 
+ * Performs a soft reset of a pipe. This resets the pipe, deallocates it and 
+ * disables it. The pipe will be available for allocation again. 
  */
 static void usbhc_pipe_soft_reset(struct usb_pipe* pipe)
 {
@@ -113,8 +116,8 @@ static void usbhc_pipe_soft_reset(struct usb_pipe* pipe)
 }
 
 /*
- * Default callback for root hub changes passed to USB host core. If no 
- * callback is assigned, this function will run. 
+ * Default callback for root hub changes passed to USB host core. The USB 
+ * core should assign a callback. So this should not run.
  */
 void default_root_hub_callback(struct usbhc* usbhc, enum root_hub_event event)
 {
@@ -132,8 +135,9 @@ void default_sof_callback(struct usbhc* usbhc)
 
 /*
  * According to page 752 in the datasheet the USB host controller must be 
- * anabled and unfrozen before any clocks are enabled. The USB host controller
- * configuration (below) will be reconfigured after the clocks are enabled. 
+ * enabled and unfrozen before any clocks are enabled. The USB host controller
+ * configuration (below) will be reconfigured after the clocks are enabled. This
+ * must be called proir to the configuration of any USB clock. 
  */
 void usbhc_early_init(void)
 {
@@ -143,7 +147,7 @@ void usbhc_early_init(void)
 }
 
 /*
- * Initializes the USB hardware
+ * Initializes the USB host controller
  */
 void usbhc_init(struct usbhc* usbhc, struct usb_pipe* pipe, u32 pipe_count)
 {
@@ -158,7 +162,7 @@ void usbhc_init(struct usbhc* usbhc, struct usb_pipe* pipe, u32 pipe_count)
     /* This must be called in order to detect device connection or dissconnection */
     usbhw_vbus_request_enable();
 
-    /* Make a new bitmap allocator. This is used for allocating URBs */
+    /* Initialize a bitmap allocator for URBs */
     umalloc_new(&urb_allocator, sizeof(struct urb),
         URB_MAX_COUNT, URB_ALLOCATOR_BANK);
 
@@ -175,21 +179,29 @@ void usbhc_init(struct usbhc* usbhc, struct usb_pipe* pipe, u32 pipe_count)
      * but their configuration still remains 
      */
     for (u32 i = 0; i < pipe_count; i++) {
-        /* Set the hardware endpoint targeted by this pipe */
         pipe[i].num = i;
-        usbhc_pipe_reset(&pipe[i]);
-        usbhw_pipe_clear_status(i, 0xFF);
+        pipe[i].fifo = usbhc_get_fifo_ptr(i);
+        usbhc_pipe_init(&pipe[i]);
     }
-    /* Listen for wakeup or connection */
+
+    /* Listen for wakeup or connection interrupts */
     usbhw_global_clear_status(USBHW_CONN | USBHW_WAKEUP);
     usbhw_global_enable_interrupt(USBHW_CONN | USBHW_WAKEUP);
 }
 
+/*
+ * Returns 1 if the USB 30 MHz clock is usable. I do not know what this 30 MHz
+ * clock is, or how to enable it. 
+ */
 u8 usbhc_clock_usable(void)
 {
     return usbhw_clock_usable();
 }
 
+/*
+ * Sends a USB reset on the root hub port. This will reset the only device 
+ * connected to the system (often a HUB)
+ */
 void usbhc_send_reset(void)
 {
     /* Clear the host speed configuration */
@@ -198,8 +210,8 @@ void usbhc_send_reset(void)
 }
 
 /*
- * Read the data in the FIFO untill end of FIFO or end of transfer. If it a 
- * short packet it returns 1
+ * Read the data in the FIFO until end of FIFO or end of transfer. If a short 
+ * packet has been received it returns 1
  */
 static u8 usbhc_in(struct usb_pipe* pipe, struct urb* urb)
 {
@@ -210,16 +222,16 @@ static u8 usbhc_in(struct usb_pipe* pipe, struct urb* urb)
     volatile u8* src = usbhc_get_fifo_ptr(pipe->num);
 
     dest += urb->acctual_length;
+    print("acctual length %d current length %d\n", urb->transfer_length, urb->acctual_length);
 
     u8 short_pkt = (fifo_count != pipe->ep_size) ? 1 : 0;
-
     while (fifo_count) {
         *dest++ = *src++;
         urb->acctual_length++;
+        fifo_count--;
         if (urb->acctual_length == urb->transfer_length) {
             break;
         }
-        fifo_count--;
     }
     usbhw_pipe_disable_interrupt(pipe->num, USBHW_FIFO_CTRL);
     if (fifo_count != 0) {
