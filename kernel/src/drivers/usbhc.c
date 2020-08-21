@@ -48,17 +48,18 @@ static inline void usbhc_sof_exception(u32 isr, struct usbhc* usbhc);
 
 /* String representation of the different pipe states, defined in usbhc.h */
 static const char* pipe_states[] = {
-    [0x00] = "DISABLED",
-    [0x01] = "IDLE",
-    [0x02] = "SETUP",
-    [0x03] = "SETUP IN",
-    [0x04] = "SETUP OUT",
-    [0x05] = "ZLP IN",
-    [0x06] = "ZLP OUT",
-    [0x07] = "IN",
-    [0x08] = "OUT",
-    [0x09] = "STATUS",
-    [0x0A] = "ERROR"
+    [0x00] = "FREE",
+    [0x01] = "CLAIMED",
+    [0x02] = "IDLE",
+    [0x03] = "SETUP",
+    [0x04] = "SETUP IN",
+    [0x05] = "SETUP OUT",
+    [0x06] = "ZLP IN",
+    [0x07] = "ZLP OUT",
+    [0x08] = "IN",
+    [0x09] = "OUT",
+    [0x0A] = "STATUS",
+    [0x0B] = "ERROR"
 };
 
 static const char* usb_speed[] = {
@@ -305,6 +306,17 @@ static void usbhc_start_urb(struct urb* urb, struct usb_pipe* pipe)
     if (urb->flags & URB_FLAGS_SETUP) {
         pipe->state = PIPE_STATE_CTRL_OUT;
         usbhc_setup_out(pipe, urb->setup_buffer);
+    } else if (urb->flags & URB_FLAGS_INTERRUPT_IN) {
+        usbhw_pipe_reset_assert(pipe->num);
+        usbhw_pipe_reset_deassert(pipe->num);
+        print("Pipe number => %d\n", pipe->config.endpoint);
+        print("Pipe number => %d\n", pipe->config.device);
+        pipe->state = PIPE_STATE_IN;
+        usbhw_pipe_in_request_continous(pipe->num);
+        usbhw_pipe_disable_interrupt(pipe->num, USBHW_PFREEZE);
+        usbhw_pipe_enable_interrupt(pipe->num, 0xFF);
+        
+        print("IN REQUEST\n");
     }
 }
 
@@ -321,6 +333,11 @@ static void usbhc_start_urb(struct urb* urb, struct usb_pipe* pipe)
 static void usbhc_end_urb(struct urb* urb, struct usb_pipe* pipe,
     enum urb_status status)
 {
+    if (urb->flags & URB_FLAGS_INTERRUPT_IN) {
+        urb->status = status;
+        urb->callback(urb);
+        return;
+    }
     pipe->state = PIPE_STATE_IDLE;
     list_delete_node(&urb->node);
 
@@ -369,6 +386,7 @@ static inline u32 usbhc_pick_interrupted_pipe(u32 pipe_mask)
 static void usbhc_naked(struct usb_pipe* pipe)
 {
     print("NAKed");
+    usbhw_pipe_clear_status(pipe->num, USBHW_NAKED);
     /* Reset the pipe */
     //usbhc_end_urb(&pipe->urb_list.next, pipe, URB_STATUS_NAK);
 }
@@ -541,6 +559,15 @@ static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc)
     //print("Pipe status => %32b\n", pipe_isr);
     struct usb_pipe* pipe = &usbhc->pipes[pipe_number];
 
+    print("Pipe number => %d\n", pipe->num);
+    if (pipe->num == 1) {
+        print("PIP ISR => %32\n", pipe_isr);
+    }
+
+    /* Check for stall */
+    if (pipe_isr & USBHW_STALL) {
+        print("Stalled on pipe %d targeting EP %d\n", pipe->num, pipe->config.endpoint);
+    }
     /* Check for any errors */
     if (pipe_isr & USBHW_PERROR) {
         print("Error on pipe %d => %32b\n", pipe_number, usbhw_pipe_get_error_reg(pipe_number));
@@ -647,9 +674,12 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg)
     /* Enable pipe interrupts */
     usbhw_pipe_clear_status(pipe->num, 0xFF);
     usbhw_pipe_enable_interrupt(pipe->num,
-        USBHW_PERROR | USBHW_OVERFLOW | USBHW_STALL);
+        USBHW_PERROR | USBHW_OVERFLOW | USBHW_STALL | USBHW_NAKED);
 
     usbhw_global_enable_interrupt(1 << (pipe->num + USBHW_PIPE_OFFSET));
+
+    usbhw_pipe_enable_interrupt(pipe->num, USBHW_PFREEZE);
+
     print("Status reg => %32b\n", usbhw_pipe_get_status(pipe->num));
     pipe->state = PIPE_STATE_IDLE;
     return 1;
@@ -664,7 +694,7 @@ struct usb_pipe* usbhc_request_pipe(void)
         struct usb_pipe* pipe = &usbhc_private->pipes[i];
 
         if (pipe->state == PIPE_STATE_FREE) {
-            pipe->state == PIPE_STATE_CLAIMED;
+            pipe->state = PIPE_STATE_CLAIMED;
             return pipe;
         }
     }

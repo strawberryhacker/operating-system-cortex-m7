@@ -328,6 +328,8 @@ static void usbc_enumerate(struct urb* urb)
         case USB_ENUM_GET_MANUFACTURER_NAME : {
             usbc_get_manufacturer_name_done(urb, usbc->enum_dev);
 
+            usbhw_pipe_disable(usbc->pipe0->num);
+
             print("Product name => %s\n", usbc->enum_dev->product);
             print("Manufacturer name => %s\n", usbc->enum_dev->manufacturer);
 

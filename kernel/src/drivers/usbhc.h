@@ -13,12 +13,6 @@
 
 #define USBHC_DPRAM_ADDR 0xA0100000
 #define USBHC_DPRAM_EP_SIZE 0x8000
-
-/* USB transfer flags */
-#define URB_FLAGS_SETUP  (u32)(1 << 0)
-#define URB_FLAGS_IN     (u32)(1 << 1)
-#define URB_FLAGS_OUT    (u32)(1 << 2)
-
 /*
  * Returns an 8 bit pointer to the DPRAM base address associated with a pipe
  */
@@ -77,6 +71,12 @@ struct pipe_config {
     enum pipe_size size;
 };
 
+/* USB transfer flags */
+#define URB_FLAGS_SETUP        (u32)(1 << 0)
+#define URB_FLAGS_IN           (u32)(1 << 1)
+#define URB_FLAGS_OUT          (u32)(1 << 2)
+#define URB_FLAGS_INTERRUPT_IN (u32)(1 << 3)
+
 /*
  * Main USB request block (URB) structure. A URB will contain all nessecary data
  * to perform any USB transfer and deliver the status back. Every transfer on
@@ -134,8 +134,6 @@ struct usb_pipe {
 
     /* Hold the current pipe configuration */
     struct pipe_config config;
-
-    void (*interrupt_callback)()
 };
 
 /*
