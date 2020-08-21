@@ -12,7 +12,7 @@
 
 /* Private valiables used for device enumeration */
 static struct usb_setup_desc setup;
-static u8 enum_buffer[ENUM_BUFFER_SIZE];
+static u8 enum_buffer[USB_ENUM_BUFFER_SIZE];
 
 /* Private USB core instance */
 struct usb_core* usbc_private;
@@ -30,11 +30,13 @@ static void usbc_get_cfg_desc(struct urb* urb, struct usb_core* usbc);
 static void usbc_get_all_desc(struct urb* urb, struct usb_core* usbc);
 
 /* Enumeration stages complete */
-static void usbc_device_desc_done(struct urb* urb, struct usb_dev* device);
-static void usbc_ep0_size_done(struct urb* urb, struct usb_dev* device);
-static void usbc_address_done(struct urb* urb, struct usb_dev* device);
-static void usbc_desc_length_done(struct urb* urb, struct usb_dev* device);
-static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* device);
+static void usbc_device_desc_done(struct urb* urb, struct usb_dev* dev);
+static void usbc_ep0_size_done(struct urb* urb, struct usb_dev* dev);
+static void usbc_address_done(struct urb* urb, struct usb_dev* dev);
+static void usbc_desc_length_done(struct urb* urb, struct usb_dev* dev);
+static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev);
+static void usbc_get_product_name_done(struct urb* urb, struct usb_dev* dev);
+static void usbc_get_manufacturer_name_done(struct urb* urb, struct usb_dev* dev);
 
 static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces, 
     u32* eps);
@@ -70,7 +72,7 @@ static void usb_get_string_desc(struct urb* urb, struct usb_core* usbc,
     setup.bDescriptorType  = USB_DESC_STRING;
     setup.bDescriptorIndex = desc_index;
     setup.wIndex           = lang_id;
-    setup.wLength          = ENUM_BUFFER_SIZE;
+    setup.wLength          = USB_ENUM_BUFFER_SIZE;
 
     usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate);
     usbhc_submit_urb(urb, usbc->pipe0);
@@ -92,7 +94,7 @@ static void usbc_get_cfg_desc(struct urb* urb, struct usb_core* usbc)
 {
     setup.bmRequestType    = USB_DEVICE_TO_HOST;
     setup.bRequest         = USB_REQ_GET_DESCRIPTOR;
-    setup.bDescriptorType  = USB_DESC_CONFIGURATION;
+    setup.bDescriptorType  = USB_DESC_CONFIG;
     setup.bDescriptorIndex = 0;
     setup.wIndex           = 0;
     setup.wLength          = 9;
@@ -105,7 +107,7 @@ static void usbc_get_all_desc(struct urb* urb, struct usb_core* usbc)
 {
     setup.bmRequestType    = USB_DEVICE_TO_HOST;
     setup.bRequest         = USB_REQ_GET_DESCRIPTOR;
-    setup.bDescriptorType  = USB_DESC_CONFIGURATION;
+    setup.bDescriptorType  = USB_DESC_CONFIG;
     setup.bDescriptorIndex = 0;
     setup.wIndex           = 0;
     setup.wLength          = usbc->enum_dev->desc_total_size;
@@ -119,7 +121,7 @@ static void usbc_get_all_desc(struct urb* urb, struct usb_core* usbc)
  * The URB will contain the first 8 bytes of the device decriptor. This should
  * be enough to read the default EP0 size
  */
-static void usbc_ep0_size_done(struct urb* urb, struct usb_dev* device)
+static void usbc_ep0_size_done(struct urb* urb, struct usb_dev* dev)
 {
     /* Update the endpoint zero size */
     printl("EP0 size done");
@@ -128,11 +130,11 @@ static void usbc_ep0_size_done(struct urb* urb, struct usb_dev* device)
     if ((packet_size < 8) || (packet_size > 1024)) {
         panic("Abort enumeration");
     }
-    device->ep0_size = packet_size;
-    print("Max packet => %d\n", device->ep0_size);
+    dev->ep0_size = packet_size;
+    print("Max packet => %d\n", dev->ep0_size);
 }
 
-static void usbc_device_desc_done(struct urb* urb, struct usb_dev* device)
+static void usbc_device_desc_done(struct urb* urb, struct usb_dev* dev)
 {
     printl("Device descriptor done");
     struct usb_setup_desc* desc = (struct usb_setup_desc *)urb->setup_buffer;
@@ -140,24 +142,24 @@ static void usbc_device_desc_done(struct urb* urb, struct usb_dev* device)
     print("Size: %d\n", size);
 
     u8* src = urb->transfer_buffer;
-    u8* dest = (u8 *)&device->desc;
+    u8* dest = (u8 *)&dev->desc;
 
     memory_copy(src, dest, size);
 }
 
-static void usbc_address_done(struct urb* urb, struct usb_dev* device)
+static void usbc_address_done(struct urb* urb, struct usb_dev* dev)
 {
     printl("Address done");
     struct usb_setup_desc* setup = (struct usb_setup_desc *)urb->setup_buffer;
-    device->address = setup->wValue;
-    print("DEVICE ADDRESS => %d\n", device->address);
+    dev->address = setup->wValue;
+    print("DEVICE ADDRESS => %d\n", dev->address);
 
     /* Update the pipe address */
     struct usb_core* usbc = (struct usb_core *)urb->context;
-    usbhc_set_address(usbc->pipe0, device->address);
+    usbhc_set_address(usbc->pipe0, dev->address);
 }
 
-static void usbc_desc_length_done(struct urb* urb, struct usb_dev* device)
+static void usbc_desc_length_done(struct urb* urb, struct usb_dev* dev)
 {
     printl("Descriptor length done");
     struct usb_config_desc* cfg_desc = (struct usb_config_desc *)urb->transfer_buffer;
@@ -165,40 +167,80 @@ static void usbc_desc_length_done(struct urb* urb, struct usb_dev* device)
     if (urb->acctual_length != 9) {
         panic("Error");
     }
-    device->desc_total_size = cfg_desc->wTotalLength;
-    print("Total length => %d\n", device->desc_total_size);
+    dev->desc_total_size = cfg_desc->wTotalLength;
+    print("Total length => %d\n", dev->desc_total_size);
 }
 
-static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* device)
+static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev)
 {
     printl("All descriptors received");
-    usbc_parse_descriptors(device, urb->transfer_buffer, urb->acctual_length);
+    usbc_parse_descriptors(dev, urb->transfer_buffer, urb->acctual_length);
 
-    print("CFGS => %d\n", device->num_configs);
-    print("IFACE => %d\n", device->configs[0].num_ifaces);
+    print("CFGS => %d\n", dev->num_configs);
+    print("IFACE => %d\n", dev->configs[0].num_ifaces);
 
-    for (u32 c = 0; c < device->num_configs; c++) {
-        struct usb_config_desc* c_ptr = &device->configs[c].desc;
+    for (u32 c = 0; c < dev->num_configs; c++) {
+        struct usb_config_desc* c_ptr = &dev->configs[c].desc;
         usb_print_config_desc(c_ptr);
-        for (u32 i = 0; i < device->configs[c].num_ifaces; i++) {
-            struct usb_iface_desc* i_ptr = &device->configs[c].ifaces[i].desc;
+        for (u32 i = 0; i < dev->configs[c].num_ifaces; i++) {
+            struct usb_iface_desc* i_ptr = &dev->configs[c].ifaces[i].desc;
             usb_print_iface_desc(i_ptr);
-            for (u32 e = 0; e < device->configs[c].ifaces[i].num_eps; e++) {
-                struct usb_ep_desc* e_ptr = &device->configs[c].ifaces[i].eps[e].desc;
+            print("NUM ENDPOINTS => %d\n", dev->configs[c].ifaces[i].num_eps);
+            for (u32 e = 0; e < dev->configs[c].ifaces[i].num_eps; e++) {
+                struct usb_ep_desc* e_ptr = &dev->configs[c].ifaces[i].eps[e].desc;
                 usb_print_ep_desc(e_ptr);
             }
         }
     }
 }
 
-static void usbc_get_string_done(struct urb* urb, struct usb_dev* device)
+/*
+ * Copies a unicode string to an ASCII string. It adds a zero terminating
+ * character at the end. It takes in the maximum length of both strings so no
+ * overflow will ever happend
+ */
+static void usbc_uni_to_string(const char* uni, u32 uni_size, char* string,
+    u32 string_size)
 {
-    print("Done => %d\n", urb->acctual_length);
-    print("Language ID => %2h\n", *(u16 *)(urb->transfer_buffer + 2));
-    char* data = (char *)urb->transfer_buffer;
-    for (u32 i = 0; i < urb->acctual_length; i++) {
-        print("%c ", *data++);
+    u32 uni_pos = 0;
+    u32 ascii_pos = 0;
+
+    /* Save space for the ternimation character */
+    if (string_size > 0) {
+        string_size--;
+    } else {
+        return;
     }
+    while ((uni_pos < uni_size) && (ascii_pos < string_size)) {
+        string[ascii_pos] = uni[uni_pos];
+        ascii_pos += 1;
+        uni_pos += 2;
+    }
+
+    /* Termination character */
+    string[ascii_pos] = 0;
+}
+
+static void usbc_get_product_name_done(struct urb* urb, struct usb_dev* dev)
+{
+    struct usb_setup_desc* desc = (struct usb_setup_desc *)urb->setup_buffer;
+    if (desc->bDescriptorIndex == 0) {
+        return;
+    }
+    char* src = (char *)(urb->transfer_buffer + USB_STRING_OFFSET);
+    usbc_uni_to_string(src, urb->acctual_length - 2,
+        dev->product, USB_DEV_NAME_MAX_SIZE);
+}
+
+static void usbc_get_manufacturer_name_done(struct urb* urb, struct usb_dev* dev)
+{
+    struct usb_setup_desc* desc = (struct usb_setup_desc *)urb->setup_buffer;
+    if (desc->bDescriptorIndex == 0) {
+        return;
+    }
+    char* src = (char *)(urb->transfer_buffer + USB_STRING_OFFSET);
+    usbc_uni_to_string(src, urb->acctual_length - 2,
+        dev->manufacturer, USB_DEV_NAME_MAX_SIZE);
 }
 
 /*
@@ -256,14 +298,23 @@ static void usbc_enumerate(struct urb* urb)
         }
         case USB_ENUM_GET_DESCRIPTORS : {
             usbc_get_all_desc_done(urb, usbc->enum_dev);
-            usbc->enum_state = USB_ENUM_GET_STRINGS;
-            usb_get_string_desc(urb, usbc, 2, 0);
+            usbc->enum_state = USB_ENUM_GET_PRODUCT_NAME;
+            usb_get_string_desc(urb, usbc, usbc->enum_dev->desc.iProduct, 0);
+            break;
+
+        }
+        case USB_ENUM_GET_PRODUCT_NAME : {
+            usbc_get_product_name_done(urb, usbc->enum_dev);
+            usbc->enum_state = USB_ENUM_GET_MANUFACTURER_NAME;
+            usb_get_string_desc(urb, usbc, usbc->enum_dev->desc.iManufacturer, 0);
             break;
         }
-        case USB_ENUM_GET_STRINGS : {
-            printl("Strings done");
-            usbc_get_string_done(urb, usbc->enum_dev);
-            usb_print_dev_desc(&usbc->enum_dev->desc);
+        case USB_ENUM_GET_MANUFACTURER_NAME : {
+            usbc_get_manufacturer_name_done(urb, usbc->enum_dev);
+
+            print("Product name => %s\n", usbc->enum_dev->product);
+            print("Manufacturer name => %s\n", usbc->enum_dev->manufacturer);
+            break;
         }
     }
 }
@@ -297,12 +348,16 @@ static void usbc_delete_address(struct usb_core* usbc, u8 address)
 static void usbc_add_device(struct usb_core* usbc)
 {
     /* Allocate a new device */
-    struct usb_dev* device = (struct usb_dev *)
+    struct usb_dev* dev = (struct usb_dev *)
         bmalloc(sizeof(struct usb_dev), BMALLOC_SRAM);
 
     /* Insert it into the list of devices */
-    list_add_first(&device->node, &usbc_private->dev_list);
-    usbc->enum_dev = device;
+    list_add_first(&dev->node, &usbc_private->dev_list);
+    usbc->enum_dev = dev;
+
+    /* Initialize the name buffers */
+    dev->product[0] = 0;
+    dev->manufacturer[0] = 0;
 }
 
 static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces, 
@@ -319,7 +374,7 @@ static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
         u32 size = data[pos];
 
         switch(type) {
-            case USB_DESC_CONFIGURATION : {
+            case USB_DESC_CONFIG : {
                 usb_print_config_desc((struct usb_config_desc *)(data + pos));
                 if (size != sizeof(struct usb_config_desc)) {
                     return 0;
@@ -327,7 +382,7 @@ static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
                 (*configs)++;
                 break;
             }
-            case USB_DESC_INTERFACE : {
+            case USB_DESC_IFACE : {
                 usb_print_iface_desc((struct usb_iface_desc *)(data + pos));
                 if (size != sizeof(struct usb_iface_desc)) {
                     return 0;
@@ -335,7 +390,7 @@ static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
                 (*ifaces)++;
                 break;
             }
-            case USB_DESC_ENDPOINT : {
+            case USB_DESC_EP : {
                 usb_print_ep_desc((struct usb_ep_desc *)(data + pos));
                 if (size != sizeof(struct usb_ep_desc)) {
                     return 0;
@@ -362,12 +417,12 @@ static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
 static u32 usb_get_desc_offset(u32 configs, u32 ifaces, u8 type, u32 index)
 {
     u32 offset = 0;
-    if (type == USB_DESC_CONFIGURATION) {
+    if (type == USB_DESC_CONFIG) {
         offset += index * sizeof(struct usb_config);
-    } else if (type == USB_DESC_INTERFACE) {
+    } else if (type == USB_DESC_IFACE) {
         offset += configs * sizeof(struct usb_config);
         offset += index * sizeof(struct usb_iface);
-    } else if (type == USB_DESC_ENDPOINT) {
+    } else if (type == USB_DESC_EP) {
         offset += configs * sizeof(struct usb_config);
         offset += ifaces * sizeof(struct usb_iface);
         offset += index * sizeof(struct usb_ep);
@@ -417,10 +472,10 @@ static void usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
         
         u32 type = data[pos + 1];
         u32 size = data[pos];
-        if (type == USB_DESC_CONFIGURATION) {
+        if (type == USB_DESC_CONFIG) {
             print("CFG\n");
             u32 offset = usb_get_desc_offset(configs, ifaces,
-                USB_DESC_CONFIGURATION, config_index);
+                USB_DESC_CONFIG, config_index);
             print("Offset => %d\n", offset);
             struct usb_config* cfg = (struct usb_config *)(desc_ptr + offset);
 
@@ -431,10 +486,10 @@ static void usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
             last_cfg = cfg;
             config_index++;
 
-        } else if (type == USB_DESC_INTERFACE) {
+        } else if (type == USB_DESC_IFACE) {
             print("IFACE\n");
             u32 offset = usb_get_desc_offset(configs, ifaces,
-                USB_DESC_INTERFACE, iface_index);
+                USB_DESC_IFACE, iface_index);
             print("Offset => %d\n", offset);
             struct usb_iface* iface = (struct usb_iface *)(desc_ptr + offset);
             iface->num_eps = 0;
@@ -452,10 +507,10 @@ static void usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
             last_cfg->num_ifaces++;
             iface_index++;
 
-        } else if (type == USB_DESC_ENDPOINT) {
+        } else if (type == USB_DESC_EP) {
             print("EP\n");
             u32 offset = usb_get_desc_offset(configs, ifaces,
-                USB_DESC_ENDPOINT, ep_index);
+                USB_DESC_EP, ep_index);
             print("Offset => %d\n", offset);
             struct usb_ep* ep = (struct usb_ep *)(desc_ptr + offset);
 

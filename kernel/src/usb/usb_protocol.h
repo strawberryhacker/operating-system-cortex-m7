@@ -47,10 +47,10 @@
 
 /* Descriptor type */
 #define USB_DESC_DEVICE           0x01
-#define USB_DESC_CONFIGURATION    0x02
+#define USB_DESC_CONFIG           0x02
 #define USB_DESC_STRING           0x03
-#define USB_DESC_INTERFACE        0x04
-#define USB_DESC_ENDPOINT         0x05
+#define USB_DESC_IFACE            0x04
+#define USB_DESC_EP               0x05
 #define USB_DESC_DEVICE_QUALIFIER 0x06
 #define USB_DESC_SPEED_CONFIG     0x07
 #define USB_DESC_INTERFACE_POWER  0x08
@@ -149,6 +149,8 @@ struct __attribute__((__packed__)) usb_ep_desc {
     u16 wMaxPacketSize;
     u8  bInterval;
 };
+
+#define USB_STRING_OFFSET 2
 
 /*
  * String descriptor header. USB 2.0 specification page 273.

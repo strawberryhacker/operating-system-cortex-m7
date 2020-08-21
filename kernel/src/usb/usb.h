@@ -6,6 +6,7 @@
 #include "types.h"
 #include "usbhc.h"
 #include "usb_protocol.h"
+#include "config.h"
 
 /*
  * This will hold all the states the USB host can have during enumeration. Some
@@ -19,7 +20,8 @@ enum usb_enum_state {
     USB_ENUM_SET_ADDRESS,
     USB_ENUM_GET_DESC_LENGTH,
     USB_ENUM_GET_DESCRIPTORS,
-    USB_ENUM_GET_STRINGS
+    USB_ENUM_GET_PRODUCT_NAME,
+    USB_ENUM_GET_MANUFACTURER_NAME
 };
 
 /*
@@ -80,6 +82,9 @@ struct usb_dev {
 
     u8 address;
     u16 ep0_size;
+
+    char product[USB_DEV_NAME_MAX_SIZE];
+    char manufacturer[USB_DEV_NAME_MAX_SIZE];
 };
 
 /*
