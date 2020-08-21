@@ -132,3 +132,13 @@ void usb_print_config_desc(struct usb_config_desc* desc)
     print("\t\t\tattrib:      %d\n", desc->bmAttributes);
     print("\t\t\tmax power:   %d\n", desc->bMaxPower);
 }
+
+void usb_print_dev_desc(struct usb_dev_desc* desc)
+{
+    printl("Device descriptor");
+    printl("-------------------------------");
+    printl("iManufacturer: %d", desc->iManufacturer);
+    printl("iProduct: %d", desc->iProduct);
+    printl("iSerialNumber: %d", desc->iSerialNumber);
+    printl("-------------------------------");
+}

@@ -18,7 +18,8 @@ enum usb_enum_state {
     USB_ENUM_GET_DEV_DESC,
     USB_ENUM_SET_ADDRESS,
     USB_ENUM_GET_DESC_LENGTH,
-    USB_ENUM_GET_DESCRIPTORS
+    USB_ENUM_GET_DESCRIPTORS,
+    USB_ENUM_GET_STRINGS
 };
 
 /*
@@ -31,7 +32,7 @@ struct usb_ep {
     struct usb_pipe* pipe;
 
     struct usbhc* usbhc;
-    struct usb_device* device;
+    struct usb_dev* device;
 };
 
 
@@ -63,8 +64,7 @@ struct usb_config {
  * This struct will contain all necessary imformation about a device. The number
  * of devices is not known, hence a linked list is needed. 
  */
-struct usb_device {
-    char name[8];
+struct usb_dev {
     struct usb_dev_desc desc;
 
     /* Hold the total size of all descriptors */
@@ -107,7 +107,7 @@ struct usb_core {
     enum usb_enum_state enum_state;
     
     /* This will allways point to the device currently being enumerated */
-    struct usb_device* enum_device;
+    struct usb_dev* enum_dev;
 
     /* Pointer to the USB host controller */
     struct usbhc* usbhc;
@@ -116,15 +116,15 @@ struct usb_core {
     struct usb_pipe* pipe0;
 
     /* Contains a list of all the devices */
-    struct list_node device_list;
-    u16 device_addr_bm;
+    struct list_node dev_list;
+    u16 dev_addr_bm;
 
     /* Contains a list of all possible drivers */
     struct list_node driver_list;
 };
 
-void usb_init(struct usb_core* usbc, struct usbhc* usbhc);
+void usbc_init(struct usb_core* usbc, struct usbhc* usbhc);
 
-void usb_add_driver(struct usb_driver* driver, struct usb_core* usbc);
+void usbc_add_driver(struct usb_driver* driver, struct usb_core* usbc);
 
 #endif

@@ -14,4 +14,6 @@ void usb_print_iface_desc(struct usb_iface_desc* desc);
 
 void usb_print_config_desc(struct usb_config_desc* desc);
 
+void usb_print_dev_desc(struct usb_dev_desc* desc);
+
 #endif

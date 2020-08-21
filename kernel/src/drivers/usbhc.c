@@ -211,7 +211,7 @@ static u8 usbhc_in(struct usb_pipe* pipe, struct urb* urb)
 
     dest += urb->acctual_length;
 
-    u8 short_pkt = (fifo_count != urb->packet_size) ? 1 : 0;
+    u8 short_pkt = (fifo_count != pipe->ep_size) ? 1 : 0;
 
     while (fifo_count) {
         *dest++ = *src++;
@@ -286,7 +286,7 @@ static void usbhc_send_in(struct usb_pipe* pipe)
  */
 static void usbhc_start_urb(struct urb* urb, struct usb_pipe* pipe)
 {
-    print("\n\nStarting URB => %s => pipe state: %s\n", urb->name, pipe_states[pipe->state]);
+    print("\n\nStarting URB => pipe state: %s\n", pipe_states[pipe->state]);
 
     urb->acctual_length = 0;
 
@@ -644,6 +644,25 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg)
 }
 
 /*
+ * Sets the address of a device. Pipe number zero should allways have 
+ * its address field set to zero.
+ */
+void usbhc_set_address(struct usb_pipe* pipe, u8 addr)
+{
+    usbhw_pipe_set_addr(pipe->num, addr);
+}
+
+void usbhc_set_ep_size(struct usb_pipe* pipe, u32 ep_size)
+{
+    /*
+     * The ep_size cannot be changed while a URB is being processed. In this 
+     * case the current trasfer if aborted and the endpoint size is updated 
+     * after
+     */
+    pipe->ep_size = ep_size;
+}
+
+/*
  * Allocates a USB request block
  */
 struct urb* usbhc_alloc_urb(void)
@@ -695,34 +714,13 @@ u8 usbhc_cancel_urb(struct urb* urb, struct usb_pipe* pipe)
  * Helps filling a URB with control transfer data
  */
 void usbhc_fill_control_urb(struct urb* urb, u8* setup, u8* transfer_buffer,
-                            void (*callback)(struct urb*), const char* name)
+                            void (*callback)(struct urb*))
 {
     urb->setup_buffer    = setup;
     urb->transfer_buffer = transfer_buffer;
     urb->callback        = callback;
     urb->flags           = URB_FLAGS_SETUP;
     urb->transfer_length = *(u16 *)(urb->setup_buffer + 6);
-
-    string_copy(name, urb->name);
-}
-
-void print_urb_list(struct usb_pipe* pipe)
-{
-    struct list_node* list_node;
-    list_iterate(list_node, &pipe->urb_list) {
-        struct urb* urb = list_get_entry(list_node, struct urb, node);
-
-        print("URB => %s\n", urb->name);
-    }
-}
-
-/*
- * Sets the address of a device. Pipe number zero should allways have 
- * its address field set to zero.
- */
-void usbhc_set_address(struct usb_pipe* pipe, u8 addr)
-{
-    usbhw_pipe_set_addr(pipe->num, addr);
 }
 
 /*

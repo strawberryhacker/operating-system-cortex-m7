@@ -86,8 +86,6 @@ struct urb {
     /* URB queue node */
     struct list_node node;
 
-    char name[16];
-
     /* Transfer flags indicating what transfer to perform */
     u32 flags;
 
@@ -98,9 +96,6 @@ struct urb {
     u8* transfer_buffer;
     u32 transfer_length;
     u32 acctual_length;
-
-    /* This is the max packet size of each transfer */
-    u32 packet_size;
 
     /* For error and status reporting */
     enum urb_status status;
@@ -133,6 +128,8 @@ struct usb_pipe {
     struct spinlock lock;
     enum pipe_state state;
     enum pipe_type type;
+
+    u32 ep_size;
 
     /* Hold the current pipe configuration */
     struct pipe_config config;
@@ -173,6 +170,8 @@ u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg);
 
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr);
 
+void usbhc_set_ep_size(struct usb_pipe* pipe, u32 ep_size);
+
 /*
  * URB (USB request blocks) is the main communication channel between the 
  * USB host core, device drivers, and the lower level host controller. All 
@@ -187,7 +186,7 @@ u8 usbhc_cancel_urb(struct urb* urb, struct usb_pipe* pipe);
 void usbhc_submit_urb(struct urb* urb, struct usb_pipe* pipe);
 
 void usbhc_fill_control_urb(struct urb* urb, u8* setup, u8* transfer_buffer,
-                            void (*callback)(struct urb*), const char* name);
+                            void (*callback)(struct urb*));
     
 void print_urb_list(struct usb_pipe* pipe);
 

@@ -39,11 +39,11 @@ void usb_host_init(void)
 
     /* Setup the USB physical layer */
     usbhc_init(&host_controller, usb_pipes, USB_PIPES);
-    usb_init(&usb_core, &host_controller);
+    usbc_init(&usb_core, &host_controller);
 
     /* Add HID class driver */
     usb_hid_init(&hid_driver);
-    usb_add_driver(&hid_driver, &usb_core);
+    usbc_add_driver(&hid_driver, &usb_core);
     
     /* Enable NVIC */
     nvic_enable(34);
