@@ -21,9 +21,7 @@ enum usb_enum_state {
     USB_ENUM_GET_DESC_LENGTH,
     USB_ENUM_GET_DESCRIPTORS,
     USB_ENUM_GET_PRODUCT_NAME,
-    USB_ENUM_GET_MANUFACTURER_NAME,
-    USB_A,
-    USB_B
+    USB_ENUM_GET_MANUFACTURER_NAME
 };
 
 /*
@@ -34,9 +32,6 @@ struct usb_ep {
 
     /* Corresponding physical pipe */
     struct usb_pipe* pipe;
-
-    struct usbhc* usbhc;
-    struct usb_dev* device;
 };
 
 
@@ -47,7 +42,7 @@ struct usb_driver;
  * the driver is necessary in the process of assigning a driver. Drivers will
  * be assigned and connected to this structure. In case of composite devices
  * the driver will connect to the fist interface it supports and then claim 
- * other interfaces it feel it need
+ * other interfaces it feel it needs
  */
 struct usb_iface {
     struct usb_iface_desc desc;
@@ -61,10 +56,6 @@ struct usb_iface {
     struct usb_dev* parent_dev;
     
     u8 assigned : 1;
-
-    /* Pipes controlled by this interface driver */
-    struct usb_pipe* pipes[MAX_PIPES];
-    u32 pipe_bm;
 
     /* Link the interfaces together */
     struct list_node node;
@@ -99,9 +90,9 @@ struct usb_dev {
     struct usb_config* configs;
     u32 num_configs;
 
-    /* Points to an IAD is available */
-    struct usb_iad_desc* iad;
-
+    /* Pipes controlled by this interface driver */
+    struct usb_pipe* pipes[MAX_PIPES];
+    u32 pipe_bm;
 
     struct usb_config* curr_config;
 
@@ -194,9 +185,5 @@ struct usb_core {
 void usbc_init(struct usb_core* usbc, struct usbhc* usbhc);
 
 void usbc_add_driver(struct usb_driver* driver, struct usb_core* usbc);
-
-u8 usbc_iface_add_pipe(struct usb_pipe* pipe, struct usb_iface* iface);
-
-u8 usbc_iface_remove_pipe(struct usb_pipe* pipe, struct usb_iface* iface);
 
 #endif

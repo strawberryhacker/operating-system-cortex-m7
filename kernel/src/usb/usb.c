@@ -18,8 +18,9 @@ static u8 enum_buffer[USB_ENUM_BUFFER_SIZE];
 /* Private USB core instance */
 struct usb_core* usbc_private;
 
-static void usbc_enumerate(struct urb* urb);
-static void usbc_add_device(struct usb_core* usbc);
+static void usbc_start_enum(struct usb_core* usbc);
+static enum usb_enum_state usbc_get_enum_state(void);
+static void usbc_enumerate_handler(struct urb* urb);
 
 static u8 usbc_new_address(struct usb_core* usbc);
 static void usbc_delete_address(struct usb_core* usbc, u8 address);
@@ -39,16 +40,16 @@ static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev);
 static void usbc_get_product_name_done(struct urb* urb, struct usb_dev* dev);
 static void usbc_get_manufacturer_name_done(struct urb* urb, struct usb_dev* dev);
 
-static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
-    u32* eps);
+static struct usb_dev* usbc_add_device(struct usb_core* usbc);
+static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces, u32* eps);
+static u32 usbc_get_desc_offset(u32 configs, u32 ifaces, u8 type, u32 index);
+static u8 usbc_alloc_descriptors(struct usb_dev* dev, u32 configs, u32 ifaces, u32 eps);
+static void usbc_delete_descriptors(struct usb_dev* dev);
+static void usbc_init_descriptors(struct usb_dev* dev, u32 configs, u32 ifaces, u32 eps);
 static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size);
-
 static u8 usbc_check_dev_match(const struct usb_dev_id* id, struct usb_dev* dev);
-
 static u8 usbc_check_iface_match(const struct usb_dev_id* id, struct usb_iface* iface);
-
 static u8 usbc_check_driver_match(struct usb_driver* driver, struct usb_iface* iface);
-
 static struct usb_driver* usbc_find_driver(struct usb_iface* iface, struct usb_core* usbc);
 
 /*
@@ -69,7 +70,7 @@ static void usbc_get_dev_desc(struct urb* urb, struct usb_core* usbc, u8 full)
     } else {
         setup.wLength = 8;
     }
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate);
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate_handler);
     usbhc_submit_urb(urb, usbc->pipe0);
 }
 
@@ -83,7 +84,7 @@ static void usb_get_string_desc(struct urb* urb, struct usb_core* usbc,
     setup.wIndex           = lang_id;
     setup.wLength          = USB_ENUM_BUFFER_SIZE;
 
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate);
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate_handler);
     usbhc_submit_urb(urb, usbc->pipe0);
 }
 
@@ -95,7 +96,7 @@ static void usbc_set_dev_addr(struct urb* urb, struct usb_core* usbc)
     setup.wIndex        = 0;
     setup.wLength       = 0;
 
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate);
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate_handler);
     usbhc_submit_urb(urb, usbc->pipe0);
 }
 
@@ -108,7 +109,7 @@ static void usbc_get_cfg_desc(struct urb* urb, struct usb_core* usbc)
     setup.wIndex           = 0;
     setup.wLength          = 9;
 
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate);
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate_handler);
     usbhc_submit_urb(urb, usbc->pipe0);
 }
 
@@ -121,7 +122,7 @@ static void usbc_get_all_desc(struct urb* urb, struct usb_core* usbc)
     setup.wIndex           = 0;
     setup.wLength          = usbc->enum_dev->desc_total_size;
 
-    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate);
+    usbhc_fill_control_urb(urb, (u8 *)&setup, enum_buffer, &usbc_enumerate_handler);
     usbhc_submit_urb(urb, usbc->pipe0);
 }
 
@@ -182,11 +183,6 @@ static void usbc_desc_length_done(struct urb* urb, struct usb_dev* dev)
 
 static void usbc_get_all_desc_done(struct urb* urb, struct usb_dev* dev)
 {
-    for (u32 i = 0; i < urb->transfer_length; i++) {
-        print("0x%1h ", urb->transfer_buffer[i]);
-    }
-
-    printl("All descriptors received");
     if (!usbc_parse_descriptors(dev, urb->transfer_buffer, urb->acctual_length)) {
         panic("Cannot parse descriptors");
     }
@@ -269,12 +265,50 @@ static void usb_handle_urb_fail(struct urb* urb)
 }
 
 /*
+ * Starts the enumeration process using the default control pipe
+ */
+static void usbc_start_enum(struct usb_core* usbc)
+{
+    /* Set configuration for the control pipe */
+    struct pipe_config cfg = {
+        .banks = PIPE_BANKS_1,
+        .autoswitch = 0,
+        .device = 0,
+        .frequency = 0,
+        .endpoint = 0,
+        .size = PIPE_SIZE_64,
+        .token = PIPE_TOKEN_SETUP,
+        .type = PIPE_TYPE_CTRL
+    };
+    usbhc_alloc_pipe(usbc->pipe0, &cfg);
+    usbhc_set_address(usbc->pipe0, 0);
+    usbhc_set_ep_size(usbc->pipe0, 64);
+
+    usbc_add_device(usbc);
+
+    struct urb* urb = usbhc_alloc_urb();
+
+    /* Context for callback routine */
+    urb->context = usbc;
+
+    /* Start the enumeration */
+    usbc_private->enum_state = USB_ENUM_GET_EP0_SIZE;
+    usbc_get_dev_desc(urb, usbc, 0);
+    printl("Enumeration has started");
+}
+
+static enum usb_enum_state usbc_get_enum_state(void)
+{
+    return usbc_private->enum_state;
+}
+
+/*
  * This will perform the enumeration of a newly attatched devices. Everything
  * will happend asynchronously since this is a URB callback. The entire
  * enumeration will only use one URB. A new device will be added in this
  * process
  */
-static void usbc_enumerate(struct urb* urb)
+static void usbc_enumerate_handler(struct urb* urb)
 {
     if (urb->status != URB_STATUS_OK) {
         usb_handle_urb_fail(urb);
@@ -378,7 +412,7 @@ static void usbc_delete_address(struct usb_core* usbc, u8 address)
  * This will add a new device to the USB core layer. This will be available in
  * the device list as well as from the enum device pointer in the USB host core
  */
-static void usbc_add_device(struct usb_core* usbc)
+static struct usb_dev* usbc_add_device(struct usb_core* usbc)
 {
     struct usb_dev* dev = (struct usb_dev *)
         bmalloc(sizeof(struct usb_dev), BMALLOC_SRAM);
@@ -391,6 +425,14 @@ static void usbc_add_device(struct usb_core* usbc)
 
     string_copy("None", dev->product);
     string_copy("None", dev->manufacturer);
+
+    /* Initialize the device pipes */
+    for (u8 i = 0; i < MAX_PIPES; i++) {
+        dev->pipes[i] = NULL;
+    }
+    dev->pipe_bm = 0;
+
+    return dev;
 }
 
 static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces, 
@@ -443,7 +485,7 @@ static u8 usbc_verify_descriptors(u8* data, u32 size, u32* configs, u32* ifaces,
  * with a given index. This function assumes the desriptor buffer layout is a
  * described above
  */
-static u32 usb_get_desc_offset(u32 configs, u32 ifaces, u8 type, u32 index)
+static u32 usbc_get_desc_offset(u32 configs, u32 ifaces, u8 type, u32 index)
 {
     u32 offset = 0;
     
@@ -459,6 +501,70 @@ static u32 usb_get_desc_offset(u32 configs, u32 ifaces, u8 type, u32 index)
     }
     return offset;
 }
+
+/*
+ * Allocates space for all configuration, interface and endpoint descriptors
+ * whithin a device. These will all be contained inside a single buffer. 
+ */
+static u8 usbc_alloc_descriptors(struct usb_dev* dev, u32 configs, u32 ifaces, u32 eps)
+{
+    /* Allocate the memory */
+    u32 desc_mem_size = configs * sizeof(struct usb_config) +
+                        ifaces * sizeof(struct usb_iface) + 
+                        eps * sizeof(struct usb_ep);
+
+    dev->configs = (struct usb_config *)bmalloc(desc_mem_size, BMALLOC_SRAM);
+    dev->desc_total_size = desc_mem_size;
+
+    return (dev->configs) ? 1 : 0;
+}
+
+/*
+ * Deletes all the devices; endpoint, interface and configuration descriptors. 
+ * This must be called before the devices is deleted. 
+ */
+static void usbc_delete_descriptors(struct usb_dev* dev)
+{
+    bfree(dev->configs);
+
+    dev->configs = NULL;
+    dev->desc_total_size = 0;
+    dev->num_configs = 0;
+}
+
+/*
+ * This function will initialize all the descriptors except the pointers between
+ * them. The pointer resolving happends in the parse_descriptors function. The
+ * descriptor buffer needs to be allocated prior to this function
+ */
+static void usbc_init_descriptors(struct usb_dev* dev, u32 configs, u32 ifaces, u32 eps)
+{
+    u8* ptr = (u8 *)dev->configs;
+
+    /* Initialize configuration structure */
+    for (u32 i = 0; i < configs; i++) {
+        struct usb_config* cfg = (struct usb_config *)ptr;
+        cfg->curr_iface = NULL;
+        ptr += sizeof(struct usb_config);
+    }
+
+    /* Initialize interface descriptors */
+    for (u32 i = 0; i < ifaces; i++) {
+        struct usb_iface* iface = (struct usb_iface *)ptr;
+        iface->driver = NULL;
+        iface->parent_dev = dev;
+        iface->assigned = 0;
+        list_add_first(&iface->node, &dev->iface_list);
+        ptr += sizeof(struct usb_iface);
+    }
+
+    /* Initialize endpoint descriptors */
+    for (u32 i = 0; i < eps; i++) {
+        struct usb_ep* ep = (struct usb_ep *)ptr;
+        ep->pipe = NULL;
+        ptr += sizeof(struct usb_ep);
+    }
+}   
 
 /*
  * Allocates and parses the entire descriptor tree. This consists of tree types
@@ -482,19 +588,10 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
         return 0;
     }
 
-    /* Allocate the memory */
-    u32 desc_mem_size = configs * sizeof(struct usb_config) +
-                        ifaces * sizeof(struct usb_iface) + 
-                        eps * sizeof(struct usb_ep);
-
-    u8* desc_ptr = (u8 *)bmalloc(desc_mem_size, BMALLOC_SRAM);
-    dev->configs = (struct usb_config *)desc_ptr;
-    
-    if (dev->configs == NULL) {
+    if (!usbc_alloc_descriptors(dev, configs, ifaces, eps)) {
         return 0;
     }
 
-    /* Variable bank */
     u32 config_index = 0;
     u32 iface_index = 0;
     u32 ep_index = 0;
@@ -504,14 +601,13 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
 
     u32 pos = 0;
     while (pos < size) {
-        
         u32 type = data[pos + 1];
 
         if (type == USB_DESC_CONFIG) {
-            u32 offset = usb_get_desc_offset(configs, ifaces, USB_DESC_CONFIG,
+            u32 offset = usbc_get_desc_offset(configs, ifaces, USB_DESC_CONFIG,
                 config_index);
 
-            struct usb_config* cfg = (struct usb_config *)(desc_ptr + offset);
+            struct usb_config* cfg = (struct usb_config *)(dev->configs + offset);
             memory_copy(data + pos, &cfg->desc, sizeof(struct usb_config_desc));
 
             dev->num_configs++;
@@ -520,10 +616,10 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
             config_index++;
 
         } else if (type == USB_DESC_IFACE) {
-            u32 offset = usb_get_desc_offset(configs, ifaces, USB_DESC_IFACE,
+            u32 offset = usbc_get_desc_offset(configs, ifaces, USB_DESC_IFACE,
                 iface_index);
 
-            struct usb_iface* iface = (struct usb_iface *)(desc_ptr + offset);
+            struct usb_iface* iface = (struct usb_iface *)(dev->configs + offset);
             memory_copy(data + pos, &iface->desc, sizeof(struct usb_iface_desc));
 
             last_iface = iface;
@@ -531,17 +627,6 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
             
             if (last_cfg == NULL) {
                 return 0;
-            }
-
-            /* Link the interface into the interface list from the device */
-            list_add_first(&iface->node, &dev->iface_list);
-
-            /* Add the parent device to the interface */
-            iface->parent_dev = dev;
-            iface->assigned = 0;
-            iface->pipe_bm = 0;
-            for (u8 i = 0; i < MAX_PIPES; i++) {
-                iface->pipes[i] = NULL;
             }
 
             /* First interface in configuration */
@@ -552,15 +637,16 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
             iface_index++;
 
         } else if (type == USB_DESC_EP) {
-            u32 offset = usb_get_desc_offset(configs, ifaces, USB_DESC_EP,
+            u32 offset = usbc_get_desc_offset(configs, ifaces, USB_DESC_EP,
                 ep_index);
 
-            struct usb_ep* ep = (struct usb_ep *)(desc_ptr + offset);
+            struct usb_ep* ep = (struct usb_ep *)(dev->configs + offset);
             memory_copy(data + pos, &ep->desc, sizeof(struct usb_ep));
 
             if (last_iface == NULL) {
                 return 0;
             }
+            
             /* First endpoint in interface */
             if (last_iface->num_eps == 0) {
                 last_iface->eps = ep;
@@ -570,9 +656,12 @@ static u8 usbc_parse_descriptors(struct usb_dev* dev, u8* data, u32 size)
         }
         pos += data[pos];
     }
+
     /* No need to check pos == size bacause the descriptors are verified  */
     return 1;
 }
+
+
 
 /*
  * Checks if the given usb_dev_id matches the given USB device. It returns 1
@@ -680,30 +769,15 @@ static struct usb_driver* usbc_find_driver(struct usb_iface* iface, struct usb_c
     return NULL;
 }
 
-u8 usbc_iface_add_pipe(struct usb_pipe* pipe, struct usb_iface* iface)
-{
-    for (u8 i = 0; i < MAX_PIPES; i++) {
-        if (!(iface->pipe_bm & (1 << i))) {
-            iface->pipes[i] = pipe;
-            iface->pipe_bm |= (1 << i);
-            return 1;
-        }
-    }
-    return 0;
-}
-
-u8 usbc_iface_remove_pipe(struct usb_pipe* pipe, struct usb_iface* iface)
-{
-    for (u8 i = 0; i < MAX_PIPES; i++) {
-        if (iface->pipes[i] == pipe) {
-            iface->pipes[i] = NULL;
-            iface->pipe_bm &= ~(1 << i);
-            return 1;
-        }
-    }
-    return 0;
-}
-
+/*
+ * Default USB core root hub event handler. This callback will be called by the
+ * USB host controller upon a change in the root hub status. This will start
+ * the tire 1 device enumeration process, since the reset send event will be
+ * reported by the root hub.
+ * 
+ * All other enumation requests will happend via the USB HUB interface. This 
+ * will handle the device discovery, reset and enumeration request
+ */
 void root_hub_event(struct usbhc* usbhc, enum root_hub_event event)
 {
     if (event == RH_EVENT_CONNECTION) {
@@ -715,36 +789,13 @@ void root_hub_event(struct usbhc* usbhc, enum root_hub_event event)
 
     } else if (event == RH_EVENT_RESET_SENT) {
         printl("USB core => reset sent");
-
-        /* Set configuration for the control pipe */
-        struct pipe_config cfg = {
-            .banks = PIPE_BANKS_1,
-            .autoswitch = 0,
-            .device = 0,
-            .frequency = 0,
-            .endpoint = 0,
-            .size = PIPE_SIZE_64,
-            .token = PIPE_TOKEN_SETUP,
-            .type = PIPE_TYPE_CTRL
-        };
-        usbhc_alloc_pipe(&usbhc->pipes[0], &cfg);
-        usbhc_set_address(&usbhc->pipes[0], 0);
-        usbhc_set_ep_size(&usbhc->pipes[0], 64);
-
-        usbc_add_device(usbc_private);
-
-        struct urb* urb = usbhc_alloc_urb();
-
-        /* Context for callback routine */
-        urb->context = usbc_private;
-
-        /* Start the enumeration */
-        usbc_private->enum_state = USB_ENUM_GET_EP0_SIZE;
-        usbc_get_dev_desc(urb, usbc_private, 0);
-        printl("Enumeration has started");
+        usbc_start_enum(usbc_private);
     }
 }
 
+/*
+ * Start of frame / start of micro-frame callback for the USB core
+ */
 static void sof_event(struct usbhc* usbhc)
 {
 
