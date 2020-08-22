@@ -269,18 +269,7 @@ static void usb_handle_urb_fail(struct urb* urb)
  */
 static void usbc_start_enum(struct usb_core* usbc)
 {
-    /* Set configuration for the control pipe */
-    struct pipe_config cfg = {
-        .banks = PIPE_BANKS_1,
-        .autoswitch = 0,
-        .device = 0,
-        .frequency = 0,
-        .endpoint = 0,
-        .size = PIPE_SIZE_64,
-        .token = PIPE_TOKEN_SETUP,
-        .type = PIPE_TYPE_CTRL
-    };
-    usbhc_alloc_pipe(usbc->pipe0, &cfg);
+    
     usbhc_set_address(usbc->pipe0, 0);
     usbhc_set_ep_size(usbc->pipe0, 64);
 

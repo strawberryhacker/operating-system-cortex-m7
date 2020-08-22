@@ -46,6 +46,9 @@ static inline void usbhc_root_hub_exception(u32 isr, struct usbhc* usbhc);
 static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc);
 static inline void usbhc_sof_exception(u32 isr, struct usbhc* usbhc);
 
+static u8 usbhc_size_to_pipe_size(u32 size, u8* pipe_size);
+static u8 usbhc_alloc_pipe(struct usb_pipe* pipe, u32 cfg);
+
 /* String representation of the different pipe states, defined in usbhc.h */
 static const char* pipe_states[] = {
     [0x00] = "FREE",
@@ -309,8 +312,8 @@ static void usbhc_start_urb(struct urb* urb, struct usb_pipe* pipe)
     } else if (urb->flags & URB_FLAGS_INTERRUPT_IN) {
         usbhw_pipe_reset_assert(pipe->num);
         usbhw_pipe_reset_deassert(pipe->num);
-        print("Pipe number => %d\n", pipe->config.endpoint);
-        print("Pipe number => %d\n", pipe->config.device);
+        print("Pipe number => %d\n", pipe->config.ep_addr);
+        print("Pipe number => %d\n", pipe->config.dev_addr);
         pipe->state = PIPE_STATE_IN;
         usbhw_pipe_in_request_continous(pipe->num);
         usbhw_pipe_disable_interrupt(pipe->num, USBHW_PFREEZE);
@@ -566,7 +569,7 @@ static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc)
 
     /* Check for stall */
     if (pipe_isr & USBHW_STALL) {
-        print("Stalled on pipe %d targeting EP %d\n", pipe->num, pipe->config.endpoint);
+        print("Stalled on pipe %d targeting EP %d\n", pipe->num, pipe->config.ep_addr);
     }
     /* Check for any errors */
     if (pipe_isr & USBHW_PERROR) {
@@ -646,27 +649,18 @@ void usb_exception(void)
 /*
  * Allocates a pipe
  */
-u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg)
+static u8 usbhc_alloc_pipe(struct usb_pipe* pipe, u32 cfg)
 {
-    memory_copy(cfg, &pipe->config, sizeof(struct pipe_config));
-
     /* The pipe should be enabled before resetting and changing config */
     usbhw_pipe_enable(pipe->num);
     usbhw_pipe_reset_assert(pipe->num);
     usbhw_pipe_reset_deassert(pipe->num);
 
-    u32 cfg_reg = 0;
-    cfg_reg |= (cfg->frequency << 24);
-    cfg_reg |= (cfg->endpoint << 16);
-    cfg_reg |= (cfg->autoswitch << 10);
-    cfg_reg |= (cfg->type << 12);
-    cfg_reg |= (cfg->token << 8);
-    cfg_reg |= (cfg->size << 4);
-    cfg_reg |= (cfg->banks << 2);
-    
-    usbhw_pipe_set_configuration(pipe->num, cfg_reg);
-    cfg_reg |= (1 << 1);
-    usbhw_pipe_set_configuration(pipe->num, cfg_reg);
+    cfg &= ~(1 << 1);    
+    usbhw_pipe_set_configuration(pipe->num, cfg);
+    cfg |= (1 << 1);
+    usbhw_pipe_set_configuration(pipe->num, cfg);
+
     if (!(usbhw_pipe_get_status(pipe->num) & (1 << 18))) {
         return 0;
     }
@@ -700,6 +694,63 @@ struct usb_pipe* usbhc_request_pipe(void)
     }
     printl("Shit, no more pipes");
     return NULL;
+}
+
+/*
+ * This function converts a physical pipe size to the acctual pipe size. If the 
+ * pipe size requested is not supported, it tries to increase the pipe size 
+ * so that it supports it. Returns 1 if the returned pipe size is valid
+ */
+static u8 usbhc_size_to_pipe_size(u32 size, u8* pipe_size)
+{
+    u32 i;
+    for (i = 32; i --> 0;) {
+        if (size & (1 << i)) {
+            break;
+        }
+    }
+    u32 num = (1 << i);
+    if (size & (num - 1)) {
+        /* Size is not accurate, multiply by 2 */
+        i++;
+    }
+    if ((i >= 3) && (i <= 10)) {
+        *pipe_size = (i - 3);
+        return 1;
+    }
+    return 0;
+}
+
+/*
+ * Configures the specified pipe with the specified configuration. This will 
+ * handle eventual memory conflicts in the DPRAM
+ */
+u8 usbhc_pipe_configure(struct usb_pipe* pipe, struct pipe_config* cfg)
+{
+    u8 size;
+    if (!usbhc_size_to_pipe_size(cfg->size, &size)) {
+        return 0;
+    }
+    if (cfg->banks < 1) {
+        return 0;
+    }
+
+    /* Configuration is OK */
+    u32 cfg_reg = 0;
+    cfg_reg |= (cfg->frequency << 24);
+    cfg_reg |= (cfg->ep_addr << 16);
+    cfg_reg |= (cfg->type << 12);
+    cfg_reg |= (cfg->bank_switch << 10);
+    cfg_reg |= (size << 4);
+    cfg_reg |= ((cfg->banks - 1) << 2);
+
+    if (!usbhc_alloc_pipe(pipe, cfg_reg)) {
+        return 0;
+    }
+
+
+
+    return 1;
 }
 
 /*

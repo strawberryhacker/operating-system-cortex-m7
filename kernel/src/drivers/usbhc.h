@@ -57,18 +57,18 @@ enum urb_status {
  * Holds all neccesary fields needed to configure a pipe
  */
 struct pipe_config {
-    u8 frequency;
-    /* Sets the address and pipe */
-    u8 device;
-    u8 endpoint : 4;
+    u8 dev_addr;
+    u8 ep_addr;
 
-    u8 autoswitch;
+    /* Requested pipe size */
+    u32 size;
+
+    u8 frequency;
+
+    u8 banks : 2;
+    u8 bank_switch : 1;
 
     enum pipe_type type;
-    enum pipe_token token;
-
-    enum pipe_banks banks;
-    enum pipe_size size;
 };
 
 /* USB transfer flags */
@@ -167,9 +167,9 @@ void usbhc_add_root_hub_callback(struct usbhc* usbhc,
 
 void usbhc_add_sof_callback(struct usbhc* usbhc, void (*callback)(struct usbhc*));
 
-u8 usbhc_alloc_pipe(struct usb_pipe* pipe, struct pipe_config* cfg);
-
 struct usb_pipe* usbhc_request_pipe(void);
+
+u8 usbhc_pipe_configure(struct usb_pipe* pipe, struct pipe_config* cfg);
 
 void usbhc_set_address(struct usb_pipe* pipe, u8 addr);
 
