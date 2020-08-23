@@ -1,3 +1,5 @@
+<img src="https://github.com/strawberryhacker/vanilla/blob/master/doc/vanilla.png" width="300">
+
 # Summary
 
 Vanilla is a single-core operating system for the ARMv7 architecture. It will work on all Cortex-M7 processors from Microchip. The SAME70 Xplained board might be the best choice for testing as it don't require any port. I will make a custom board soon and explain the porting process - it's easy!
