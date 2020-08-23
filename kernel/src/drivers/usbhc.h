@@ -50,7 +50,8 @@ enum urb_status {
     URB_STATUS_OK,
     URB_STATUS_ERROR,
     URB_STATUS_STALL,
-    URB_STATUS_NAK
+    URB_STATUS_NAK,
+    URB_STATUS_ABORT
 };
 
 /*

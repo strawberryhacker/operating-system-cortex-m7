@@ -47,6 +47,8 @@ static inline void usbhc_pipe_exception(u32 isr, struct usbhc* usbhc);
 static inline void usbhc_sof_exception(u32 isr, struct usbhc* usbhc);
 
 static u8 usbhc_size_to_pipe_size(u32 size, u8* pipe_size);
+static u8 usbhc_pipe_to_index(struct usb_pipe* pipe, struct usbhc* hc, u8* index);
+static u8 usbhc_solve_pipe_conflicts(struct usb_pipe* pipe, struct usbhc* hc);
 static u8 usbhc_alloc_pipe(struct usb_pipe* pipe, u32 cfg);
 
 /* String representation of the different pipe states, defined in usbhc.h */
@@ -356,6 +358,17 @@ static void usbhc_end_urb(struct urb* urb, struct usb_pipe* pipe,
     } else {
         print("Cannot start next trasfer directly\n");
     }
+}
+
+/*
+ * Aborts the transfer on a pipe. This will happend if the pipe needs to be
+ * reallocated since this will corrupt the DPRAM memory. This function does not
+ * report the event to the USB core layer
+ */
+static void usbhc_abort_transfer(struct usb_pipe* pipe)
+{
+    usbhw_pipe_reset_assert(pipe->num);
+    usbhw_pipe_reset_deassert(pipe->num);
 }
 
 /*
@@ -722,15 +735,77 @@ static u8 usbhc_size_to_pipe_size(u32 size, u8* pipe_size)
 }
 
 /*
+ * Reallocates a pipe and performs the callback
+ */
+static u8 usbhc_pipe_reallocate(struct usb_pipe* pipe)
+{
+    if (pipe->state <= PIPE_STATE_CLAIMED) {
+        /* Pipe is not active */
+        return 1;
+    }
+    usbhc_abort_transfer(pipe);
+
+    /* Reallocate the memory */
+    u32 cfg = usbhw_pipe_get_configuration(pipe->num);
+    cfg &= ~(1 << 1);
+    usbhw_pipe_set_configuration(pipe->num, cfg);
+    cfg |= (1 << 1);
+    usbhw_pipe_set_configuration(pipe->num, cfg);
+
+    if (!(usbhw_pipe_get_status(pipe->num) & (1 << 18))) {
+        return 0;
+    }
+
+    /*
+     * We have to end the URB after the reallocation. This is bacuse the pipe
+     * needs to be ready to execute a new URB after the callback if either
+     * a new URB has been submitted or if the queue is not empty. This pipe
+     * will allways be functional after the allocation, but might mess up the 
+     * memory of upper pipes
+     */
+    struct urb* urb = list_get_entry(pipe->urb_list.next, struct urb, node);
+    usbhc_end_urb(urb, pipe, URB_STATUS_ABORT);
+
+    printl("PIPE REALLOCATED");
+    return 1;
+}
+
+/*
+ * This will solve all the memory conflicts on the pipes with a higher muber 
+ * than the given pipe
+ */
+static u8 usbhc_solve_pipe_conflicts(struct usb_pipe* pipe, struct usbhc* hc)
+{
+    /* Reallocate all pipes from index + 1 to num_pipes */
+    for (u8 i = pipe->num + 1; i < hc->num_pipes; i++) {
+        if (!usbhc_pipe_reallocate(&hc->pipes[i])) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*
  * Configures the specified pipe with the specified configuration. This will 
  * handle eventual memory conflicts in the DPRAM
  */
 u8 usbhc_pipe_configure(struct usb_pipe* pipe, struct pipe_config* cfg)
 {
+    /* Default control pipe has a max size of 64 bytes, page 750 */
+    if ((pipe->num) && (cfg->size > 64)) {
+        return 0;
+    }
+
+    /* Pipe has to be claimed first, see usbhc_request_pipe */
+    if (pipe->state != PIPE_STATE_CLAIMED) {
+        return 0;
+    }
+
     u8 size;
     if (!usbhc_size_to_pipe_size(cfg->size, &size)) {
         return 0;
     }
+
     if (cfg->banks < 1) {
         return 0;
     }
@@ -747,9 +822,24 @@ u8 usbhc_pipe_configure(struct usb_pipe* pipe, struct pipe_config* cfg)
     if (!usbhc_alloc_pipe(pipe, cfg_reg)) {
         return 0;
     }
+    usbhc_set_address(pipe, cfg->dev_addr);
+    pipe->ep_size = cfg->size;
 
+    /* Allocation of pipe was successful */
+    memory_copy(cfg, &pipe->config, sizeof(struct pipe_config));
+    pipe->state = PIPE_STATE_IDLE;
 
+    /*
+     * Due the the stupid way the USB DPRAM is organized (see page 756) all 
+     * pipes with a higher number will be reallocated to solve any memory
+     * conflicts. If the size to be allocated is the same size as the pipe had
+     * in its previous state, the reallocation is not necessary. When a pipe is
+     * reallocated the current transfer on that buffer has to abort. This will
+     * again trigger the callback, so extra execution time might occur
+     */
+    usbhc_solve_pipe_conflicts(pipe, usbhc_private);
 
+    print("Pipe allocation success\n");
     return 1;
 }
 
