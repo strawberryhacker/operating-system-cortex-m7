@@ -21,6 +21,8 @@
 #include "prand.h"
 #include "usb_host.h"
 #include "usb_hid.h"
+#include "led.h"
+#include "button.h"
 
 void kernel_entry(void) {
     /* Disable the watchdog timer */
@@ -61,16 +63,9 @@ void kernel_entry(void) {
 	/* Make the kernel listen for firmware upgrade */
 	bootloader_init();
 	
-	/* Configure the on-board LED */
-	gpio_set_function(GPIOC, 8, GPIO_FUNC_OFF);
-	gpio_set_direction(GPIOC, 8, GPIO_OUTPUT);
-	gpio_set(GPIOC, 8);
-
-	/* Configure the on board button */
-	peripheral_clock_enable(10);	
-	gpio_set_function(GPIOA, 11, GPIO_FUNC_OFF);
-	gpio_set_direction(GPIOA, 11, GPIO_INPUT);
-	gpio_set_pull(GPIOA, 11, GPIO_PULL_UP);
+	/* On board button and LED */
+	led_init();
+	button_init();	
 
 	/* Initialize the dynamic memory core */
 	mm_init();

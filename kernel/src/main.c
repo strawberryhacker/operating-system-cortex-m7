@@ -8,8 +8,7 @@
 #include "syscall.h"
 #include "fpi.h"
 #include "usb_hid.h"
-
-
+#include "button.h"
 #include <stddef.h>
 
 static void print_thread(void* args)

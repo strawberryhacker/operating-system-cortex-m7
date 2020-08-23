@@ -67,3 +67,55 @@ void gpio_set_pull(gpio_reg* port, u8 pin, enum gpio_pull pull) {
         port->PPDDR = (1 << pin);
     }
 }
+
+void gpio_interrupt_enable(gpio_reg* port, u8 pin, enum gpio_irq_src src)
+{
+    
+    if (src == GPIO_EDGE) {
+        port->AIMDR = (1 << pin);
+    } else {
+        port->AIMER = (1 << pin);
+
+        if (src & 0b10) {
+            port->LSR = (1 << pin);     /* Level */
+        } else {
+            port->ESR = (1 << pin);     /* Edge */
+        }
+
+        if (src & 0b01) {
+            port->FELLSR = (1 << pin);  /* Falling edge, low level */
+        } else {
+            port->REHLSR = (1 << pin);  /* Rising edge, high level */
+        }
+    }
+
+    /* Enabel interrupt */
+    port->IER = (1 << pin);
+}
+
+u32 gpio_get_interrupt_status(gpio_reg* port)
+{
+    return port->ISR;
+}
+
+void gpio_set_filter(gpio_reg* port, u8 pin, enum gpio_filter filt, u32 us)
+{
+    /* Select filter */
+    if (filt == GPIO_GLITCH_FILTER) {
+        port->IFSCDR = (1 << pin);
+    } else {
+        port->IFSCER = (1 << pin);
+    }
+
+    /* The debounce filter period must be programmed */
+    if (filt == GPIO_DEBOUNCE_FILTER) {
+        u32 div = (u32)((us / 125) - 1.0);
+        if (div > 0x3FFF) {
+            div = 0x3FFF;
+        }
+        port->SCDR = (0x3FFF & div);
+    }
+
+    /* Enable filter */
+    port->IFER = (1 << pin);
+}

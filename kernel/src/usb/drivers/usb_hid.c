@@ -43,8 +43,7 @@ static struct usb_driver hid_driver = {
 
 static u8 usb_hid_connect(struct usb_iface* iface)
 {
-    print("Loading the driver\n");
-    /* This is where it assigns the driver */
+    /* This driver will work without any more information */
     iface->driver = &hid_driver;
 
     /* Get descriptors */

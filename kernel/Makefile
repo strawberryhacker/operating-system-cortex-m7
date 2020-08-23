@@ -79,6 +79,8 @@ board-y += /src/board/print.c
 board-y += /src/board/sd.c
 board-y += /src/board/ethernet.c
 board-y += /src/board/usb_host.c
+board-y += /src/board/button.c
+board-y += /src/board/led.c
 
 # Generic source files
 generic-y += /src/generic/sprint.c

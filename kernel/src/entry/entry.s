@@ -126,7 +126,7 @@ Vector_table:
 	.word	default_exception
 	.word	default_exception
 	.word	default_exception
-	.word	default_exception
+	.word	gpioa_exception
 	.word	default_exception
 	.word	default_exception
 	.word	usart0_exception      /* USART0 */
@@ -239,3 +239,6 @@ Vector_table:
 
 	.weak timer1_ch0_exception
 	.thumb_set timer1_ch0_exception, default_exception
+
+	.weak gpioa_exception
+	.thumb_set gpioa_exception, default_exception
