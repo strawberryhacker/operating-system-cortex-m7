@@ -135,4 +135,15 @@ static inline u8 list_is_empty(struct list_node* list)
 #define list_iterate(node, list) \
     for (node = (list)->next; node != (list); node = node->next)
 
+static inline u32 list_get_size(struct list_node* list)
+{
+    u32 size = 0;
+    
+    struct list_node* node;
+    list_iterate(node, list) {
+        size++;
+    }
+    return size;
+}
+
 #endif

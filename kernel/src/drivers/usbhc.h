@@ -189,6 +189,8 @@ u8 usbhc_cancel_urb(struct urb* urb, struct usb_pipe* pipe);
 
 void usbhc_submit_urb(struct urb* urb, struct usb_pipe* pipe);
 
+void usbhc_set_urb_context(struct urb* urb, void* context);
+
 void usbhc_fill_control_urb(struct urb* urb, u8* setup, u8* transfer_buffer,
                             void (*callback)(struct urb*));
     

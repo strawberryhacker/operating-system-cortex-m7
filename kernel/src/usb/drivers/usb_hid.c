@@ -11,12 +11,12 @@ extern struct usb_core* usbc_private;
 static u8 usb_hid_connect(struct usb_iface* iface);
 static u8 usb_hid_default(struct usb_iface* iface);
 
-#define HID_NUM_DEV_IDS 1
-
 static u8 hid_buffer[128];
 static struct usb_setup_desc setup;
 
 struct urb* hid_urb;
+
+#define HID_NUM_DEV_IDS 1
 
 /*
  * Definition of the driver and the device IDs
@@ -44,7 +44,7 @@ static struct usb_driver hid_driver = {
 static u8 usb_hid_connect(struct usb_iface* iface)
 {
     print("Loading the driver\n");
-    /* This is where is assigns the driver */
+    /* This is where it assigns the driver */
     iface->driver = &hid_driver;
 
     /* Get descriptors */

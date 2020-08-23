@@ -766,7 +766,7 @@ static u8 usbhc_pipe_reallocate(struct usb_pipe* pipe)
     struct urb* urb = list_get_entry(pipe->urb_list.next, struct urb, node);
     usbhc_end_urb(urb, pipe, URB_STATUS_ABORT);
 
-    printl("PIPE REALLOCATED");
+    printl("PIPE %d REALLOCATED", pipe->num);
     return 1;
 }
 
@@ -893,6 +893,11 @@ void usbhc_submit_urb(struct urb* urb, struct usb_pipe* pipe)
     if (urb_start) {
         usbhc_start_urb(urb, pipe);
     }
+}
+
+void usbhc_set_urb_context(struct urb* urb, void* context)
+{
+    urb->context = context;
 }
 
 /*
