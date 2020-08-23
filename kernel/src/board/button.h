@@ -21,6 +21,6 @@ struct button_callback {
 
 void button_init(void);
 
-void button_add_handler(struct button_callback* cb);
+void button_add_callback(struct button_callback* cb);
 
 #endif

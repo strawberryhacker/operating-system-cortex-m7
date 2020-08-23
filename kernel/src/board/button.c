@@ -23,7 +23,7 @@ void button_init(void)
     list_init(&button_list);
 }
 
-void button_add_handler(struct button_callback* handler)
+void button_add_callback(struct button_callback* handler)
 {
     list_add_first(&handler->node, &button_list);
 }

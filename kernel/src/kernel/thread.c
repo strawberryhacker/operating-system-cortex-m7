@@ -184,6 +184,18 @@ void thread_sleep(u64 ms) {
     reschedule();
 }
 
+void thread_block(tid_t tid)
+{
+    struct thread* th = get_thread(&cpu_rq, tid);
+    scheduler_block_thread(th);
+}
+
+void thread_unblock(tid_t tid)
+{
+    struct thread* th = get_thread(&cpu_rq, tid);
+    scheduler_unblock_thread(th);
+}
+
 void kill_thread(tid_t tid) {
     suspend_scheduler();
 

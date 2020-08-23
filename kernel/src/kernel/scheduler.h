@@ -117,6 +117,8 @@ struct scheduling_class {
     struct thread* (*pick_thread)(struct rq* rq);
     void           (*enqueue)(struct thread* thread, struct rq* rq);
     void           (*dequeue)(struct thread* thread, struct rq* rq);
+    void           (*unblock)(struct thread* thread, struct rq* rq);
+    void           (*block)(struct thread* thread, struct rq* rq);
 };
 
 /*
@@ -145,5 +147,9 @@ u64 get_kernel_tick(void);
 struct thread* get_thread(struct rq *rq, tid_t tid);
 
 u64 get_idle_runtime(void);
+
+void scheduler_unblock_thread(struct thread* thread);
+
+void scheduler_block_thread(struct thread* thread);
 
 #endif

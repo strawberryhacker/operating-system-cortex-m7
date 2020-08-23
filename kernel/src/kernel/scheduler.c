@@ -381,3 +381,27 @@ u64 get_kernel_tick(void) {
 u64 get_idle_runtime(void) {
 	return cpu_rq.idle->runtime_curr;
 }
+
+void scheduler_unblock_thread(struct thread* thread)
+{
+	if (thread == curr_thread) {
+		reschedule();
+	}
+	if (thread == curr_thread) {
+		panic("ERROR");
+	}
+	/* The CPU thread to block do not run anymore */
+	thread->class->unblock(thread, &cpu_rq);
+}
+
+void scheduler_block_thread(struct thread* thread)
+{
+	if (thread == curr_thread) {
+		reschedule();
+	}
+	if (thread == curr_thread) {
+		panic("ERROR");
+	}
+	/* The CPU thread to block do not run anymore */
+	thread->class->block(thread, &cpu_rq);
+}

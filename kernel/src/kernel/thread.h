@@ -14,4 +14,8 @@ void kill_thread(tid_t tid);
 
 void thread_sleep(u64 ms);
 
+void thread_block(tid_t tid);
+
+void thread_unblock(tid_t tid);
+
 #endif
