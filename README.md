@@ -51,7 +51,8 @@ Go to the kernel directory and tpye `make`. This will automatically flash the ch
 - Add thread safety
 - Support mamory fault cleanup from program testing
 - Dynamic MPU regions in case of thread failure
-- C (my own language) compiler
+
+This will not be implemented... I went to the A-series after limitations on the USB host. These features will hopefully be present in the next OS. And I will maybe make a port with the Cortex-M7. 
 
 Everything will be completely bare metal - no libraries - literally
 
