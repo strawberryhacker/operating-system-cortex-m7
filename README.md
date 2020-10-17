@@ -6,7 +6,7 @@ Vanilla is a single-core operating system for the ARMv7 architecture. It will wo
 
 # Building
 
-To compile this project `make` and `arm-none-eabi` is needed. In ubuntu they are installed by:
+To compile this project `make` and `arm-none-eabi` is needed. In Ubuntu they are installed by:
 ```shell
 > sudo apt-get update -y
 > sudo apt-get install build-essential
@@ -17,7 +17,7 @@ Go in the bootloader directory and type `make`
 
 Flash the bootloader binary (in the build directory) at address 0x00400000. This can be done with Atmel Studio or OpenOCD
 
-Line number 92 in the Makefile specify which COM port the programming script will use to connect to the board. In ubuntu it is /dev/ttySx and in windows COMx. Change this according to which COM port you use.
+Line number 92 in the Makefile specifies which COM port the programming script will use to connect to the board. In Ubuntu it is /dev/ttySx and in Windows COMx. Change this according to which COM port you use.
 
 Go to the kernel directory and type `make`. This will automatically flash the chip.
 
@@ -49,7 +49,7 @@ Go to the kernel directory and type `make`. This will automatically flash the ch
 - ARMv7 assembler with floating point extension
 - GUI, terminals, LCD etc.
 - Add thread safety
-- Support mamory fault cleanup from program testing
+- Support memory fault cleanup from program testing
 - Dynamic MPU regions in case of thread failure
 
 This will not be implemented... I went to the A-series after limitations on the USB host. These features will hopefully be present in the next OS. And I will maybe make a port with the Cortex-M7. 
@@ -65,7 +65,7 @@ The software embeds a flash bootloader residing inside flash at address 0x004000
 - boot signature at address 0x20400000 says "StayInBootloader"
 - trigger the boot-pin during reset (pull GPIOA 11 low)
 
-In order to program the chip on-the-fly the kernel should provide the same serial interface as the bootloader. If the character `\0` is received it should write the boot signature and reset itself. However, when a software failure occurs, the kernel might not be able to process the serial interrupts. Therefore two mechanisms has been added to ensure the bootloader will be usable.
+In order to program the chip on-the-fly the kernel should provide the same serial interface as the bootloader. If the character `\0` is received it should write the boot signature and reset itself. However, when a software failure occurs, the kernel might not be able to process the serial interrupts. Therefore two mechanisms have been added to ensure the bootloader will be usable.
 
 - Panic is safe to use. It will print the debug info and return straight to the bootloader
 - If the programming interface is not responding, the CPU has stopped somewhere. To bypass the image loading stage in the bootloader; hold in SW0 while resetting the board. This will start up the bootloader.
